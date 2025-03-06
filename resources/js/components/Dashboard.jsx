@@ -2,7 +2,7 @@ import Layout from "./Layout";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -182,7 +182,7 @@ const Dashboard = () => {
       });
       if (response.status === 200 || response.status === 201) {
         const data = response.data;
-        console.error(data);
+        // console.error(data);
         if (data?.recentSales?.length > 0) {
           setRecentSales(data.recentSales);
         }

@@ -5,7 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import moment from "moment";
-import { Eye, Plus, Trash, Package, RefreshCw, Truck, Box, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
+import { Eye, Plus, Trash, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
 import ReturnsNewModal from "./ReturnsNewModal";
 import toastr from 'toastr';
 import Swal from 'sweetalert2';

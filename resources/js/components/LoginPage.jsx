@@ -16,8 +16,13 @@ const LoginPage = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
     if (token) {
-      navigate('/dashboard');
+      if(userRole=="2"){
+        navigate('/pos');
+      }else{
+        navigate('/dashboard');
+      }      
     }
   }, [navigate]);
 
@@ -63,9 +68,17 @@ const LoginPage = () => {
             );
 
             if(response.data.message=="success"){
+              localStorage.removeItem("token");
+              localStorage.removeItem("userRole");
               localStorage.setItem('token', response.data.token);
+              localStorage.setItem('userRole', response.data.userRole);
               toastr.success('Login successful!');
-              navigate('/dashboard', { replace: true });
+              if(response.data.userRole===2){
+                navigate('/pos', { replace: true });
+              }else{
+                navigate('/dashboard', { replace: true });
+              }
+              
             }else{
               toastr.error(response.data.message);
             }

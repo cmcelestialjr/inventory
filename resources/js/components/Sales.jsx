@@ -573,7 +573,7 @@ const Sales = () => {
                                     </div>
 
                                     {/* Price, Discount, Quantity, Amount & Add Button */}
-                                    <div className="grid grid-cols-4 gap-2">                                    
+                                    <div className="grid grid-cols-4 gap-2">
                                         <div className="col-span-2">
                                             <label className="block text-sm font-medium text-gray-700">Price:</label>
                                             <select 

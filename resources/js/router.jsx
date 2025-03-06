@@ -8,42 +8,61 @@ import Sales from './components/Sales';
 import Returns from './components/Returns';
 import Expenses from './components/Expenses';
 import Logout from './components/Logout';
+import PointOfSale from './components/PointOfSale';
 
 function RouterApp() {
+
+  const userRole = localStorage.getItem("userRole");
+  
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>} 
-        />
-        <Route path="/sales" 
-          element={
-            <ProtectedRoute>
-              <Sales />
-            </ProtectedRoute>} 
-        />
-        <Route path="/returns" 
-          element={
-            <ProtectedRoute>
-              <Returns />
-            </ProtectedRoute>} 
-        />
-        <Route path="/products" 
-          element={
-            <ProtectedRoute>
-              <Products />
-            </ProtectedRoute>} 
-        />
-        <Route path="/expenses" 
-          element={
-            <ProtectedRoute>
-              <Expenses />
-            </ProtectedRoute>} 
-        />
+
+        {userRole === 1 && (
+          <>
+          <Route path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>} 
+          />
+          <Route path="/sales" 
+            element={
+              <ProtectedRoute>
+                <Sales />
+              </ProtectedRoute>} 
+          />
+          <Route path="/returns" 
+            element={
+              <ProtectedRoute>
+                <Returns />
+              </ProtectedRoute>} 
+          />
+          <Route path="/products" 
+            element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>} 
+          />
+          <Route path="/expenses" 
+            element={
+              <ProtectedRoute>
+                <Expenses />
+              </ProtectedRoute>} 
+          />          
+          </>
+        )}
+
+        {userRole === 2 && (
+          <Route path="/pos" 
+            element={
+              <ProtectedRoute>
+                <PointOfSale />
+              </ProtectedRoute>} 
+          />
+        )}
+
         <Route path="/logout" 
           element={
             <ProtectedRoute>
