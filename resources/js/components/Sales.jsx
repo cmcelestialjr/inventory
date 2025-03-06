@@ -656,7 +656,7 @@ const Sales = () => {
                                                     </span>
                                                 </div>
                                             ))}
-                                    </div>
+                                        </div>
 
                                     {/* Total Amount */}
                                     <div className="flex justify-between items-center p-2 border-t font-semibold text-lg bg-white">
