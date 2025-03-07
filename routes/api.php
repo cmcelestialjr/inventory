@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\UsersController;
 use App\Models\Returns;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -50,4 +51,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/expenses/names', [ExpensesController::class, 'names']);
     Route::post('/expenses/store', [ExpensesController::class, 'store']);
     Route::post('/expenses/delete', [ExpensesController::class, 'destroy']);
+
+    Route::get('/users', [UsersController::class, 'index']);
+    Route::get('/users/roles', [UsersController::class, 'roles']);
 });

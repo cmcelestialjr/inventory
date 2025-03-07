@@ -5,7 +5,7 @@ import { Menu,
         ShoppingCart,
         Undo,
         Boxes,
-        User, 
+        Users, 
         Truck,
         Banknote,
         Settings, 
@@ -108,17 +108,17 @@ const Sidebar = () => {
             </li>
             <li>
               <Link 
-                to="/settings" 
+                to="/users" 
                 className={`flex items-center p-2 rounded transition ${
-                  isActive("/settings") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  isActive("/users") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
                 }`}
               >
-                <Settings size={20} className="mr-2" />
-                Settings
+                <Users size={20} className="mr-2" />
+                Users
               </Link>
             </li>
             <li>
-              <Link 
+              <Link
                 to="/logout" 
                 className={`flex items-center p-2 rounded transition text-red-500 ${
                   isActive("/logout") ? "bg-red-500 text-white" : "hover:bg-gray-100"

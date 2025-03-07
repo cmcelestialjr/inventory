@@ -17,12 +17,12 @@ class AuthController extends Controller
             $user = Auth::user();
             $token = $user->createToken('authToken')->plainTextToken;
 
-            // User::where('id',1)->update(['password' => Hash::make("admin")]);
+            User::where('id',1)->update(['password' => Hash::make("adm1n@ROCKFIL")]);
             // User::where('id',2)->update(['password' => Hash::make("cashier@ROCKFIL")]);
 
             return response()->json([
                 'message' => 'success',
-                'userRole' => $user->user_role, 
+                'userRole' => $user->user_role_id, 
                 'token' => $token
             ]);
         }

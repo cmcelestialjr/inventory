@@ -7,8 +7,9 @@ import Products from './components/Products';
 import Sales from './components/Sales';
 import Returns from './components/Returns';
 import Expenses from './components/Expenses';
-import Logout from './components/Logout';
+import UsersList from './components/UsersList';
 import PointOfSale from './components/PointOfSale';
+import Logout from './components/Logout';
 
 function RouterApp() {  
   return (
@@ -45,7 +46,13 @@ function RouterApp() {
             <ProtectedRoute allowedRoles={["1"]}>
               <Expenses />
             </ProtectedRoute>} 
-        />   
+        />
+        <Route path="/users" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <UsersList />
+            </ProtectedRoute>} 
+        />
         <Route path="/pos" 
           element={
             <ProtectedRoute allowedRoles={["2"]}>
