@@ -54,4 +54,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/users', [UsersController::class, 'index']);
     Route::get('/users/roles', [UsersController::class, 'roles']);
+    Route::post('/users/store', [UsersController::class, 'store']);
+    Route::put('/users/{id}', [UsersController::class, 'update']);
 });

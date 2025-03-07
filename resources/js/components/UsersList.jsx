@@ -18,6 +18,7 @@ const UsersList = () => {
     const [userNameOfUser, setUserNameOfUser] = useState("");
     const [passwordOfUser, setPasswordOfUser] = useState("");
     const [roleOfUser, setRoleOfUser] = useState(2);
+    const [idOfUser, setIdOfUser] = useState(null);
     const [roles, setRoles] = useState([]);
 
     useEffect(() => {
@@ -60,6 +61,113 @@ const UsersList = () => {
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setPage(1);
+    };
+    
+    const handleEditUser = (user) => {
+        setNameOfUser(user.name);
+        setUserNameOfUser(user.username);
+        setPasswordOfUser("************");
+        setRoleOfUser(user.user_role_id);
+        setIdOfUser(user.id);
+        setUserModal(true);
+    };
+
+    const handleUserSubmit = async () => {
+        if(validateForm){
+            if(idOfUser==null){
+                handleNewUserSubmit();
+            }else{
+                handleUpdateUserSubmit();
+            }
+        }
+    };
+
+    const validateForm = () => {
+        let isValid = false;
+        if(nameOfUser==""){
+            toastr.success("Name is required!"); 
+            isValid = false;
+        }
+        if(userNameOfUser==""){
+            toastr.success("Username is required!"); 
+            isValid = false;
+        }
+        if(passwordOfUser==""){
+            toastr.success("Password is required!"); 
+            isValid = false;
+        }
+        return isValid;
+    }
+
+    const handleNewUserSubmit = async () => {
+        try {
+            const formData = {
+                name: nameOfUser,
+                username: userNameOfUser,
+                password: passwordOfUser,
+                role: roleOfUser
+            };
+            const authToken = localStorage.getItem("token");
+            const response = await axios.post("/api/users/store", formData, {
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (response.status === 200 || response.status === 201) {
+                toastr.success("User added successfully!"); 
+                setNameOfUser("");
+                setUserNameOfUser("");
+                setPasswordOfUser("");
+                setRoleOfUser(2);
+                setIdOfUser(null);                
+                fetchUsers();
+                setUserModal(false);
+            } else {
+                toastr.error("Unexpected response");
+            }
+        } catch (error) {
+            // console.error("Request failed:", error.response?.data?.message || error.message);
+            toastr.error("Failed to add user.");
+        }
+    };
+
+    const handleUpdateUserSubmit = async () => {
+        try {
+            const formData = {
+                name: nameOfUser,
+                username: userNameOfUser,
+                password: passwordOfUser,
+                role: roleOfUser
+            };
+            const authToken = localStorage.getItem("token");
+            const response = await axios.put(`/api/users/${idOfUser}`, formData, {
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (response.status === 200 || response.status === 201) {
+                toastr.success("User updated successfully!"); 
+                setNameOfUser("");
+                setUserNameOfUser("");
+                setPasswordOfUser("");
+                setRoleOfUser(2);
+                setIdOfUser(null);
+                fetchUsers();
+                setUserModal(false);
+            } else {
+                toastr.error("Unexpected response");
+            }
+        } catch (error) {
+            // console.error("Request failed:", error.response?.data?.message || error.message);
+            toastr.error("Failed to update user.");
+        }
+    };
+
+    const handleUserModalClose  = async () => {
+        setNameOfUser("");
+        setUserNameOfUser("");
+        setPasswordOfUser("");
+        setRoleOfUser(2);
+        setIdOfUser(null);
+        setUserModal(false);
     };
 
     return (
@@ -106,7 +214,7 @@ const UsersList = () => {
                                         <td className="border border-gray-300 px-4 py-2">{user.user_role?.name}</td>
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
                                             <button 
-                                                // onClick={() => openSaleViewModal(sale)}
+                                                onClick={(e) => handleEditUser(user)}
                                                 className="flex items-center gap-1 text-blue-600 hover:underline">
                                                 <Edit size={16} /> Edit
                                             </button>
@@ -150,62 +258,61 @@ const UsersList = () => {
             
             {userModal && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
                         <div className="flex justify-between">
-                            <h2 className="text-xl font-semibold">New User</h2>
+                            <h2 className="text-xl font-semibold">User</h2>
                             <button 
-                                onClick={() => setUserModal(false)} 
+                                onClick={handleUserModalClose} 
                                 className="text-gray-500 hover:text-gray-700 transition"
                             >
                                 <X size={24} />
                             </button>
                         </div>
 
-                        <div className="flex flex-col md:flex-row gap-2">
-                            <div className="relative flex-1">
-                                <label className="block text-sm font-medium text-gray-700">Name:</label>
-                                <input 
-                                    type="number"
-                                    value={nameOfUser}
-                                    className="w-full border px-3 py-2 rounded-lg"
-                                />
-                            </div>
-                            <div className="relative flex-1">
-                                <label className="block text-sm font-medium text-gray-700">Username:</label>
-                                <input 
-                                    type="number"
-                                    value={userNameOfUser}
-                                    className="w-full border px-3 py-2 rounded-lg"
-                                />
-                            </div>
-                            <div className="relative flex-1">
-                                <label className="block text-sm font-medium text-gray-700">Password:</label>
-                                <input 
-                                    type="number"
-                                    value={passwordOfUser}
-                                    className="w-full border px-3 py-2 rounded-lg"
-                                />
-                            </div>
-                            <div className="relative flex-1">
-                                <label className="block text-sm font-medium text-gray-700">Role:</label>
-                                <select
-                                    value={roleOfUser}
-                                    onChange={(e) => {setRoleOfUser(e.target.value)}}
-                                    className="w-full border px-3 py-2 rounded-lg flex-1"
-                                    >
-                                    {roles.map((role) => (
-                                        <option key={role.id} 
-                                            value={role.id}>
-                                            {role.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="relative flex-1">
+                        <div className="mt-2">
+                            <label className="block text-sm font-medium text-gray-700">Name:</label>
+                            <input 
+                                type="text"
+                                value={nameOfUser}
+                                onChange={(e) => setNameOfUser(e.target.value)}
+                                className="w-full border px-3 py-2 rounded-lg"
+                            />
+                            <label className="block text-sm font-medium text-gray-700">Username:</label>
+                            <input 
+                                type="text"
+                                value={userNameOfUser}
+                                onChange={(e) => setUserNameOfUser(e.target.value)}
+                                className="w-full border px-3 py-2 rounded-lg"
+                            />
+                            <label className="block text-sm font-medium text-gray-700">Password:</label>
+                            <input 
+                                type="password"
+                                value={passwordOfUser}
+                                onChange={(e) => setPasswordOfUser(e.target.value)}
+                                className="w-full border px-3 py-2 rounded-lg"
+                            />
+                            <label className="block text-sm font-medium text-gray-700">Role:</label>
+                            <select
+                                value={roleOfUser}
+                                onChange={(e) => {setRoleOfUser(e.target.value)}}
+                                className="w-full border px-3 py-2 rounded-lg flex-1"
+                            >
+                                {roles.map((role) => (
+                                    <option key={role.id} 
+                                        value={role.id}>
+                                        {role.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex justify-between mt-2">
+                                <button 
+                                    onClick={handleUserModalClose}
+                                    className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg shadow mt-2 hover:bg-gray-700 transition">
+                                    <X size={18} /> Close
+                                </button>
                                 <button
-                                    // onClick={() => setNewUserModal(true)}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                                    onClick={handleUserSubmit}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow mt-2 hover:bg-blue-700 transition"
                                 >
                                     <Plus size={18} /> Submit
                                 </button>
