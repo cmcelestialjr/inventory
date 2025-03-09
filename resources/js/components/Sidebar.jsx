@@ -84,7 +84,7 @@ const Sidebar = () => {
                 Products
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link 
                 to="/suppliers" 
                 className={`flex items-center p-2 rounded transition ${
@@ -94,7 +94,7 @@ const Sidebar = () => {
                 <Truck size={20} className="mr-2" />
                 Suppliers
               </Link>
-            </li>
+            </li> */}
             <li>
               <Link 
                 to="/expenses" 
