@@ -234,8 +234,58 @@ const PointOfSale = () => {
       toastr.warning("No products to checkout.");
       return;
     }
+    submitProceedToPayment();
+    // setProceedToPayment(true);
+  }
 
-    setProceedToPayment(true);
+  const submitProceedToPayment = async () => {
+    const updatedSaleData = { 
+      ...newSaleData,
+      products 
+    };
+    try {
+        const authToken = localStorage.getItem("token");
+        const response = await axios.post("/api/sales-proceed-payment", updatedSaleData, {
+            headers: { Authorization: `Bearer ${authToken}` },
+        });
+
+        if (response.status === 200 || response.status === 201) {
+            toastr.success("Sale confirmed successfully!"); 
+
+            Swal.fire("Success!", response.data.message, "success");
+
+            setProceedToPayment(false);
+            setProducts([]);
+            setSelectedPrice(null);
+            setPriceOptions([]);
+            setTotalAmount(0.00);
+            setSubTotal(0.00);  
+            setDiscountTotal(0.00);
+            setNewSaleData({
+                date_time_of_sale: getLocalDateTime(),
+                code: "",
+                cashier_name: "",
+                customer_name: "Default",
+                total_cost: 0.00,
+                total_price: 0.00,
+                total_qty: 0.00,
+                total_discount: 0.00,
+                total_amount: 0.00,
+                paymentOptions: [{
+                    payment_option_id: 1,
+                    payment_option_name: "Cash",
+                    amount: 0.00,
+                    amount_paid: 0.00,
+                    amount_change: 0.00
+                }]
+            });
+        } else {
+            toastr.error("Unexpected response");
+        }
+    } catch (error) {
+        // console.error("Request failed:", error.response?.data?.message || error.message);
+        toastr.error("Failed to confirm sale.");
+    }
   }
 
   const handlePaymentChange = (idx, field, id, value) => {

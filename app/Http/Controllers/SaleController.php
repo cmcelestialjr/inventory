@@ -100,6 +100,7 @@ class SaleController extends Controller
                 'amount_paid' => 0.00,
                 'amount_change' => 0.00,
                 'cashier_id' => $cashier_id,
+                'sales_status_id' => 2,
                 'cashier_name' => $cashier_name,            
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
@@ -159,6 +160,97 @@ class SaleController extends Controller
 
             DB::commit();
             return response()->json(['message' => 'Sale confirmed successfully'], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function proceedPayment(Request $request)
+    {
+        $validatedData = $request->validate([
+            'date_time_of_sale' => 'required|date',
+            'customer_name' => 'required|string|max:255',
+            'total_cost' => 'required|numeric|min:0',
+            'total_price' => 'required|numeric|min:0',
+            'total_qty' => 'required|integer|min:0',
+            'total_discount' => 'required|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'products' => 'required|array|min:1',
+            'products.*.id' => 'required|integer|exists:products,id',
+            'products.*.name' => 'required|string|max:255',
+            'products.*.cost' => 'required|numeric|min:0',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount' => 'required|numeric|min:0',
+            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.totalCost' => 'required|numeric|min:0',
+        ]);
+
+        try{
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            $cashier_name = $user->name;
+            $cashier_id = $user->id;
+            $code = $this->getCode();
+            $customer_id = $this->getCustomerId($validatedData['customer_name']);
+            
+            $sale = Sale::create([
+                'date_time_of_sale' => $validatedData['date_time_of_sale'],
+                'customer_id' => $customer_id,
+                'customer_name' => $validatedData['customer_name'],
+                'code' => $code,
+                'total_cost' => $validatedData['total_cost'],
+                'total_price' => $validatedData['total_price'],
+                'total_discount' => $validatedData['total_discount'],
+                'total_qty' => $validatedData['total_qty'],
+                'total_amount' => $validatedData['total_amount'],
+                'amount_paid' => 0.00,
+                'amount_change' => 0.00,
+                'cashier_id' => $cashier_id,
+                'cashier_name' => $cashier_name,
+                'sales_status_id' => 1,
+                'updated_by' => $cashier_id,
+                'created_by' => $cashier_id
+            ]);
+
+            // Save Products
+            foreach ($validatedData['products'] as $product) {
+                if($product['discount']>0){
+                    $discountPercentage = ($product['discount'] / $product['price']) * 100;
+
+                    $discountPercentage = round($discountPercentage);
+                }else{
+                    $discountPercentage = 0.00;
+                }
+
+                SalesProduct::create([
+                    'sale_id' => $sale->id,
+                    'sale_code' => $sale->code,
+                    'product_id' => $product['id'],
+                    'total_cost' => $product['totalCost'],
+                    'cost' => $product['cost'],                
+                    'price' => $product['price'],
+                    'discount_amount' => $product['discount'],
+                    'discount_percentage' => $discountPercentage,
+                    'qty' => $product['quantity'],
+                    'amount' => $product['amount'],
+                    'updated_by' => $cashier_id,
+                    'created_by' => $cashier_id
+                ]);
+            }
+
+            DB::commit();
+            return response()->json([
+                'message' => 'Sale confirmed successfully',
+                'code' => $code
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
