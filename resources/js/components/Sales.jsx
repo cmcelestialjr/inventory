@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Eye, Plus, X } from "lucide-react";
+import { Edit, Eye, Plus, X } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -36,6 +36,7 @@ const Sales = () => {
     const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
     const [isSaleViewModalOpen, setIsSaleViewModalOpen] = useState(false);
     const [selectedSaleView, setSelectedSaleView] = useState(null);
+    const [saleId, setSaleId] = useState(null);
     const didFetch = useRef(false);
 
     const openSaleViewModal = (sale) => {
@@ -349,7 +350,8 @@ const Sales = () => {
 
         const updatedSaleData = { 
             ...newSaleData,
-            products 
+            products,
+            saleId: saleId
         };
         try {
             const authToken = localStorage.getItem("token");
@@ -473,7 +475,7 @@ const Sales = () => {
                                                         {paymentOption.amount_change !== undefined && paymentOption.amount_change !== null ? (
                                                             paymentOption.amount_change > 0 ? (
                                                                 <div className="text-green-500">
-                                                                    Change: ${paymentOption.amount_change.toFixed(2)}
+                                                                    Change: ${paymentOption.amount_change}
                                                                 </div>
                                                             ) : (
                                                                 <div className="text-red-500">
@@ -512,8 +514,12 @@ const Sales = () => {
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
                                             <button onClick={() => openSaleViewModal(sale)}
-                                                className="flex items-center gap-1 text-blue-600 hover:underline">
+                                                className="flex items-center gap-1 text-green-800 hover:text-green-600 hover:underline">
                                                 <Eye size={16} /> View
+                                            </button>
+                                            <button onClick={() => openSaleViewModal(sale)}
+                                                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
+                                                <Edit size={16} /> Edit
                                             </button>
                                         </td>
                                     </tr>

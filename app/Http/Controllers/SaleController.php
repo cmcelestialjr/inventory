@@ -51,9 +51,10 @@ class SaleController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function confirmSale(Request $request)
     {
         $validatedData = $request->validate([
+            'saleId' => 'nullable|exists:sales,id',
             'date_time_of_sale' => 'required|date',
             'customer_name' => 'required|string|max:255',
             'total_cost' => 'required|numeric|min:0',
@@ -78,6 +79,15 @@ class SaleController extends Controller
             'products.*.totalCost' => 'required|numeric|min:0',
         ]);
 
+        if($validatedData['saleId']){
+            return $this->update($validatedData);
+        }else{
+            return $this->store($validatedData);
+        }
+    }
+
+    private function store($validatedData)
+    {
         try{
             DB::beginTransaction();
 
@@ -100,8 +110,8 @@ class SaleController extends Controller
                 'amount_paid' => 0.00,
                 'amount_change' => 0.00,
                 'cashier_id' => $cashier_id,
-                'sales_status_id' => 2,
-                'cashier_name' => $cashier_name,            
+                'sales_status_id' => 1,
+                'cashier_name' => $cashier_name,
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
             ]);
@@ -134,7 +144,7 @@ class SaleController extends Controller
                     'sale_code' => $sale->code,
                     'product_id' => $product['id'],
                     'total_cost' => $product['totalCost'],
-                    'cost' => $product['cost'],                
+                    'cost' => $product['cost'],
                     'price' => $product['price'],
                     'discount_amount' => $product['discount'],
                     'discount_percentage' => $discountPercentage,
@@ -157,6 +167,50 @@ class SaleController extends Controller
                 $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
                 Product::where('id', $product['id'])->update(['qty' => $totalStock]);
             }
+
+            DB::commit();
+            return response()->json(['message' => 'Sale confirmed successfully'], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function update($validatedData)
+    {
+        $sale = Sale::findOrFail($validatedData['saleId']);
+
+        try{
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            $cashier_name = $user->name;
+            $cashier_id = $user->id;
+            $customer_id = $this->getCustomerId($validatedData['customer_name']);
+
+            $sale->update([
+                'date_time_of_sale' => $validatedData['date_time_of_sale'],
+                'customer_id' => $customer_id,
+                'customer_name' => $validatedData['customer_name'],
+                'total_cost' => $validatedData['total_cost'],
+                'total_price' => $validatedData['total_price'],
+                'total_discount' => $validatedData['total_discount'],
+                'total_qty' => $validatedData['total_qty'],
+                'total_amount' => $validatedData['total_amount'],
+                'amount_paid' => 0.00,
+                'amount_change' => 0.00,
+                'cashier_id' => $cashier_id,
+                'sales_status_id' => 1,
+                'cashier_name' => $cashier_name,
+                'updated_by' => $cashier_id,
+            ]);
+
+
 
             DB::commit();
             return response()->json(['message' => 'Sale confirmed successfully'], 200);
@@ -215,7 +269,7 @@ class SaleController extends Controller
                 'amount_change' => 0.00,
                 'cashier_id' => $cashier_id,
                 'cashier_name' => $cashier_name,
-                'sales_status_id' => 1,
+                'sales_status_id' => 2,
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
             ]);
