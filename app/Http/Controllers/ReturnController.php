@@ -248,6 +248,7 @@ class ReturnController extends Controller
     
                     $productPrice = ProductsPrice::where('product_id', $product['id'])
                         ->where('price', $product['price'])
+                        ->where('cost', $product['cost'])
                         ->first();
     
                     if ($productPrice) {

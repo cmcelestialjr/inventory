@@ -156,6 +156,7 @@ class SaleController extends Controller
 
                 $productPrice = ProductsPrice::where('product_id', $product['id'])
                     ->where('price', $product['price'])
+                    ->where('cost', $product['cost'])
                     ->first();
 
                 if ($productPrice) {
@@ -209,6 +210,87 @@ class SaleController extends Controller
                 'cashier_name' => $cashier_name,
                 'updated_by' => $cashier_id,
             ]);
+
+            foreach ($validatedData['paymentOptions'] as $payment) {
+                SalesPayment::updateOrCreate(
+                    [
+                        'sale_id' => $sale->id,
+                        'payment_option_id' => $payment['payment_option_id'],
+                    ],
+                    [
+                        'payment_option_name' => $payment['payment_option_name'],
+                        'amount' => $payment['amount'],
+                        'amount_paid' => $payment['amount_paid'],
+                        'amount_change' => $payment['amount_change'] >= 0 ? $payment['amount_change'] : 0.00,
+                        'updated_by' => $cashier_id,
+                        'created_by' => $cashier_id,
+                    ]
+                );
+            }
+
+            $salesProducts = SalesProduct::where('sale_id',$sale->id)->get();
+            if($salesProducts->count()>0){
+                foreach($salesProducts as $salesProduct){
+                    $productPrice = ProductsPrice::where('product_id', $salesProduct->product_id)
+                        ->where('price', $salesProduct->price)
+                        ->where('cost', $salesProduct->cost)
+                        ->first();
+
+                    if ($productPrice) {
+                        $newQuantity = max(0, $productPrice->qty + $salesProduct->qty);
+
+                        $productPrice->update(['qty' => $newQuantity]);
+                    }
+
+                    $totalStock = ProductsPrice::where('product_id', $salesProduct->product_id)->sum('qty');
+                    Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);
+                }
+            }
+            
+
+            // Save Products
+            foreach ($validatedData['products'] as $product) {
+                if($product['discount']>0){
+                    $discountPercentage = ($product['discount'] / $product['price']) * 100;
+
+                    $discountPercentage = round($discountPercentage);
+                }else{
+                    $discountPercentage = 0.00;
+                }
+
+                SalesProduct::updateOrCreate(
+                    [
+                        'sale_id' => $sale->id,
+                        'product_id' => $product['id'],
+                        'price' => $product['price'],
+                        'qty' => $product['quantity'],
+                        'amount' => $product['amount'],
+                    ],
+                    [
+                        'sale_code' => $sale->code,
+                        'total_cost' => $product['totalCost'],
+                        'cost' => $product['cost'],
+                        'discount_amount' => $product['discount'],
+                        'discount_percentage' => $discountPercentage,
+                        'updated_by' => $cashier_id,
+                        'created_by' => $cashier_id,
+                    ]
+                );
+
+                $productPrice = ProductsPrice::where('product_id', $product['id'])
+                    ->where('price', $product['price'])
+                    ->where('cost', $product['cost'])
+                    ->first();
+
+                if ($productPrice) {
+                    $newQuantity = max(0, $productPrice->qty - $product['quantity']);
+
+                    $productPrice->update(['qty' => $newQuantity]);
+                }
+
+                $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
+                Product::where('id', $product['id'])->update(['qty' => $totalStock]);
+            }
 
 
 
