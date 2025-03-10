@@ -248,7 +248,7 @@ class SaleController extends Controller
 
             DB::commit();
             return response()->json([
-                'message' => 'Sale confirmed successfully',
+                'message' => 'Sale confirmed successfully!',
                 'code' => $code
             ], 200);
 

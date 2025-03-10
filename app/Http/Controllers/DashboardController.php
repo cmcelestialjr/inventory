@@ -27,7 +27,7 @@ class DashboardController extends Controller
         $startDate = $request->startDate ? Carbon::parse($request->startDate) : null;
         $endDate = $request->endDate ? Carbon::parse($request->endDate) : null;
 
-        $getSales = DB::table('sales');
+        $getSales = DB::table('sales')->where('sales_status_id',1);
         $getReturns = DB::table('returns');
         $getExpenses = DB::table('expenses');
 
@@ -109,7 +109,7 @@ class DashboardController extends Controller
 
         $selected = $request->selected;
 
-        $getSales = DB::table('sales');
+        $getSales = DB::table('sales')->where('sales_status_id',1);
         $getExpenses = DB::table('expenses');
         $getSellingProducts = $this->getSellingProducts();
         
@@ -194,7 +194,7 @@ class DashboardController extends Controller
 
     public function bottomSection()
     {
-        $recentSales = Sale::orderBy('date_time_of_sale', 'desc')->limit(10)->get();
+        $recentSales = Sale::where('sales_status_id',1)->orderBy('date_time_of_sale', 'desc')->limit(10)->get();
         $recentRestocks = Product::orderBy('restock_date', 'desc')->limit(10)->get();
         $recentExpenses = Expense::orderBy('date_time_of_expense', 'desc')->limit(10)->get();
         $recentReturns = Returns::orderBy('date_time_returned', 'desc')->limit(10)->get();
@@ -218,17 +218,22 @@ class DashboardController extends Controller
             ')
             ->join('sales', 'sales_products.sale_id', '=', 'sales.id')
             ->join('products', 'sales_products.product_id', '=', 'products.id')
+            ->where('sales.sales_status_id',1)
             ->groupBy('sales_products.product_id', 'products.name', 'sales_products.price')
             ->limit(5);
     }
 
     private function getProductsWithNoSales()
     {
-        return DB::table('products')->leftJoin('sales_products', 'products.id', '=', 'sales_products.product_id')
+        return DB::table('products')
+            ->leftJoin('sales_products', 'products.id', '=', 'sales_products.product_id')
             ->leftJoin('sales', 'sales_products.sale_id', '=', 'sales.id')
             ->select('products.id', 'products.name', 'products.price')
             ->whereNull('sales_products.product_id')
-            ->orWhereNull('sales.id')
+            ->orWhere(function ($query) {
+                $query->whereNotNull('sales.id') 
+                      ->where('sales.sales_status_id', '!=', 1);
+            })
             ->limit(5)
             ->get();
     }

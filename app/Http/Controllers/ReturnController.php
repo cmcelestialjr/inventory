@@ -207,6 +207,7 @@ class ReturnController extends Controller
                     'amount_change' => 0.00,
                     'cashier_id' => $cashier_id,
                     'cashier_name' => $cashier_name,
+                    'sales_status_id' => 1,
                     'updated_by' => $cashier_id,
                     'created_by' => $cashier_id
                 ]);

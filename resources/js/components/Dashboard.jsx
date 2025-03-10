@@ -5,6 +5,7 @@ import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknot
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import moment from "moment";
 
 const Dashboard = () => {
   const [selectedDurationTopSection, setSelectedDurationTopSection] = useState("today");
@@ -385,7 +386,9 @@ const Dashboard = () => {
                 <li key={sale.id} className="border-b pb-2 flex justify-between">
                   <div>
                     <p className="text-gray-700 font-medium">{sale.code}</p>
-                    <p className="text-sm text-gray-500">{sale.date_time_of_sale}</p>
+                    <p className="text-sm text-gray-500">
+                      {moment(sale.date_time_of_sale).format("MMM D, YY h:mma")}
+                    </p>
                   </div>
                   <p className="text-sm font-semibold text-gray-700">₱ {sale.total_amount}</p>
                 </li>
@@ -408,7 +411,9 @@ const Dashboard = () => {
                 <li key={restock.id} className="border-b pb-2 flex justify-between">
                   <div>
                     <p className="text-gray-700 font-medium">{restock.name}</p>
-                    <p className="text-sm text-gray-500">{restock.restock_date}</p>
+                    <p className="text-sm text-gray-500">
+                      {moment(restock.restock_date).format("MMM D, YY h:mma")}
+                    </p>
                   </div>
                   <p className="text-sm font-semibold text-gray-700">₱ {restock.price}</p>
                 </li>
@@ -431,7 +436,9 @@ const Dashboard = () => {
                 <li key={expense.id} className="border-b pb-2 flex justify-between">
                   <div>
                     <p className="text-gray-700 font-medium">{expense.expense_name}</p>
-                    <p className="text-sm text-gray-500">{expense.date_time_of_expense}</p>
+                    <p className="text-sm text-gray-500">
+                      {moment(expense.date_time_of_expense).format("MMM D, YY h:mma")}
+                    </p>
                   </div>
                   <p className="text-sm font-semibold text-gray-700">₱ {expense.amount}</p>
                 </li>
@@ -454,7 +461,9 @@ const Dashboard = () => {
                 <li key={ret.id} className="border-b pb-2 flex justify-between">
                   <div>
                     <p className="text-gray-700 font-medium">{ret.code}</p>
-                    <p className="text-sm text-gray-500">{ret.date_time_returned}</p>
+                    <p className="text-sm text-gray-500">
+                      {moment(ret.date_time_returned).format("MMM D, YY h:mma")}
+                    </p>
                   </div>
                   <p className="text-sm font-semibold text-gray-700">₱ {ret.total_amount}</p>
                 </li>

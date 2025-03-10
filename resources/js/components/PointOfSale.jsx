@@ -252,7 +252,7 @@ const PointOfSale = () => {
         if (response.status === 200 || response.status === 201) {
             toastr.success("Sale confirmed successfully!"); 
 
-            Swal.fire("Success!", response.data.message, "success");
+            Swal.fire(response.data.code, response.data.message, "success");
 
             setProceedToPayment(false);
             setProducts([]);
@@ -514,6 +514,9 @@ const PointOfSale = () => {
               <LogOut size={20} className="mr-2" />
               Logout
             </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            
           </div>
           <div className="space-y-2 flex-1 border p-2 rounded-md">
             {products.length > 0 ? (

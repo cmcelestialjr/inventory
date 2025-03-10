@@ -441,30 +441,74 @@ const Sales = () => {
                                 <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Cashier</th>
                                 {/* <th className="border border-gray-300 px-4 py-2 text-left">Customer</th> */}
-                                <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
+                                {/* <th className="border border-gray-300 px-4 py-2 text-left">Cost</th> */}
                                 <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
                                 {/* <th className="border border-gray-300 px-4 py-2 text-left">No. of Items</th> */}
                                 <th className="border border-gray-300 px-4 py-2 text-left">Type of Payment</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sales.length > 0 ? (
                                 sales.map((sale, index) => (
-                                    <tr key={sale.id}>                 
+                                    <tr key={sale.id}>
                                         <td className="border border-gray-300 px-4 py-2">
                                             {moment(sale.date_time_of_sale).format("MMM D, YY h:mma")}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">{sale.code}</td>
                                         <td className="border border-gray-300 px-4 py-2">{sale.cashier_name}</td>
                                         {/* <td className="border border-gray-300 px-4 py-2">{sale.customer_name}</td> */}
-                                        <td className="border border-gray-300 px-4 py-2">{sale.total_cost}</td>
+                                        {/* <td className="border border-gray-300 px-4 py-2">{sale.total_cost}</td> */}
                                         <td className="border border-gray-300 px-4 py-2">{sale.total_amount}</td>
                                         {/* <td className="border border-gray-300 px-4 py-2">{sale.total_qty}</td> */}
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {sale.payment_options?.map((paymentOption, idx) => (
-                                                <div key={idx}>{paymentOption.payment_option_name} : {paymentOption.amount_paid}</div>
-                                            ))}
+                                            {sale.payment_options && sale.payment_options.length > 0 ? (
+                                                sale.payment_options?.map((paymentOption, idx) => (
+                                                    <div key={idx}>
+                                                        {/* Display payment_option_name and amount_paid */}
+                                                        {paymentOption.payment_option_name} : {paymentOption.amount_paid}
+
+                                                        {/* Display amount_change if it exists */}
+                                                        {paymentOption.amount_change !== undefined && paymentOption.amount_change !== null ? (
+                                                            paymentOption.amount_change > 0 ? (
+                                                                <div className="text-green-500">
+                                                                    Change: ${paymentOption.amount_change.toFixed(2)}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-red-500">
+                                                                    No Change
+                                                                </div>
+                                                            )
+                                                        ) : null}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="text-gray-500">Awaiting Payment</div>
+                                            )}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {/* Check sales_status_id and apply appropriate label and color */}
+                                            {sale.sales_status_id === 1 && (
+                                                <span className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full">
+                                                For Payment
+                                                </span>
+                                            )}
+                                            {sale.sales_status_id === 2 && (
+                                                <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full">
+                                                Paid
+                                                </span>
+                                            )}
+                                            {sale.sales_status_id === 3 && (
+                                                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full">
+                                                Transaction On-hold
+                                                </span>
+                                            )}
+                                            {sale.sales_status_id === 4 && (
+                                                <span className="px-3 py-1 bg-red-200 text-red-800 rounded-full">
+                                                Cancelled
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
                                             <button onClick={() => openSaleViewModal(sale)}

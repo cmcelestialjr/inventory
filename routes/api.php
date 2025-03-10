@@ -36,7 +36,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'store']);
-    Route::get('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);
+    Route::post('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);
     Route::get('/fetch-sales', [SaleController::class, 'fetch']);
     
     Route::get('/fetch-customers', [CustomerController::class, 'fetch']);
