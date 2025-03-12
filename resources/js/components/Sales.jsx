@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X } from "lucide-react";
+import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -37,6 +37,9 @@ const Sales = () => {
     const [isSaleViewModalOpen, setIsSaleViewModalOpen] = useState(false);
     const [selectedSaleView, setSelectedSaleView] = useState(null);
     const [saleId, setSaleId] = useState(null);
+    const [salesStatuses, setSalesStatuses] = useState([]);
+    const [selectedSaleStatus, setSelectedSaleStatus] = useState("all");
+    const [totalSales, setTotalSales] = useState(0);
     const didFetch = useRef(false);
 
     const openSaleViewModal = (sale) => {
@@ -62,6 +65,7 @@ const Sales = () => {
         new Date(),
     ]);
     const [startDate, endDate] = dateRange;
+
     const getLocalDateTime = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -90,33 +94,68 @@ const Sales = () => {
     useEffect(() => {
         if (didFetch.current) return;
         didFetch.current = true;
+    
         const authToken = localStorage.getItem("token");
-        axios.get("/api/fetch-payment-options",{
-                headers: { Authorization: `Bearer ${authToken}` },
-            }) 
-            .then(response => {
-                if (response.data.success) {
-                    setAvailablePaymentOptions(response.data.data);
-                } else {
-                    toastr.error("Failed to load payment options.");
-                }
-            })
-            .catch(error => {
-                toastr.error("Cant fetch payment options. Please refresh page.");
-            });
+        
+        axios.get("/api/fetch-payment-options", {
+            headers: { Authorization: `Bearer ${authToken}` },
+        })
+        .then(response => {
+            if (response.data.success) {
+                setAvailablePaymentOptions(response.data.data);
+            } else {
+                toastr.error("Failed to load payment options.");
+            }
+        })
+        .catch(error => {
+            toastr.error("Can't fetch payment options. Please refresh the page.");
+        });
     }, []);
 
-    useEffect(() => {
-        fetchSales();
-    }, [search, page, dateRange]);
+    useEffect(() => {    
+        const authToken = localStorage.getItem("token");
+        
+        // Format dates if they are valid
+        const formattedStartDate = startDate ? startDate.toISOString().split("T")[0] : null;
+        const formattedEndDate = endDate ? endDate.toISOString().split("T")[0] : null;
+    
+        // Fetch sales statuses with date range
+        axios.get("/api/fetch-sales-statuses", {
+            params: {
+                start_date: formattedStartDate,
+                end_date: formattedEndDate
+            },
+            headers: { Authorization: `Bearer ${authToken}` },
+        })
+        .then(response => {
+            if (response.data.success) {
+                const statuses = response.data.data;
+                setSalesStatuses(statuses);
+    
+                const total = statuses.reduce((sum, option) => sum + (option.sales_count || 0), 0);
+                setTotalSales(total);
+            } else {
+                toastr.error("Failed to load sales statuses.");
+            }
+        })
+        .catch(error => {
+            toastr.error("Can't fetch sales statuses. Please refresh the page.");
+        });
+    }, [startDate, endDate]);
+    
 
-    const fetchSales = async () => {
+    useEffect(() => {
+        fetchSales(selectedSaleStatus);
+    }, [search, page, dateRange, selectedSaleStatus]);
+
+    const fetchSales = async (filter) => {
         try {
             const authToken = localStorage.getItem("token");
             const response = await axios.get(`/api/sales`, {
                 params: {
-                    search,
-                    page,
+                    search: search,
+                    page: page,
+                    filter: filter,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
                     end_date: endDate ? endDate.toISOString().split("T")[0] : null
                 },
@@ -136,6 +175,42 @@ const Sales = () => {
 
     const handleEditSale = (sale) => {
         setSaleId(sale.id);
+        const updatedProducts = sale.products_list?.map((productList) => ({
+            id: productList.product_id,
+            name: productList.product_info.name,
+            totalCost: productList.total_cost,
+            cost: productList.cost,
+            price: productList.price,
+            discount: productList.discount_amount,
+            quantity: productList.qty,
+            amount: productList.amount,
+        }));
+        setProducts(updatedProducts);
+    
+        const updatedPayments = (sale.payment_options?.length > 0
+            ? sale.payment_options
+            : [{
+                payment_option_id: 1,
+                payment_option_name: "Cash",
+                amount: 0.00,
+                amount_paid: 0.00,
+                amount_change: 0.00
+            }]
+        ).map((paymentOption) => ({
+            payment_option_id: paymentOption.payment_option_id,
+            payment_option_name: paymentOption.payment_option_name,
+            amount: paymentOption.amount,
+            amount_paid: paymentOption.amount_paid,
+            amount_change: paymentOption.amount_change
+        }));
+        
+        
+        setNewSaleData({
+            ...newSaleData,
+            paymentOptions: updatedPayments,
+        });
+        
+        setIsNewSaleModalOpen(true);
     }
 
     const handleCustomerSearch = async (e) => {
@@ -366,6 +441,7 @@ const Sales = () => {
             if (response.status === 200 || response.status === 201) {
                 toastr.success("Sale confirmed successfully!"); 
                 setIsNewSaleModalOpen(false);
+                setSaleId(null);
                 setProducts([]);
                 setSelectedPrice(null);
                 setPriceOptions([]);
@@ -400,6 +476,62 @@ const Sales = () => {
         }
     };
 
+    const handleCloseModal = () => {
+        setIsNewSaleModalOpen(false);
+        setSaleId(null);
+        setProducts([]);
+        setSelectedPrice(null);
+        setPriceOptions([]);
+        setTotalAmount(0.00);
+        setStep(1);
+
+        setNewSaleData({
+            date_time_of_sale: getLocalDateTime(),
+            code: "",
+            cashier_name: "",
+            customer_name: "Default",
+            total_cost: 0.00,
+            total_price: 0.00,
+            total_qty: 0.00,
+            total_discount: 0.00,
+            total_amount: 0.00,
+            paymentOptions: [{
+                payment_option_id: 1,
+                payment_option_name: "Cash",
+                amount: 0.00,
+                amount_paid: 0.00,
+                amount_change: 0.00
+            }]
+        });
+    };
+
+    const handleSelectedSaleStatus = (salesStatus) => {
+        setSelectedSaleStatus(salesStatus);
+        setPage(1);
+        fetchSales(salesStatus);
+    };
+
+    const icons = [
+        (props) => <Repeat size={20} {...props} />, // For Payment
+        (props) => <ShoppingBag size={20} {...props} />, // Paid
+        (props) => <AlertTriangle size={20} {...props} />, // On-hold
+        (props) => <XCircle size={20} {...props} />, // Cancelled
+    ];
+    
+    const colors = [
+        "bg-blue-800", // For Payment
+        "bg-green-500", // Paid
+        "bg-yellow-500", // On-hold
+        "bg-red-500", // Cancelled
+    ];
+    
+    const textColors = [
+        "text-blue-800", // For Payment
+        "text-green-500", // Paid
+        "text-yellow-500", // On-hold
+        "text-red-500", // Cancelled
+    ];
+
     return (
         <Layout>
             <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto max-w-7xl mt-10">
@@ -412,6 +544,44 @@ const Sales = () => {
                     >
                         <Plus size={18} /> New Sale
                     </button>
+                </div>
+
+                {/* Summary Section (Sales Options) */}
+                <div className="grid grid-cols-5 gap-6 mb-8">
+                    <button
+                        onClick={() => handleSelectedSaleStatus("all")}
+                        className={`flex flex-col items-center p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedSaleStatus === "all" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Package size={24} className={`${selectedSaleStatus === "all" ? "text-white" : "text-blue-600"}`} />
+                        <span className="text-sm font-semibold">All Sales</span>
+                        <span className="text-lg font-bold">{totalSales}</span>
+                    </button>
+
+                    {salesStatuses.map((saleStatus, index) => {
+                        const buttonColor = colors[index % colors.length];
+                        const textColor = textColors[index % colors.length];
+                        const Icon = icons[index % icons.length];
+
+                        return (
+                            <button
+                                key={saleStatus.id}
+                                onClick={() => handleSelectedSaleStatus(saleStatus.id)}
+                                className={`flex flex-col items-center p-5 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                                    selectedSaleStatus === saleStatus.id 
+                                        ? `${buttonColor} text-white shadow-xl` 
+                                        : `bg-white border border-gray-300 hover:bg-gray-100`
+                                }`}
+                            >
+                                <Icon className={selectedSaleStatus === saleStatus.id ? "text-white" : textColor} />
+                                <span className="text-sm font-semibold">{saleStatus.name}</span>
+                                <span className="text-xl font-bold">
+                                    {saleStatus.sales_count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Filters */}
@@ -479,7 +649,7 @@ const Sales = () => {
                                                         {paymentOption.amount_change !== undefined && paymentOption.amount_change !== null ? (
                                                             paymentOption.amount_change > 0 ? (
                                                                 <div className="text-green-500">
-                                                                    Change: ${paymentOption.amount_change}
+                                                                    Change: {paymentOption.amount_change}
                                                                 </div>
                                                             ) : (
                                                                 <div className="text-red-500">
@@ -567,9 +737,11 @@ const Sales = () => {
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                     <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
                         <div className="flex justify-between">
-                            <h2 className="text-xl font-semibold">New Sale</h2>
+                            <h2 className="text-xl font-semibold">
+                                {saleId === null ? "New Sale" : "Update Sale"}
+                            </h2>
                             <button 
-                                onClick={() => setIsNewSaleModalOpen(false)} 
+                                onClick={handleCloseModal} 
                                 className="text-gray-500 hover:text-gray-700 transition"
                             >
                                 <X size={24} />

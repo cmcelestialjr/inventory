@@ -162,10 +162,11 @@ class ProductController extends Controller
 
         $checkProductPrice = ProductsPrice::where('product_id',$request->product_id)
             ->where('price',$request->price)
+            ->where('cost',$request->cost)
             ->first();
         if ($checkProductPrice) {
             return response()->json([
-                'message' => 'Price already exists.']);
+                'message' => 'Price and Cost already exists.']);
         }
 
         $user_id = $user->id;
@@ -230,6 +231,7 @@ class ProductController extends Controller
     {
         $checkProductPrice = ProductsPrice::where('product_id',$product_id)
             ->where('price',$request->price)
+            ->where('cost',$request->cost)
             ->first();
 
         if($checkProductPrice){

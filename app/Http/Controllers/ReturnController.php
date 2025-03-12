@@ -42,7 +42,7 @@ class ReturnController extends Controller
         if ($request->has('filter')){
             $filter = $request->filter;
             if($filter!="all"){
-                $query->orWhere('return_option_id', $filter);
+                $query->where('return_option_id', $filter);
             }
         }
 
@@ -103,7 +103,7 @@ class ReturnController extends Controller
             'customer_name' => 'required|string|max:255',
             'total_cost' => 'required|numeric|min:0',
             'total_price' => 'required|numeric|min:0',
-            'total_qty' => 'required|integer|min:0',
+            'total_qty' => 'required|numeric|min:0',
             'total_discount' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
             'changedTotalAmount' => 'required|numeric|min:0',
@@ -132,7 +132,7 @@ class ReturnController extends Controller
             'changedProducts.*.cost' => 'required|numeric|min:0',
             'changedProducts.*.price' => 'required|numeric|min:0',
             'changedProducts.*.discount' => 'required|numeric|min:0',
-            'changedProducts.*.quantity' => 'required|integer|min:1',
+            'changedProducts.*.quantity' => 'required|numeric|min:1',
             'changedProducts.*.amount' => 'required|numeric|min:0',
             'changedProducts.*.totalCost' => 'required|numeric|min:0',
         ]);
@@ -193,6 +193,7 @@ class ReturnController extends Controller
                 $customer_id = $getCustomer->customer_id;
                 $customer_name = $getCustomer->customer_name;
                 $code = $this->getCode();
+                
                 $sale = Sale::create([
                     'date_time_of_sale' => $validatedData['date_time_of_sale'],
                     'customer_id' => $customer_id,
@@ -207,7 +208,7 @@ class ReturnController extends Controller
                     'amount_change' => 0.00,
                     'cashier_id' => $cashier_id,
                     'cashier_name' => $cashier_name,
-                    'sales_status_id' => 1,
+                    'sales_status_id' => 2,
                     'updated_by' => $cashier_id,
                     'created_by' => $cashier_id
                 ]);

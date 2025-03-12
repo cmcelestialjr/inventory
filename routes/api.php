@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\UsersController;
 use App\Models\Returns;
 use Illuminate\Http\Request;
@@ -35,9 +36,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-products', [ProductController::class, 'fetch']);
 
     Route::get('/sales', [SaleController::class, 'index']);
-    Route::post('/sales-confirm', [SaleController::class, 'store']);
+    Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
     Route::post('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);
     Route::get('/fetch-sales', [SaleController::class, 'fetch']);
+    Route::get('/fetch-sales-statuses', [SaleController::class, 'salesStatuses']);
     
     Route::get('/fetch-customers', [CustomerController::class, 'fetch']);
     Route::get('/fetch-payment-options', [PaymentOptionController::class, 'fetch']);
@@ -57,4 +59,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/roles', [UsersController::class, 'roles']);
     Route::post('/users/store', [UsersController::class, 'store']);
     Route::put('/users/{id}', [UsersController::class, 'update']);
+
+    Route::get('/suppliers', [SuppliersController::class, 'index']);
+    Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
 });

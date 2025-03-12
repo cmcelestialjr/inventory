@@ -9,6 +9,8 @@ use App\Models\ProductsPrice;
 use App\Models\Sale;
 use App\Models\SalesPayment;
 use App\Models\SalesProduct;
+use App\Models\SalesStatus;
+use App\Services\SaleServices;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +18,13 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
+    protected $saleService;
+
+    public function __construct(SaleServices $saleService)
+    {
+        $this->saleService = $saleService;
+    }
+
     public function index(Request $request)
     {
         $query = Sale::with('paymentOptions.paymentOptionInfo','productsList.productInfo');
@@ -38,6 +47,14 @@ class SaleController extends Controller
             }
         }
 
+        if ($request->has('filter')){
+            $filter = $request->filter;
+            if($filter!="all"){
+                $query->where('sales_status_id', $filter);
+            }
+        }
+
+
         $sales = $query->orderByDesc('date_time_of_sale')->paginate(10);
 
         return response()->json([
@@ -51,6 +68,34 @@ class SaleController extends Controller
         ]);
     }
 
+    public function salesStatuses(Request $request)
+    {
+        try {
+            
+            $query = SalesStatus::withCount(['sales' => function ($q) use ($request) {
+                if ($request->has('start_date') && $request->has('end_date')) {
+                    $startDate = $request->start_date;
+                    $endDate = $request->end_date;                    
+                    $q->whereBetween(DB::raw('DATE(date_time_of_sale)'), [$startDate, $endDate]);
+                }
+            }]);
+            
+            $salesStatus = $query->orderBy('id','ASC')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $salesStatus
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch sales statuses',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function confirmSale(Request $request)
     {
         $validatedData = $request->validate([
@@ -59,7 +104,7 @@ class SaleController extends Controller
             'customer_name' => 'required|string|max:255',
             'total_cost' => 'required|numeric|min:0',
             'total_price' => 'required|numeric|min:0',
-            'total_qty' => 'required|integer|min:0',
+            'total_qty' => 'required|numeric|min:0',
             'total_discount' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
             'paymentOptions' => 'required|array|min:1',
@@ -74,7 +119,7 @@ class SaleController extends Controller
             'products.*.cost' => 'required|numeric|min:0',
             'products.*.price' => 'required|numeric|min:0',
             'products.*.discount' => 'required|numeric|min:0',
-            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.quantity' => 'required|numeric|min:1',
             'products.*.amount' => 'required|numeric|min:0',
             'products.*.totalCost' => 'required|numeric|min:0',
         ]);
@@ -91,83 +136,8 @@ class SaleController extends Controller
         try{
             DB::beginTransaction();
 
-            $user = Auth::user();
-            $cashier_name = $user->name;
-            $cashier_id = $user->id;
-            $code = $this->getCode();
-            $customer_id = $this->getCustomerId($validatedData['customer_name']);
-            
-            $sale = Sale::create([
-                'date_time_of_sale' => $validatedData['date_time_of_sale'],
-                'customer_id' => $customer_id,
-                'customer_name' => $validatedData['customer_name'],
-                'code' => $code,
-                'total_cost' => $validatedData['total_cost'],
-                'total_price' => $validatedData['total_price'],
-                'total_discount' => $validatedData['total_discount'],
-                'total_qty' => $validatedData['total_qty'],
-                'total_amount' => $validatedData['total_amount'],
-                'amount_paid' => 0.00,
-                'amount_change' => 0.00,
-                'cashier_id' => $cashier_id,
-                'sales_status_id' => 1,
-                'cashier_name' => $cashier_name,
-                'updated_by' => $cashier_id,
-                'created_by' => $cashier_id
-            ]);
-
-            foreach ($validatedData['paymentOptions'] as $payment) {
-                SalesPayment::create([
-                    'sale_id' => $sale->id,
-                    'payment_option_id' => $payment['payment_option_id'],
-                    'payment_option_name' => $payment['payment_option_name'],
-                    'amount' => $payment['amount'],
-                    'amount_paid' => $payment['amount_paid'],
-                    'amount_change' => $payment['amount_change'] >= 0 ? $payment['amount_change'] : 0.00,
-                    'updated_by' => $cashier_id,
-                    'created_by' => $cashier_id
-                ]);
-            }
-
-            // Save Products
-            foreach ($validatedData['products'] as $product) {
-                if($product['discount']>0){
-                    $discountPercentage = ($product['discount'] / $product['price']) * 100;
-
-                    $discountPercentage = round($discountPercentage);
-                }else{
-                    $discountPercentage = 0.00;
-                }
-
-                SalesProduct::create([
-                    'sale_id' => $sale->id,
-                    'sale_code' => $sale->code,
-                    'product_id' => $product['id'],
-                    'total_cost' => $product['totalCost'],
-                    'cost' => $product['cost'],
-                    'price' => $product['price'],
-                    'discount_amount' => $product['discount'],
-                    'discount_percentage' => $discountPercentage,
-                    'qty' => $product['quantity'],
-                    'amount' => $product['amount'],
-                    'updated_by' => $cashier_id,
-                    'created_by' => $cashier_id
-                ]);
-
-                $productPrice = ProductsPrice::where('product_id', $product['id'])
-                    ->where('price', $product['price'])
-                    ->where('cost', $product['cost'])
-                    ->first();
-
-                if ($productPrice) {
-                    $newQuantity = max(0, $productPrice->qty - $product['quantity']);
-
-                    $productPrice->update(['qty' => $newQuantity]);
-                }
-
-                $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
-                Product::where('id', $product['id'])->update(['qty' => $totalStock]);
-            }
+            $saleStatus = 2;
+            $this->saleService->insertSale($validatedData, $saleStatus);
 
             DB::commit();
             return response()->json(['message' => 'Sale confirmed successfully'], 200);
@@ -189,110 +159,8 @@ class SaleController extends Controller
         try{
             DB::beginTransaction();
 
-            $user = Auth::user();
-            $cashier_name = $user->name;
-            $cashier_id = $user->id;
-            $customer_id = $this->getCustomerId($validatedData['customer_name']);
-
-            $sale->update([
-                'date_time_of_sale' => $validatedData['date_time_of_sale'],
-                'customer_id' => $customer_id,
-                'customer_name' => $validatedData['customer_name'],
-                'total_cost' => $validatedData['total_cost'],
-                'total_price' => $validatedData['total_price'],
-                'total_discount' => $validatedData['total_discount'],
-                'total_qty' => $validatedData['total_qty'],
-                'total_amount' => $validatedData['total_amount'],
-                'amount_paid' => 0.00,
-                'amount_change' => 0.00,
-                'cashier_id' => $cashier_id,
-                'sales_status_id' => 1,
-                'cashier_name' => $cashier_name,
-                'updated_by' => $cashier_id,
-            ]);
-
-            foreach ($validatedData['paymentOptions'] as $payment) {
-                SalesPayment::updateOrCreate(
-                    [
-                        'sale_id' => $sale->id,
-                        'payment_option_id' => $payment['payment_option_id'],
-                    ],
-                    [
-                        'payment_option_name' => $payment['payment_option_name'],
-                        'amount' => $payment['amount'],
-                        'amount_paid' => $payment['amount_paid'],
-                        'amount_change' => $payment['amount_change'] >= 0 ? $payment['amount_change'] : 0.00,
-                        'updated_by' => $cashier_id,
-                        'created_by' => $cashier_id,
-                    ]
-                );
-            }
-
-            $salesProducts = SalesProduct::where('sale_id',$sale->id)->get();
-            if($salesProducts->count()>0){
-                foreach($salesProducts as $salesProduct){
-                    $productPrice = ProductsPrice::where('product_id', $salesProduct->product_id)
-                        ->where('price', $salesProduct->price)
-                        ->where('cost', $salesProduct->cost)
-                        ->first();
-
-                    if ($productPrice) {
-                        $newQuantity = max(0, $productPrice->qty + $salesProduct->qty);
-
-                        $productPrice->update(['qty' => $newQuantity]);
-                    }
-
-                    $totalStock = ProductsPrice::where('product_id', $salesProduct->product_id)->sum('qty');
-                    Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);
-                }
-            }
-            
-
-            // Save Products
-            foreach ($validatedData['products'] as $product) {
-                if($product['discount']>0){
-                    $discountPercentage = ($product['discount'] / $product['price']) * 100;
-
-                    $discountPercentage = round($discountPercentage);
-                }else{
-                    $discountPercentage = 0.00;
-                }
-
-                SalesProduct::updateOrCreate(
-                    [
-                        'sale_id' => $sale->id,
-                        'product_id' => $product['id'],
-                        'price' => $product['price'],
-                        'qty' => $product['quantity'],
-                        'amount' => $product['amount'],
-                    ],
-                    [
-                        'sale_code' => $sale->code,
-                        'total_cost' => $product['totalCost'],
-                        'cost' => $product['cost'],
-                        'discount_amount' => $product['discount'],
-                        'discount_percentage' => $discountPercentage,
-                        'updated_by' => $cashier_id,
-                        'created_by' => $cashier_id,
-                    ]
-                );
-
-                $productPrice = ProductsPrice::where('product_id', $product['id'])
-                    ->where('price', $product['price'])
-                    ->where('cost', $product['cost'])
-                    ->first();
-
-                if ($productPrice) {
-                    $newQuantity = max(0, $productPrice->qty - $product['quantity']);
-
-                    $productPrice->update(['qty' => $newQuantity]);
-                }
-
-                $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
-                Product::where('id', $product['id'])->update(['qty' => $totalStock]);
-            }
-
-
+            $saleStatus = 2;
+            $this->saleService->updateSale($sale,$validatedData, $saleStatus);
 
             DB::commit();
             return response()->json(['message' => 'Sale confirmed successfully'], 200);
@@ -314,7 +182,7 @@ class SaleController extends Controller
             'customer_name' => 'required|string|max:255',
             'total_cost' => 'required|numeric|min:0',
             'total_price' => 'required|numeric|min:0',
-            'total_qty' => 'required|integer|min:0',
+            'total_qty' => 'required|numeric|min:0',
             'total_discount' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
             'products' => 'required|array|min:1',
@@ -323,64 +191,17 @@ class SaleController extends Controller
             'products.*.cost' => 'required|numeric|min:0',
             'products.*.price' => 'required|numeric|min:0',
             'products.*.discount' => 'required|numeric|min:0',
-            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.quantity' => 'required|numeric|min:1',
             'products.*.amount' => 'required|numeric|min:0',
             'products.*.totalCost' => 'required|numeric|min:0',
         ]);
 
         try{
             DB::beginTransaction();
-
-            $user = Auth::user();
-            $cashier_name = $user->name;
-            $cashier_id = $user->id;
-            $code = $this->getCode();
-            $customer_id = $this->getCustomerId($validatedData['customer_name']);
             
-            $sale = Sale::create([
-                'date_time_of_sale' => $validatedData['date_time_of_sale'],
-                'customer_id' => $customer_id,
-                'customer_name' => $validatedData['customer_name'],
-                'code' => $code,
-                'total_cost' => $validatedData['total_cost'],
-                'total_price' => $validatedData['total_price'],
-                'total_discount' => $validatedData['total_discount'],
-                'total_qty' => $validatedData['total_qty'],
-                'total_amount' => $validatedData['total_amount'],
-                'amount_paid' => 0.00,
-                'amount_change' => 0.00,
-                'cashier_id' => $cashier_id,
-                'cashier_name' => $cashier_name,
-                'sales_status_id' => 2,
-                'updated_by' => $cashier_id,
-                'created_by' => $cashier_id
-            ]);
-
-            // Save Products
-            foreach ($validatedData['products'] as $product) {
-                if($product['discount']>0){
-                    $discountPercentage = ($product['discount'] / $product['price']) * 100;
-
-                    $discountPercentage = round($discountPercentage);
-                }else{
-                    $discountPercentage = 0.00;
-                }
-
-                SalesProduct::create([
-                    'sale_id' => $sale->id,
-                    'sale_code' => $sale->code,
-                    'product_id' => $product['id'],
-                    'total_cost' => $product['totalCost'],
-                    'cost' => $product['cost'],                
-                    'price' => $product['price'],
-                    'discount_amount' => $product['discount'],
-                    'discount_percentage' => $discountPercentage,
-                    'qty' => $product['quantity'],
-                    'amount' => $product['amount'],
-                    'updated_by' => $cashier_id,
-                    'created_by' => $cashier_id
-                ]);
-            }
+            $saleStatus = 1;
+            $getSale = $this->saleService->insertSale($validatedData, $saleStatus);
+            $code = $getSale->code;
 
             DB::commit();
             return response()->json([
@@ -411,27 +232,5 @@ class SaleController extends Controller
         $sales = $query->orderBy('date_time_of_sale','DESC')->limit(10)->get();
 
         return response()->json($sales);
-    }
-
-    private function getCode()
-    {
-        $today = now()->format('ymd');
-
-        $lastSaleToday = Sale::where('code', 'LIKE', "INV-$today-%")->orderByDesc('code')->first();
-
-        if ($lastSaleToday && preg_match('/INV-\d{6}-(\d+)/', $lastSaleToday->code, $matches)) {
-            $newSaleNumber = intval($matches[1]) + 1;
-        } else {
-            $newSaleNumber = 1;
-        }
-
-        $saleCode = "INV-$today-" . str_pad($newSaleNumber, 5, '0', STR_PAD_LEFT);
-
-        return $saleCode;
-    }
-    private function getCustomerId($customer_name)
-    {
-        $customer = Customer::firstOrCreate(['name' => $customer_name]);
-        return $customer->id;
-    }
+    }    
 }

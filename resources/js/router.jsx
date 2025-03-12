@@ -3,10 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './components/Dashboard';
-import Products from './components/Products';
 import Sales from './components/Sales';
+import Services from './components/Services';
 import Returns from './components/Returns';
 import Expenses from './components/Expenses';
+import Suppliers from './components/Suppliers';
+import Products from './components/Products';
 import UsersList from './components/UsersList';
 import PointOfSale from './components/PointOfSale';
 import Logout from './components/Logout';
@@ -29,10 +31,22 @@ function RouterApp() {
               <Sales />
             </ProtectedRoute>} 
         />
+        <Route path="/services" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Services />
+            </ProtectedRoute>} 
+        />
         <Route path="/returns" 
           element={
             <ProtectedRoute allowedRoles={["1"]}>
               <Returns />
+            </ProtectedRoute>} 
+        />
+        <Route path="/expenses" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Expenses />
             </ProtectedRoute>} 
         />
         <Route path="/products" 
@@ -41,10 +55,10 @@ function RouterApp() {
               <Products />
             </ProtectedRoute>} 
         />
-        <Route path="/expenses" 
+        <Route path="/suppliers" 
           element={
             <ProtectedRoute allowedRoles={["1"]}>
-              <Expenses />
+              <Suppliers />
             </ProtectedRoute>} 
         />
         <Route path="/users" 

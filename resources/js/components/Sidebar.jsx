@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Menu, 
         LayoutDashboard, 
         ShoppingCart,
+        Wrench,
         Undo,
         Boxes,
         Users, 
@@ -64,6 +65,17 @@ const Sidebar = () => {
             </li>
             <li>
               <Link 
+                to="/services"
+                className={`flex items-center p-2 rounded transition ${
+                  isActive("/services") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                <Wrench size={20} className="mr-2" />
+                Services
+              </Link>
+            </li>
+            <li>
+              <Link 
                 to="/returns"
                 className={`flex items-center p-2 rounded transition ${
                   isActive("/returns") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
@@ -71,6 +83,17 @@ const Sidebar = () => {
               >
                 <Undo size={20} className="mr-2" />
                 Returns
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/expenses" 
+                className={`flex items-center p-2 rounded transition ${
+                  isActive("/expenses") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                <Banknote size={20} className="mr-2" />
+                Expenses
               </Link>
             </li>
             <li>
@@ -84,7 +107,7 @@ const Sidebar = () => {
                 Products
               </Link>
             </li>
-            {/* <li>
+            <li>
               <Link 
                 to="/suppliers" 
                 className={`flex items-center p-2 rounded transition ${
@@ -94,18 +117,7 @@ const Sidebar = () => {
                 <Truck size={20} className="mr-2" />
                 Suppliers
               </Link>
-            </li> */}
-            <li>
-              <Link 
-                to="/expenses" 
-                className={`flex items-center p-2 rounded transition ${
-                  isActive("/expenses") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-                }`}
-              >
-                <Banknote size={20} className="mr-2" />
-                Expenses
-              </Link>
-            </li>
+            </li>            
             <li>
               <Link 
                 to="/users" 
