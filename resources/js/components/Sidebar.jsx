@@ -4,6 +4,7 @@ import { Menu,
         LayoutDashboard, 
         ShoppingCart,
         Wrench,
+        ClipboardList,
         Undo,
         Boxes,
         Users, 
@@ -64,14 +65,14 @@ const Sidebar = () => {
               </Link>
             </li>
             <li>
-              <Link 
-                to="/services"
+              <Link
+                to="/serviceTransactions"
                 className={`flex items-center p-2 rounded transition ${
-                  isActive("/services") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  isActive("/serviceTransactions") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
                 }`}
               >
-                <Wrench size={20} className="mr-2" />
-                Services
+                <ClipboardList size={20} className="mr-2" />
+                Service Transactions
               </Link>
             </li>
             <li>
@@ -105,6 +106,17 @@ const Sidebar = () => {
               >
                 <Boxes size={20} className="mr-2" />
                 Products
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/services"
+                className={`flex items-center p-2 rounded transition ${
+                  isActive("/services") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                <Wrench size={20} className="mr-2" />
+                Services
               </Link>
             </li>
             <li>

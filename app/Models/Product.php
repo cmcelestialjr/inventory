@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -15,9 +16,14 @@ class Product extends Model
     protected $fillable = [
         'code', 
         'name', 
+        'variant',
+        'name_variant',
         'cost',
         'price',
         'qty',
+        'restock_date',
+        'product_status',
+        'product_category_id',
         'updated_by',
         'created_by',
     ];
@@ -41,5 +47,8 @@ class Product extends Model
     {
         return $this->hasMany(ProductsPrice::class, 'product_id', 'id')->where('qty','>',0)->orderBy('effective_date','ASC')->orderBy('id','ASC');
     }
-
+    public function productCategory(): BelongsTo
+    {
+        return $this->belongsTo(ProductsCategory::class, 'product_category_id', 'id');
+    }
 }

@@ -19,6 +19,7 @@ const Products = () => {
   const [editErrors, setEditErrors] = useState({});
   const [pricingErrors, setPricingErrors] = useState({});
   const [filteredProducts, setFilteredProducts] = useState(products);
+  const [productCategories, setProductCategories] = useState({});
   const [filterType, setFilterType] = useState("all");
   const didFetch = useRef(false);
   const [summary, setSummary] = useState({
@@ -31,13 +32,17 @@ const Products = () => {
     id: "", 
     code: "", 
     name: "",
+    variant: "",
+    productCategoryId: "",
   });
   const [formData, setFormData] = useState({
     code: "",
     name: "",
+    variant: "",
     cost: "",
     price: "",
     qty: "",
+    productCategoryId: "",
     effective_date: null,
   });
   const [selectedPricing, setSelectedPricing] = useState({
@@ -67,8 +72,21 @@ const Products = () => {
         // console.error("Error fetching summary:", error);
       }
     };
+
+    const fetchProductCategories = async () => {
+      try {
+        const authToken = localStorage.getItem("token");
+        const response = await axios.get("/api/products/categories", {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        setProductCategories(response.data);
+      } catch (error) {
+        // console.error("Error fetching summary:", error);
+      }
+    };
   
     fetchSummary();
+    fetchProductCategories();
   }, []);
 
   const handleFilter = (filterType) => {
@@ -161,6 +179,7 @@ const Products = () => {
           setFormData({
             code: "",
             name: "",
+            variant: "",
             cost: "",
             price: "",
             qty: "",
@@ -183,6 +202,8 @@ const Products = () => {
       id: product.id,
       code: product.code,
       name: product.name,
+      variant: product.variant,
+      productCategoryId: product.product_category_id,
       pricingList: product.pricing_list || [],
     });
     setShowEditModal(true);
@@ -384,6 +405,7 @@ const Products = () => {
               <tr className="bg-gray-100 text-gray-700">
                 <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Variant</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Qty</th>
@@ -396,6 +418,7 @@ const Products = () => {
                   <tr key={product.id}>
                     <td className="border border-gray-300 px-4 py-2">{product.code}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.name}</td>
+                    <td className="border border-gray-300 px-4 py-2">{product.variant}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.cost}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.price}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.qty}</td>
@@ -482,6 +505,18 @@ const Products = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">Variant</label>
+                    <input
+                      type="text"
+                      name="variant"
+                      value={formData.variant}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.variant ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Cost</label>
                     <input
                       type="number"
@@ -493,6 +528,10 @@ const Products = () => {
                       }`}                      
                     />
                   </div>
+                  
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price</label>
                     <input
@@ -505,9 +544,6 @@ const Products = () => {
                       }`}                      
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Quantity</label>
                     <input
@@ -520,8 +556,33 @@ const Products = () => {
                       }`}                      
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Effective Date</label>
+                    <label className="block text-sm font-medium text-gray-700">Product Category:</label>
+                    <select
+                      name="productCategoryId"
+                      value={formData.productCategoryId}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none ${
+                        errors.productCategoryId ? "border-red-500" : "border-gray-300"
+                      }`}
+                      wrapperClassName={`w-full ${
+                        errors.productCategoryId ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Please select category...</option>
+                      {productCategories?.map((category) => (
+                        <option key={category.id} 
+                          value={category.id}>
+                            {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Effective Date:</label>
                     <DatePicker
                       selected={formData.effective_date}
                       onChange={handleDateChange}
@@ -593,6 +654,43 @@ const Products = () => {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Variant</label>
+                    <input
+                      type="text"
+                      name="variant"
+                      value={editFormData.variant}
+                      onChange={handleEditChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        editErrors.variant ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Product Category:</label>
+                    <select
+                      name="productCategoryId"
+                      value={editFormData.productCategoryId}
+                      onChange={handleEditChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none ${
+                        editErrors.productCategoryId ? "border-red-500" : "border-gray-300"
+                      }`}
+                      wrapperClassName={`w-full ${
+                        editErrors.productCategoryId ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Please select category...</option>
+                      {productCategories?.map((category) => (
+                        <option key={category.id} 
+                          value={category.id}>
+                            {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-2 mt-4">
                   <button
                     type="submit"                    

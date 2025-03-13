@@ -4,11 +4,12 @@ import Login from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
-import Services from './components/Services';
+import ServiceTransactions from './components/ServiceTransactions';
 import Returns from './components/Returns';
 import Expenses from './components/Expenses';
-import Suppliers from './components/Suppliers';
 import Products from './components/Products';
+import Services from './components/Services';
+import Suppliers from './components/Suppliers';
 import UsersList from './components/UsersList';
 import PointOfSale from './components/PointOfSale';
 import Logout from './components/Logout';
@@ -31,10 +32,10 @@ function RouterApp() {
               <Sales />
             </ProtectedRoute>} 
         />
-        <Route path="/services" 
+        <Route path="/serviceTransactions" 
           element={
             <ProtectedRoute allowedRoles={["1"]}>
-              <Services />
+              <ServiceTransactions />
             </ProtectedRoute>} 
         />
         <Route path="/returns" 
@@ -53,6 +54,12 @@ function RouterApp() {
           element={
             <ProtectedRoute allowedRoles={["1"]}>
               <Products />
+            </ProtectedRoute>} 
+        />
+        <Route path="/services" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Services />
             </ProtectedRoute>} 
         />
         <Route path="/suppliers" 

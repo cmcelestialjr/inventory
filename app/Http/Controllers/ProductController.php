@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductsCategory;
 use App\Models\ProductsPrice;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -70,24 +71,35 @@ class ProductController extends Controller
         ]);
     }
 
+    public function categories()
+    {
+        $categories = ProductsCategory::get();
+
+        return response()->json($categories);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
             'code' => 'required|string|unique:products',
             'name' => 'required|string',
+            'variant' => 'required|string',
             'cost' => 'required|numeric',
+            'productCategoryId' => 'required|integer|exists:products_categories,id',
             'price' => 'required|numeric',
             'qty' => 'required|numeric',
             'effective_date' => 'required|date',
         ]);
 
+        $name_variant = "$request->name-$request->variant";
+
         $checkProductCodeAndName = Product::where('code',$request->code)
-            ->orWhere('name',$request->name)
+            ->orWhere('name_variant',$name_variant)
             ->select('id')
             ->first();
 
         if($checkProductCodeAndName){
-            return response()->json(['message' => 'Code or Name already exists!'], 201);
+            return response()->json(['message' => 'Code or Name Variant already exists!'], 201);
         }
 
         $user = Auth::user();
@@ -101,9 +113,12 @@ class ProductController extends Controller
         $insert = new Product;
         $insert->code = $request->code;
         $insert->name = $request->name;
+        $insert->variant = $request->variant;
+        $insert->name_variant = $name_variant;
         $insert->cost = $request->cost;
         $insert->price = $request->price;
         $insert->qty = $request->qty;
+        $insert->product_category_id = $request->productCategoryId;
         $insert->updated_by = $user_id;
         $insert->created_by = $user_id;
         $insert->save();
@@ -134,11 +149,30 @@ class ProductController extends Controller
         $request->validate([
             'code' => 'required|string|max:255',
             'name' => 'required|string|max:255',
+            'variant' => 'required|string|max:255',
+            'productCategoryId' => 'required|integer|exists:products_categories,id',
         ]);
+
+        $name_variant = "$request->name-$request->variant";
+
+        $checkProductCodeAndName = Product::where('id','<>',$id)
+            ->where(function ($query) use ($request, $name_variant) {
+                $query->where('code', $request->code)
+                ->orWhere('name_variant', $name_variant);
+            })        
+            ->select('id')
+            ->first();
+
+        if($checkProductCodeAndName){
+            return response()->json(['message' => 'Code or Name Variant already exists!'], 201);
+        }
 
         $product->update([
             'code' => $request->code,
             'name' => $request->name,
+            'variant' => $request->variant,
+            'name_variant' => $name_variant,
+            'product_category_id' => $request->productCategoryId,
         ]);
 
         // $this->productPrice($user_id,$id,$request);
@@ -234,7 +268,7 @@ class ProductController extends Controller
             ->where('cost',$request->cost)
             ->first();
 
-        if($checkProductPrice){
+        if($checkProductPrice){                                                                                                                  
             $insert = ProductsPrice::find($checkProductPrice->id);
         }else{
             $insert = new ProductsPrice;

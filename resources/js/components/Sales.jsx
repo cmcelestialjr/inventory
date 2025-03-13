@@ -341,7 +341,7 @@ const Sales = () => {
             Swal.fire("Voided!", `"${product.name}" has been voided.`, "success");
           }
         });
-    };      
+    };
 
     useEffect(() => {
         const total = parseFloat((Number(price) * Number(quantity) - Number(discount) * Number(quantity)).toFixed(2));
@@ -626,7 +626,7 @@ const Sales = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {sales.length > 0 ? (
+                            {sales?.length > 0 ? (
                                 sales.map((sale, index) => (
                                     <tr key={sale.id}>
                                         <td className="border border-gray-300 px-4 py-2">
@@ -790,7 +790,7 @@ const Sales = () => {
                                                             className="p-2 cursor-pointer hover:bg-gray-200"
                                                             onClick={() => handleSelectProduct(product)}
                                                         >
-                                                            {product.name}
+                                                            {product.name_variant}
                                                         </li>
                                                     ))}
                                                 </ul>

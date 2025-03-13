@@ -134,7 +134,7 @@ class SuppliersController extends Controller
             ]);
 
             DB::commit();
-            return response()->json(['message' => 'Successful! New supplier saved..'], 200);
+            return response()->json(['message' => 'Successful! Updated supplier saved..'], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();

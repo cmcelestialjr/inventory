@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\UsersController;
 use App\Models\Returns;
@@ -31,6 +32,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/products/store', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::get('/products/summary', [ProductController::class, 'summary']);
+    Route::get('/products/categories', [ProductController::class, 'categories']);
     Route::put('/product-pricing/{id}', [ProductController::class, 'updatePricing']);
     Route::post('/product-pricing', [ProductController::class, 'storePricing']);
     Route::get('/fetch-products', [ProductController::class, 'fetch']);
@@ -62,4 +64,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
+
+    Route::get('/services', [ServicesController::class, 'index']);
+    Route::post('/services/manage', [ServicesController::class, 'manage']);
 });

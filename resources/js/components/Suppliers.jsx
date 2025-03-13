@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
-import Swal from "sweetalert2";
-import moment from "moment";
+import { Edit, Plus, X, } from "lucide-react";
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 const Suppliers = () => {
@@ -22,8 +19,12 @@ const Suppliers = () => {
     const [contactNo, setContactNo] = useState(null);
     const [email, setEmail] = useState(null);
     const [status, setStatus] = useState("Active");
+    const didFetch = useRef(false);
 
     useEffect(() => {
+        if (didFetch.current) return;
+        didFetch.current = true;
+
         fetchSuppliers(selectedSupplierStatus);
     }, [search, page, selectedSupplierStatus]);
 
@@ -172,7 +173,7 @@ const Suppliers = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {suppliers.length > 0 ? (
+                            {suppliers?.length > 0 ? (
                                 suppliers.map((supplier, index) => (
                                     <tr key={supplier.id}>
                                         <td className="border border-gray-300 px-4 py-2">
