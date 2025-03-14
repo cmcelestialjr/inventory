@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X } from "lucide-react";
+import { Edit, Eye, Plus, X, CheckCircle, XCircle } from "lucide-react";
 import Swal from "sweetalert2";
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
@@ -31,19 +31,32 @@ const Services = () => {
     const [productCost, setProductCost] = useState(0);
     const [productQty, setProductQty] = useState(0);
     const [productTotalCost, setProductTotalCost] = useState(0);
+    const [selectedStatus, setSelectedStatus] = useState("Available");
+    const [totalAvailable, setTotalAvailable] = useState(0);
+    const [totalUnavailable, setTotalUnavailable] = useState(0);
     const [step, setStep] = useState(1);
     const didFetch = useRef(false);
     
     useEffect(() => {
-        if (didFetch.current) return;
-        didFetch.current = true;
-
+        // if (didFetch.current) return;
+        // didFetch.current = true;
         fetchServices(selectedServiceStatus);
     }, [search, page, selectedServiceStatus]);
+
+    useEffect(() => {
+        fetchStatusTotal();
+    }, [search]);
+    
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setPage(1);
+    };
+
+    const handleSelectedStatus = (salesStatus) => {
+        setSelectedStatus(salesStatus);
+        setPage(1);
+        fetchServices(salesStatus);
     };
 
     const fetchServices = async (filter) => {
@@ -59,6 +72,24 @@ const Services = () => {
             });
             setServices(response.data.data);
             setMeta(response.data.meta);
+        } catch (error) {
+            // console.error("Error fetching services:", error);
+        }
+    };
+
+    const fetchStatusTotal = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            const response = await axios.get(`/api/services/statusTotal`, {
+                params: {
+                    search: search,
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            const { totalAvailableResponse, totalUnavailableResponse } = response.data;
+
+            setTotalAvailable(totalAvailableResponse);
+            setTotalUnavailable(totalUnavailableResponse);
         } catch (error) {
             // console.error("Error fetching services:", error);
         }
@@ -150,7 +181,7 @@ const Services = () => {
         setProductTotalCost(0);
     };
 
-    const handleRemoveProduct = (product, index) => {
+    const handleRemoveProduct = async (product, index) => {
         
         Swal.fire({
             title: `Remove ${product.name}?`,
@@ -160,14 +191,29 @@ const Services = () => {
             confirmButtonColor: "#d33",
             cancelButtonColor: "#6c757d",
             confirmButtonText: "Yes, remove it!",
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
                 if(serviceId!=null){
-
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/services/removeProduct", {
+                            params: { id: product.id },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Product deleted successfully.') {
+                            setProductsSelected((prevProducts) => prevProducts.filter((_, i) => i !== index));
+                            Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
+                        }
+                    } catch (error) {
+                        // console.error("Error fetching products:", error);
+                        Swal.fire("Error", "An error occurred while deleting the product.", "error");
+                    }
+                }else{
+                    setProductsSelected(productsList.filter((_, i) => i !== index));
+                    Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
                 }
-                setProductsSelected(productsList.filter((_, i) => i !== index));
-                
-                Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
             }
         });
     };
@@ -213,6 +259,7 @@ const Services = () => {
                 setEstimateDuration(null);
                 setRemarks(null);
                 setProductsSelected([]);
+                setStep(1);
                 setIsServiceModalOpen(false);
                 fetchServices();
             }else{
@@ -234,16 +281,30 @@ const Services = () => {
         setEstimateDuration(null);
         setRemarks(null);
         setProductsSelected([]);
+        setStep(1);
         setIsServiceModalOpen(true);
     };
 
     const handleServiceEdit = (service) => {
         setServiceId(service.id);
         setServiceName(service.name);
-        setServicePrice(service.contact_person);
-        setLaborCost(service.contact_no);
-        setDiscount(service.discount_address);
+        setServicePrice(service.price);
+        setLaborCost(service.labor_cost);
+        setDiscount(service.discount);
         setStatus(service.service_status);
+        setEstimateDuration(service.estimate_duration);
+        setRemarks(service.remarks);
+        setStep(1);
+        const products = service.products.map(product => ({
+            id: product.id,
+            name: product.product.name_variant,
+            cost: product.product.cost,
+            qty: product.qty,
+            total: product.product.cost * product.qty
+        }));
+    
+        setProductsSelected(prevProducts => [...prevProducts, ...products]);
+
         setIsServiceModalOpen(true);
     };
 
@@ -257,6 +318,7 @@ const Services = () => {
         setEstimateDuration(null);
         setRemarks(null);
         setProductsSelected([]);
+        setStep(1);
         setIsServiceModalOpen(false);
     };
 
@@ -271,6 +333,31 @@ const Services = () => {
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
                     >
                         <Plus size={18} /> New Service
+                    </button>
+                </div>
+
+                {/* Summary Section (Sales Options) */}
+                <div className="grid grid-cols-5 gap-6 mb-8">
+                    <button
+                        onClick={() => handleSelectedStatus("Available")}
+                        className={`flex flex-col items-center p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedStatus === "Available" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <CheckCircle size={24} className={`${selectedStatus === "Available" ? "text-white" : "text-blue-600"}`} />
+                        <span className="text-sm font-semibold">Available</span>
+                        <span className="text-lg font-bold">{totalAvailable}</span>
+                    </button>
+
+                    <button
+                        onClick={() => handleSelectedStatus("Unavailable")}
+                        className={`flex flex-col items-center p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedStatus === "Unavailable" ? "bg-red-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <XCircle size={24} className={`${selectedStatus === "Unavailable" ? "text-white" : "text-red-600"}`} />
+                        <span className="text-sm font-semibold">Unavailable</span>
+                        <span className="text-lg font-bold">{totalUnavailable}</span>
                     </button>
                 </div>
 

@@ -67,4 +67,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/services', [ServicesController::class, 'index']);
     Route::post('/services/manage', [ServicesController::class, 'manage']);
+    Route::get('/services/removeProduct', [ServicesController::class, 'removeProduct']);
+    Route::get('/services/statusTotal', [ServicesController::class, 'statusTotal']);
 });

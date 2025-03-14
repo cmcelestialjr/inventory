@@ -41,7 +41,45 @@ class ServicesController extends Controller
             ]
         ]);
     }
+    public function statusTotal(Request $request)
+    {
+        $totals = DB::table('services')
+                ->select('service_status', DB::raw('count(*) as total'));
 
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $totals->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                ->orWhere('price', 'LIKE', "%{$search}%")
+                ->orWhere('estimate_duration', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $totals = $totals->groupBy('service_status')
+                ->get();
+
+        $totalAvailable = $totals->firstWhere('service_status', 'Available')->total ?? 0;
+        $totalUnavailable = $totals->firstWhere('service_status', 'Unavailable')->total ?? 0;
+
+        return response()->json([
+            'totalAvailableResponse' => $totalAvailable,
+            'totalUnavailableResponse' => $totalUnavailable,
+        ]);
+    }
+    public function removeProduct(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|integer|exists:services_products,id',
+        ]);
+
+        $deleted = ServicesProduct::where('id', $validatedData['id'])->delete();
+
+        if ($deleted) {
+            return response()->json(['message' => 'Product deleted successfully.'], 200);
+        } else {
+            return response()->json(['message' => 'Product not found.'], 404);
+        }
+    }
     public function manage(Request $request)
     {
         if($request->serviceId==null){
