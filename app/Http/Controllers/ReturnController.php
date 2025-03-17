@@ -340,11 +340,7 @@ class ReturnController extends Controller
 
         $lastSaleToday = Sale::where('code', 'LIKE', "INV-$today-%")->orderByDesc('code')->first();
 
-        if ($lastSaleToday && preg_match('/INV-\d{6}-(\d+)/', $lastSaleToday->code, $matches)) {
-            $newSaleNumber = intval($matches[1]) + 1;
-        } else {
-            $newSaleNumber = 1;
-        }
+        $newSaleNumber = $lastSaleToday && preg_match('/INV-\d{6}-(\d+)/', $lastSaleToday->code, $matches) ? intval($matches[1]) + 1 : 1;
 
         $saleCode = "INV-$today-" . str_pad($newSaleNumber, 5, '0', STR_PAD_LEFT);
 
@@ -357,11 +353,7 @@ class ReturnController extends Controller
 
         $lastSaleToday = Returns::where('code', 'LIKE', "RTN-$today-%")->orderByDesc('code')->first();
 
-        if ($lastSaleToday && preg_match('/RTN-\d{6}-(\d+)/', $lastSaleToday->code, $matches)) {
-            $newSaleNumber = intval($matches[1]) + 1;
-        } else {
-            $newSaleNumber = 1;
-        }
+        $newSaleNumber = $lastSaleToday && preg_match('/RTN-\d{6}-(\d+)/', $lastSaleToday->code, $matches) ? intval($matches[1]) + 1 : 1;
 
         $saleCode = "RTN-$today-" . str_pad($newSaleNumber, 5, '0', STR_PAD_LEFT);
 

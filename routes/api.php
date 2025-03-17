@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ServicesController;
+use App\Http\Controllers\ServiceTransactionsController;
 use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\UsersController;
 use App\Models\Returns;
@@ -69,4 +70,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/services/manage', [ServicesController::class, 'manage']);
     Route::get('/services/removeProduct', [ServicesController::class, 'removeProduct']);
     Route::get('/services/statusTotal', [ServicesController::class, 'statusTotal']);
+    Route::get('/fetch-services', [ServicesController::class, 'fetch']);
+    
+    Route::get('/serviceTransactions', [ServiceTransactionsController::class, 'index']);
+    
 });

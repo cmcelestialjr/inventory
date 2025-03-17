@@ -66,6 +66,19 @@ class ServicesController extends Controller
             'totalUnavailableResponse' => $totalUnavailable,
         ]);
     }
+    public function fetch(Request $request)
+    {
+        $query = Service::with('products.product');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where('name', 'LIKE', "%{$search}%");
+        }
+
+        $services = $query->limit(10)->get();
+
+        return response()->json($services);
+    }
     public function removeProduct(Request $request)
     {
         $validatedData = $request->validate([

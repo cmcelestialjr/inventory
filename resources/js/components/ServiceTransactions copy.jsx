@@ -19,7 +19,6 @@ const TransactionTransactions = () => {
     const [selectedTransactionStatus, setSelectedTransactionStatus] = useState("all");
     const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("all");
     const [step, setStep] = useState(1);
-    const didFetch = useRef(false);
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
     
     const [searchService, setSearchService] = useState(null);
@@ -32,7 +31,6 @@ const TransactionTransactions = () => {
     const [servicePrice, setServicePrice] = useState(0);
     const [laborCost, setLaborCost] = useState(0);
     const [discount, setDiscount] = useState(0);
-    const [amountToPaid, setAmountToPaid] = useState(0);
 
     const [productsList, setProductsList] = useState([]);
     const [productsSelected, setProductsSelected] = useState([]);    
@@ -44,45 +42,15 @@ const TransactionTransactions = () => {
     const [productQty, setProductQty] = useState(0);
     const [productTotalCost, setProductTotalCost] = useState(0);
 
-    const [searchCustomer, setSearchCustomer] = useState("");
-    const [showDropdownCustomers, setShowDropdownCustomers] = useState(false);
-    const [customers, setCustomers] = useState([]);
-    const [customerId, setCustomerId] = useState(null);
-    const [customerName, setCustomerName] = useState(null);
-    const [customerContactNo, setCustomerContactNo] = useState(null);
-    const [customerEmail, setCustomerEmail] = useState(null);
-    const [customerAddress, setCustomerAddress] = useState(null);
+    const [searchCustomer, setSearchCustomer] = useEffect("");
+    const [showDropdownCustomers, setShowDropdownCustomers] = useEffect(false);
+    const [customers, setCustomers] = useEffect([]);
+    const [customerId, setCustomerId] = useEffect(null);
+    const [customerName, setCustomerName] = useEffect(null);
+    const [customerContactNo, setCustomerContactNo] = useEffect(null);
+    const [customerEmail, setCustomerEmail] = useEffect(null);
+    const [customerAddress, setCustomerAddress] = useEffect(null);
     
-    const [availablePaymentOptions, setAvailablePaymentOptions] = useState([]);
-    const [paymentOptions, setPaymentOptions] = useState([
-        {
-            payment_option_id: 1,
-            payment_option_name: "Cash",
-            amount_paid: 0.00
-        }
-    ]);
-
-    useEffect(() => {
-        if (didFetch.current) return;
-        didFetch.current = true;
-    
-        const authToken = localStorage.getItem("token");
-        
-        axios.get("/api/fetch-payment-options", {
-            headers: { Authorization: `Bearer ${authToken}` },
-        })
-        .then(response => {
-            if (response.data.success) {
-                setAvailablePaymentOptions(response.data.data);
-            } else {
-                toastr.error("Failed to load payment options.");
-            }
-        })
-        .catch(error => {
-            toastr.error("Can't fetch payment options. Please refresh the page.");
-        });
-    }, []);
-
     useEffect(() => {
         fetchTransactions(selectedTransactionStatus);
     }, [search, page, dateRange, selectedTransactionStatus]);
@@ -164,7 +132,6 @@ const TransactionTransactions = () => {
         setSearchService(e.name);
         setServiceId(e.id);
         setServicePrice(e.price);
-        setAmountToPaid(Number(e.price)-Number(e.discount));
         setLaborCost(e.labor_cost);
         setDiscount(e.discount);
         const productsData = e.products.map(product => ({
@@ -276,7 +243,6 @@ const TransactionTransactions = () => {
 
     const handleCustomerSearch = async (e) => {
         const query = e.target.value;
-        setSearchCustomer(query);
         if (query.length > 1) {
             try {
                 const authToken = localStorage.getItem("token");
@@ -302,40 +268,7 @@ const TransactionTransactions = () => {
         setCustomerContactNo(e.contact_no);
         setCustomerEmail(e.email);
         setCustomerAddress(e.address);
-        setShowDropdownCustomers(false);
     };
-
-    const handlePaymentChange = (idx, field, id, value) => {
-        let updatedPayments = [...paymentOptions];
-    
-        if (field === "payment_option_name") {
-            updatedPayments[idx][field] = value;
-            updatedPayments[idx]["payment_option_id"] = id; 
-        } else {
-            updatedPayments[idx][field] = parseFloat(value) || 0;
-        }
-
-        setPaymentOptions(updatedPayments);
-    };
-
-    const addPaymentOption = () => {
-        let totalPaid = paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0);
-        
-        // Prevent adding a new option if totalPaid >= totalAmount
-        if (totalPaid >= amountToPaid) return;
-        
-        let updatedPayments = [...paymentOptions];
-        updatedPayments.push({
-            payment_option_id: 1,
-            payment_option_name: "Cash",
-            amount_paid: 0.00
-        });
-    
-        setPaymentOptions(updatedPayments);
-    };
-
-    // Check if total amount is fully covered
-    const isFullyPaid = paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0) >= amountToPaid;  
 
     const handleSubmit = () => {
 
@@ -550,10 +483,7 @@ const TransactionTransactions = () => {
                                                 <input
                                                     type="number"
                                                     value={servicePrice}
-                                                    onChange={(e) => { 
-                                                        setServicePrice(e.target.value);
-                                                        setAmountToPaid(Number(e.target.value)-Number(discount));
-                                                    }}
+                                                    onChange={(e) => setServicePrice(e.target.value)}
                                                     className="w-full p-2 border rounded"
                                                     placeholder="Service Price..."
                                                 />
@@ -579,10 +509,7 @@ const TransactionTransactions = () => {
                                                 <input
                                                     type="number"
                                                     value={discount}
-                                                    onChange={(e) => {
-                                                        setDiscount(e.target.value);
-                                                        setAmountToPaid(Number(servicePrice)-Number(e.target.value));
-                                                    }}
+                                                    onChange={(e) => setDiscount(e.target.value)}
                                                     className="w-full p-2 border rounded"
                                                     placeholder="Discount"
                                                 />
@@ -725,7 +652,7 @@ const TransactionTransactions = () => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
                                         {/* Customer Contact */}
                                         <div>
                                             <label className="block text-sm font-medium mt-2">Contact No:</label>
@@ -764,64 +691,6 @@ const TransactionTransactions = () => {
                                                     placeholder="Address..."
                                                 />
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-6 mt-4">
-                                        {/* Left Side - Form Inputs */}
-                                        <div className="space-y-4">
-                                            <label className="block text-sm font-medium text-gray-700">Payment Options:</label>
-                                            <div className="relative max-h-40 overflow-y-auto">
-                                                {paymentOptions.map((option, idx) => (
-                                                    <div key={idx} className="flex gap-2 mb-2 items-center">
-                                                        {/* Payment Type Dropdown */}
-                                                        <select
-                                                            value={JSON.stringify({ id: option.payment_option_id, name: option.payment_option_name })}
-                                                            onChange={(e) => {
-                                                                const selectedValue = JSON.parse(e.target.value);
-                                                                handlePaymentChange(idx, "payment_option_name", selectedValue.id, selectedValue.name);
-                                                            }}
-                                                            className="border px-3 py-2 rounded-lg flex-1"
-                                                        >
-                                                            {availablePaymentOptions.map((payment) => (
-                                                                <option key={payment.id} value={JSON.stringify({ id: payment.id, name: payment.name })}>
-                                                                    {payment.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-
-                                                        {/* Amount Paid */}
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Amount Paid"
-                                                            value={option.amount_paid}
-                                                            onChange={(e) => handlePaymentChange(idx, "amount_paid", e.target.value, e.target.value)}
-                                                            className="border px-3 py-2 rounded-lg flex-1"
-                                                        />
-                                                      
-                                                        {/* Remove Button (Only for index > 0) */}
-                                                        {idx > 0 && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    setPaymentOptions(paymentOptions.filter((_, i) => i !== idx));
-                                                                }}
-                                                                className="text-red-600 hover:text-red-800"
-                                                            >
-                                                                ❌
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* Disable the Add Payment Option button if total is fully paid */}
-                                            <button 
-                                                onClick={addPaymentOption}
-                                                className={`mt-2 ${isFullyPaid ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:underline"}`}
-                                                disabled={isFullyPaid}
-                                            >
-                                                + Add Payment Option
-                                            </button>
                                         </div>
                                     </div>
 
