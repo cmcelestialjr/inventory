@@ -100,6 +100,9 @@ class SaleServices
     {
         if(isset($validatedData['paymentOptions'])){
             foreach ($validatedData['paymentOptions'] as $payment) {
+                $amount_change = $payment['amount_change'] >= 0 ? $payment['amount_change'] : 0.00;
+                $payment_status = $payment['payment_option_id']==4 ? 'Unpaid' : 'Paid';
+                $total_amount = $payment['payment_option_id']==4 ? 0 : $payment['amount_paid']-$amount_change;
                 SalesPayment::updateOrCreate(
                     [
                         'sale_id' => $sale_id,
@@ -109,12 +112,16 @@ class SaleServices
                         'payment_option_name' => $payment['payment_option_name'],
                         'amount' => $payment['amount'],
                         'amount_paid' => $payment['amount_paid'],
-                        'amount_change' => $payment['amount_change'] >= 0 ? $payment['amount_change'] : 0.00,
+                        'amount_change' => $amount_change,
+                        'total_amount' => $total_amount,
+                        'payment_status' => $payment_status,
                         'updated_by' => $cashier_id,
                         'created_by' => $cashier_id,
                     ]
                 );
             }
+            $totalAmount = SalesPayment::where('sale_id', $sale_id)->sum('total_amount');
+            Sale::where('id', $sale_id)->update(['total_amount' => $totalAmount]);
         }
     }
 

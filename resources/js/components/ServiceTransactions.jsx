@@ -29,10 +29,12 @@ const TransactionTransactions = () => {
 
     const [serviceTransactionId, setServiceTransactionId] = useState(null);
     const [serviceId, setServiceId] = useState(null);
+    const [serviceName, setServiceName] = useState(null);
     const [servicePrice, setServicePrice] = useState(0);
     const [laborCost, setLaborCost] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [amountToPaid, setAmountToPaid] = useState(0);
+    const [remarks, setRemarks] = useState(null);
 
     const [productsList, setProductsList] = useState([]);
     const [productsSelected, setProductsSelected] = useState([]);    
@@ -53,52 +55,83 @@ const TransactionTransactions = () => {
     const [customerEmail, setCustomerEmail] = useState(null);
     const [customerAddress, setCustomerAddress] = useState(null);
     
+    const [paymentStatus, setPaymentStatus] = useState(1);
+    const [availablePaymentStatuses, setAvailablePaymentStatuses] = useState([]);
     const [availablePaymentOptions, setAvailablePaymentOptions] = useState([]);
+
+    const formatDateTime = (dateString) => {
+        const formattedDate = moment(dateString);
+
+        if (!formattedDate.isValid()) {
+            return '';
+        }
+
+        return formattedDate.format("MMM D, YYYY h:mma");
+    };
     const [paymentOptions, setPaymentOptions] = useState([
         {
+            transaction_payment_id: null,
             payment_option_id: 1,
             payment_option_name: "Cash",
-            amount_paid: 0.00
+            amount_paid: 0.00,
+            date: new Date(),
         }
     ]);
 
     useEffect(() => {
-        if (didFetch.current) return;
+         if (didFetch.current) return;
         didFetch.current = true;
+        const fetchData = async () => {
+            try {
+                const authToken = localStorage.getItem("token");
     
-        const authToken = localStorage.getItem("token");
-        
-        axios.get("/api/fetch-payment-options", {
-            headers: { Authorization: `Bearer ${authToken}` },
-        })
-        .then(response => {
-            if (response.data.success) {
-                setAvailablePaymentOptions(response.data.data);
-            } else {
-                toastr.error("Failed to load payment options.");
+                const paymentOptionsResponse = await axios.get("/api/fetch-payment-options", {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+    
+                if (paymentOptionsResponse.data.success) {
+                    setAvailablePaymentOptions(paymentOptionsResponse.data.data.filter(option => option.id !== 4));
+                } else {
+                    toastr.error("Failed to load payment options.");
+                }
+    
+                const paymentStatusesResponse = await axios.get("/api/fetch-payment-statuses", {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+    
+                if (paymentStatusesResponse.data.success) {
+                    const statuses = paymentStatusesResponse.data.data;
+                    setAvailablePaymentStatuses(statuses);
+                    setPaymentStatus(statuses[0]?.id || 1);
+                } else {
+                    toastr.error("Failed to load payment statuses.");
+                }
+            } catch (error) {
+                toastr.error("Can't fetch data. Please refresh the page.");
             }
-        })
-        .catch(error => {
-            toastr.error("Can't fetch payment options. Please refresh the page.");
-        });
+        };
+    
+        fetchData();
     }, []);
+    
 
     useEffect(() => {
-        fetchTransactions(selectedTransactionStatus);
-    }, [search, page, dateRange, selectedTransactionStatus]);
+        fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
+    }, [search, page, dateRange, selectedTransactionStatus, selectedPaymentStatus]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setPage(1);
     };
 
-    const fetchTransactions = async (filterStatus) => {
+    const fetchTransactions = async (filterStatus,filterPayment) => {
         try {
             const authToken = localStorage.getItem("token");
-            const response = await axios.get(`/api/serviceTransactions`, {
+            const response = await axios.get(`/api/service-transactions`, {
                 params: {
                     search: search,
                     page: page,
+                    filterPayment: filterPayment,
                     filterStatus: filterStatus,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
                     end_date: endDate ? endDate.toISOString().split("T")[0] : null
@@ -118,25 +151,103 @@ const TransactionTransactions = () => {
 
     const handleServiceModal = (transaction) => {
         setIsTransactionModalOpen(true);
-        if(serviceTransactionId){
 
-        }else{
+        if(transaction && transaction.id){
+            setServiceTransactionId(transaction.id);
+            setServiceId(transaction.service_id);
+            setSearchService(transaction.service_name);
+            setServiceName(transaction.service_name);
+            setServicePrice(transaction.price);
+            setLaborCost(transaction.labor_cost);
+            setDiscount(transaction.discount);
+            setRemarks(transaction.remarks);
+            setProductsSelected(transaction.products);
+            setCustomerId(transaction.customer_id);
+            setCustomerName(transaction.customer_name);
+            setSearchCustomer(transaction.customer_name);
+            setCustomerContactNo(transaction.customer_info?.contact_no);
+            setCustomerEmail(transaction.customer_info?.email);
+            setCustomerAddress(transaction.customer_info?.address);
+            setPaymentStatus(transaction.payment_status_id);
+            setAmountToPaid(transaction.amount);
 
+            const updatedProducts = transaction.products?.map((productList) => ({
+                pid: productList.id,
+                id: productList.product_id,
+                name: productList.product_info.name,
+                cost: productList.cost,
+                qty: productList.qty,
+                total: productList.total,
+            }));
+            setProductsSelected(updatedProducts);
+
+            const updatedPayments = (transaction.payments?.length > 0
+                ? transaction.payments
+                : [{
+                    transaction_payment_id: null,
+                    payment_option_id: 1,
+                    payment_option_name: "Cash",
+                    amount: 0.00,
+                    payment_date: new Date()
+                }]
+            ).map((paymentOption) => {
+                const paymentDate = new Date(paymentOption.payment_date);
+
+                if (isNaN(paymentDate.getTime())) {
+                    paymentDate = new Date();
+                }
+
+                return {
+                    transaction_payment_id: paymentOption.id,
+                    payment_option_id: paymentOption.payment_option_id,
+                    payment_option_name: paymentOption.payment_option_name,
+                    amount_paid: paymentOption.amount,
+                    date: paymentDate
+                };
+            });
+            
+            setPaymentOptions(updatedPayments);
         }
     };
 
     const nextStep = () => {
-        // if (products.length === 0) {
-        //     toastr.error("Add at least one (1) product"); 
-        //     return;
-        // }
+        if (serviceId === null) {
+            toastr.error("Please select a service..."); 
+            return;
+        }
         setStep(step + 1);
     };
     const prevStep = () => setStep(step - 1);
 
     const handleServiceModalClose = () => {
         setServiceTransactionId(false);
-        setIsTransactionModalOpen(false);        
+        setSearchProduct("");
+        setSearchCustomer("");
+        setServiceId(null);
+        setServiceName(null);
+        setServicePrice(null);
+        setLaborCost(null);
+        setDiscount(0);
+        setRemarks(null);
+        setProductsSelected([]);
+        setCustomerId(null);
+        setCustomerName(null);
+        setCustomerContactNo(null);
+        setCustomerEmail(null);
+        setCustomerAddress(null);
+        setAmountToPaid(null);
+        setPaymentStatus(1);
+        setPaymentOptions([
+            {
+                transaction_payment_id: null,
+                payment_option_id: 1,
+                payment_option_name: "Cash",
+                amount_paid: 0.00,
+                date: new Date(),
+            }
+        ]);
+        setStep(1);
+        setIsTransactionModalOpen(false);
     };
 
     const handleServiceSearch = async (e) => {
@@ -160,21 +271,25 @@ const TransactionTransactions = () => {
         }
     };
 
-    const handleSelectService = (e) => {
-        setSearchService(e.name);
-        setServiceId(e.id);
-        setServicePrice(e.price);
-        setAmountToPaid(Number(e.price)-Number(e.discount));
-        setLaborCost(e.labor_cost);
-        setDiscount(e.discount);
-        const productsData = e.products.map(product => ({
+    const handleSelectService = (service) => {
+        setSearchService(service.name);
+        setServiceId(service.id);
+        setServiceName(service.name);
+        setServicePrice(service.price);
+        setAmountToPaid(Number(service.price)-Number(service.discount));
+        setLaborCost(service.labor_cost);
+        setDiscount(service.discount);
+        const productsData = service.products?.map(product => ({
+            pid: null,
             id: product.id,
             name: product.product.name_variant,
             cost: product.product.cost,
             qty: product.qty,
             total: product.product.cost * product.qty
         }));
-        setProductsSelected(prevProducts => [...prevProducts, ...productsData]);
+        if (productsData && productsData.length > 0) {
+            setProductsSelected(productsData);
+        }
         setShowDropdownServices(false);
         
     };
@@ -239,6 +354,7 @@ const TransactionTransactions = () => {
         }
 
         const newProduct = {
+            pid: null,
             id: productId,
             name: productName,
             cost: productCost,
@@ -257,7 +373,6 @@ const TransactionTransactions = () => {
     };
 
     const handleRemoveProduct = async (product, index) => {
-        
         Swal.fire({
             title: `Remove ${product.name}?`,
             text: `Are you sure you want to remove "${product.name}" costed at ${product.cost}? This action cannot be undone!`,
@@ -268,15 +383,73 @@ const TransactionTransactions = () => {
             confirmButtonText: "Yes, remove it!",
         }).then(async (result) => {
             if (result.isConfirmed) {
-                setProductsSelected(productsList.filter((_, i) => i !== index));
-                Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                if(product.pid!=null){
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/service-transactions/removeProduct", {
+                            params: { id: product.pid },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Product deleted successfully.') {
+                            setProductsSelected((prevProducts) => prevProducts.filter((_, i) => i !== index));
+                            Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
+                        }
+                    } catch (error) {
+                        // console.error("Error fetching products:", error);
+                        Swal.fire("Error", "An error occurred while removing the product.", "error");
+                    }
+                }else{
+                    setProductsSelected(productsList.filter((_, i) => i !== index));
+                    Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                }
             }
         });
+    };
+
+    const handleRemovePayment = async (option, idx) => {
+        Swal.fire({
+            title: `Remove ${option.payment_option_name}?`,
+            text: `Are you sure you want to remove payment "${option.payment_option_name}" costed at ${option.amount_paid} dated ${formatDateTime(option.date)}? This action cannot be undone!`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, remove it!",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+
+                if(option.transaction_payment_id!=null){
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/service-transactions/removePayment", {
+                            params: { id: option.transaction_payment_id },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Payment deleted successfully.') {
+                            setPaymentOptions(paymentOptions.filter((_, i) => i !== idx));
+                            Swal.fire("Removed!", `"${option.payment_option_name}" costed at ${option.amount_paid} has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
+                        }
+                    } catch (error) {
+                        // console.error("Error fetching products:", error);
+                        Swal.fire("Error", "An error occurred while removing the payment.", "error");
+                    }
+                }else{
+                    setPaymentOptions(paymentOptions.filter((_, i) => i !== idx));
+                    Swal.fire("Removed!", `"${option.payment_option_name}" costed at ${option.amount_paid} has been removed.`, "success");
+                }
+            }
+        });
+        
     };
 
     const handleCustomerSearch = async (e) => {
         const query = e.target.value;
         setSearchCustomer(query);
+        setCustomerName(query);
         if (query.length > 1) {
             try {
                 const authToken = localStorage.getItem("token");
@@ -311,6 +484,8 @@ const TransactionTransactions = () => {
         if (field === "payment_option_name") {
             updatedPayments[idx][field] = value;
             updatedPayments[idx]["payment_option_id"] = id; 
+        } else if (field === "date") {
+            updatedPayments[idx][field] = value;
         } else {
             updatedPayments[idx][field] = parseFloat(value) || 0;
         }
@@ -321,37 +496,124 @@ const TransactionTransactions = () => {
     const addPaymentOption = () => {
         let totalPaid = paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0);
         
-        // Prevent adding a new option if totalPaid >= totalAmount
         if (totalPaid >= amountToPaid) return;
         
         let updatedPayments = [...paymentOptions];
         updatedPayments.push({
+            transaction_payment_id: null,
             payment_option_id: 1,
             payment_option_name: "Cash",
-            amount_paid: 0.00
+            amount_paid: 0.00,
+            date: new Date(),
         });
     
         setPaymentOptions(updatedPayments);
     };
 
-    // Check if total amount is fully covered
     const isFullyPaid = paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0) >= amountToPaid;  
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        if(paymentStatus==2 && paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid)))<1){
+            toastr.error("Please input amount of payment..");
+            return;
+        } else if(paymentStatus==3 && paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid)))<amountToPaid){
+            toastr.error("Payment should cover the amount to be paid...");
+            return;
+        }
 
+        if(customerName==='' || customerName===null){
+            toastr.error("Customer is required");
+            return;
+        }
+
+        try {
+            const formData = {
+                serviceTransactionId: serviceTransactionId,
+                serviceId: serviceId,
+                serviceName: serviceName,
+                servicePrice: servicePrice,
+                laborCost: laborCost,
+                discount: discount,
+                remarks: remarks,
+                productsSelected: productsSelected,
+                customerId: customerId,
+                customerName: customerName,
+                customerContactNo: customerContactNo,
+                customerEmail: customerEmail,
+                customerAddress: customerAddress,
+                paymentStatus: paymentStatus,
+                paymentOptions: paymentOptions,
+            };
+
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/service-transactions/manage`, 
+                formData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                setSearchProduct("");
+                setSearchCustomer("");
+                setServiceTransactionId(false);
+                setServiceId(null);
+                setServiceName(null);
+                setServicePrice(null);
+                setLaborCost(null);
+                setDiscount(0);
+                setRemarks(null);
+                setProductsSelected([]);
+                setCustomerId(null);
+                setCustomerName(null);
+                setCustomerContactNo(null);
+                setCustomerEmail(null);
+                setCustomerAddress(null);
+                setAmountToPaid(null);
+                setPaymentStatus(1);
+                setPaymentOptions([
+                    {
+                        payment_option_id: 1,
+                        payment_option_name: "Cash",
+                        amount_paid: 0.00
+                    }
+                ]);
+                setStep(1);
+                setIsTransactionModalOpen(false);
+                fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
+            }else{
+                toastr.error("Error! There is something wrong in saving service transaction.");
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "An error occurred while saving the service transaction.";
+            toastr.error(errorMessage);
+        }
     };    
 
     const formatPhoneNumber = (value) => {
-        // Remove all non-digit characters
-        const cleaned = value.replace(/\D/g, '').slice(0, 11); // limit to 11 digits
-      
-        // Format to: 0912 345 6789
+
+        const cleaned = value.replace(/\D/g, '').slice(0, 11); 
+
         const match = cleaned.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
       
         if (!match) return cleaned;
       
         return [match[1], match[2], match[3]].filter(Boolean).join('-');
     };
+
+    const formatPrice = (price) => {
+        if (Number(price) === 0) return ' -';
+        return `₱${Number(price).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    };
+
+    const formatDate = (dateString) => {
+        const formattedDate = moment(dateString);
+
+        if (!formattedDate.isValid()) {
+            return '';
+        }
+        
+        return formattedDate.format("MMM D, YYYY");
+    };
+      
 
     return (
         <Layout>
@@ -416,30 +678,78 @@ const TransactionTransactions = () => {
                                             <td className="border border-gray-300 px-4 py-2">{transaction.code}</td>
                                             <td className="border border-gray-300 px-4 py-2">{transaction.service_name}</td>
                                             <td className="border border-gray-300 px-4 py-2">{transaction.customer_name}</td>
-                                            <td className="border border-gray-300 px-4 py-2">₱{transaction.price}</td>
                                             <td className="border border-gray-300 px-4 py-2">
                                                 <div className="text-sm">
-                                                    <div><span className="font-medium">Product:</span> ₱{transaction.product_cost}</div>
-                                                    <div><span className="font-medium">Labor:</span> ₱{transaction.labor_cost}</div>
-                                                    <div><span className="font-medium">Discount:</span> ₱{transaction.discount}</div>
-                                                    <div><span className="font-medium">Total:</span> ₱{transaction.total_cost}</div>
+                                                    <div className="text-blue-600">
+                                                        <span className="font-medium">Price:</span> 
+                                                        <span>
+                                                            {Number(transaction.price) === 0 ? ' -' : formatPrice(transaction.price)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-red-600">
+                                                        <span className="font-medium">Discount:</span> 
+                                                        <span>
+                                                            {Number(transaction.discount) === 0 ? ' -' : formatPrice(transaction.discount)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-green-800">
+                                                        <span className="font-medium">Total:</span> 
+                                                        <span>
+                                                            {Number(transaction.amount) === 0 ? ' -' : formatPrice(transaction.amount)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="border border-gray-300 px-4 py-2">₱{transaction.amount}</td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {transaction.service_status?.name}
                                                 <div className="text-sm">
-                                                    <div><span className="font-medium">Started:</span>{transaction.date_started}</div>
-                                                    <div><span className="font-medium">Finished:</span> {transaction.date_finished}</div>
-                                                    <div><span className="font-medium">Out:</span> {transaction.day_out}</div>
+                                                    <div>
+                                                        <span className="font-medium">Product:</span> 
+                                                        {Number(transaction.product_cost) === 0 ? ' -' : formatPrice(transaction.product_cost)}
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium">Labor:</span> 
+                                                        {Number(transaction.labor_cost) === 0 ? ' -' : formatPrice(transaction.labor_cost)}
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium">Total:</span> 
+                                                        {Number(transaction.total_cost) === 0 ? ' -' : formatPrice(transaction.total_cost)}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">
-                                                {transaction.payment_status?.name}
+                                                <span className="text-green-800">
+                                                    {formatPrice(transaction.income)}
+                                                </span>
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <span className={`text-${transaction.service_status?.color}-800`}>
+                                                    {transaction.service_status?.name}
+                                                </span>
                                                 <div className="text-sm">
-                                                    <div><span className="font-medium">Price:</span> ₱{transaction.price}</div>
-                                                    <div><span className="font-medium">Paid:</span> ₱{transaction.paid}</div>
-                                                    <div><span className="font-medium">Remaining:</span> ₱{transaction.remaining}</div>
+                                                    <div><span className="font-medium">Started:</span>{formatDate(transaction.date_started)}</div>
+                                                    <div><span className="font-medium">Finished:</span> {formatDate(transaction.date_finished)}</div>
+                                                    <div><span className="font-medium">Out:</span> {formatDate(transaction.day_out)}</div>
+                                                </div>
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <span className={`text-${transaction.payment_status?.color}-800`}>
+                                                    {transaction.payment_status?.name}
+                                                </span>
+                                                <div className="text-sm">
+                                                    <div className="text-green-800">
+                                                        <span className="font-medium">Paid:</span> 
+                                                        <span>
+                                                            {Number(transaction.paid) === 0 ? ' -' : formatPrice(transaction.paid)}
+                                                        </span>
+                                                    </div>
+                                                    {transaction.remaining > 0 && (
+                                                        <div className="text-red-600">
+                                                            <span className="font-medium">Remaining:</span> 
+                                                            <span>
+                                                                {Number(transaction.remaining) === 0 ? ' -' : formatPrice(transaction.remaining)}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">{transaction.remarks}</td>
@@ -492,7 +802,7 @@ const TransactionTransactions = () => {
                 
                 {isTransactionModalOpen && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
                             {/* Header */}
                             <div className="flex justify-between mt-4">
                                 <h2 className="text-xl font-semibold">
@@ -594,7 +904,7 @@ const TransactionTransactions = () => {
                                         {/* Button to toggle Product Search & Selection visibility */}
                                         <div className="mb-4">
                                             <button
-                                                onClick={() => setShowProductSelection(!showProductSelection)} // Toggle visibility
+                                                onClick={() => setShowProductSelection(!showProductSelection)}
                                                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600"
                                             >
                                                 {showProductSelection ? 'Cancel' : 'Add New Product'}
@@ -666,9 +976,9 @@ const TransactionTransactions = () => {
                                                     {productsSelected?.map((product, index) => (
                                                     <tr key={index}>
                                                         <td className="border px-4 py-2">{product.name}</td>
-                                                        <td className="border px-4 py-2">₱{Number((product.cost)).toFixed(2)}</td>
+                                                        <td className="border px-4 py-2">₱{Number((product.cost)).toFixed(2).toLocaleString()}</td>
                                                         <td className="border px-4 py-2">{product.qty}</td>
-                                                        <td className="border px-4 py-2">₱{Number((product.total)).toFixed(2)}</td>
+                                                        <td className="border px-4 py-2">₱{Number((product.total)).toFixed(2).toLocaleString()}</td>
                                                         <td className="border px-4 py-2">
                                                         <button
                                                             onClick={() => handleRemoveProduct(product, index)}
@@ -686,7 +996,7 @@ const TransactionTransactions = () => {
 
                                     <div className="mt-4">
                                         <button
-                                            onClick={() => setStep(2)}
+                                            onClick={() => nextStep()}
                                             className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 float-right"
                                         >
                                             Next
@@ -766,62 +1076,138 @@ const TransactionTransactions = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    {/* Left Side - Form Inputs */}
+                                    <div className="space-y-4 mt-4">
+                                        <label className="block text-sm font-medium text-gray-700">Payment Options:</label>
+                                        <div className="relative">
+                                            {/* Payment Type Dropdown */}
+                                            <select
+                                                value={paymentStatus}
+                                                onChange={(e) => setPaymentStatus(e.target.value)}
+                                                className="border px-2 py-2 rounded-lg w-full"
+                                            >
+                                                {availablePaymentStatuses.map((payment) => (
+                                                    <option key={payment.id} value={payment.id}>
+                                                        {payment.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                            
+                                            {paymentStatus > 1 && (
+                                                <div className="relative">
+                                                    <div className="relative">
+                                                        {paymentOptions.map((option, idx) => (
+                                                            <div key={idx} className="flex gap-2 mb-2 items-center">
+                                                                {/* Payment Type Dropdown */}
+                                                                <select
+                                                                    value={JSON.stringify({ id: option.payment_option_id, name: option.payment_option_name })}
+                                                                    onChange={(e) => {
+                                                                        const selectedValue = JSON.parse(e.target.value);
+                                                                        handlePaymentChange(idx, "payment_option_name", selectedValue.id, selectedValue.name);
+                                                                    }}
+                                                                    className="border px-3 py-2 rounded-lg w-1/3"
+                                                                >
+                                                                    {availablePaymentOptions.map((payment) => (
+                                                                        <option key={payment.id} value={JSON.stringify({ id: payment.id, name: payment.name })}>
+                                                                            {payment.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+
+                                                                {/* Amount Paid */}
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Amount Paid"
+                                                                    value={option.amount_paid}
+                                                                    onChange={(e) => handlePaymentChange(idx, "amount_paid", e.target.value, e.target.value)}
+                                                                    className="border px-3 py-2 rounded-lg w-1/3"
+                                                                />
+
+                                                                {/* Date and Time Picker */}
+                                                                <DatePicker
+                                                                    selected={option.date}
+                                                                    onChange={(date) => handlePaymentChange(idx, "date", date, date)}
+                                                                    showTimeSelect
+                                                                    dateFormat="Pp"
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                />
+                                                            
+                                                                {/* Remove Button (Only for index > 0) */}
+                                                                {idx > 0 && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                           handleRemovePayment(option, idx);
+                                                                        }}
+                                                                        className="text-red-600 hover:text-red-800"
+                                                                    >
+                                                                        ❌
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Disable the Add Payment Option button if total is fully paid */}
+                                                    <button 
+                                                        onClick={addPaymentOption}
+                                                        className={`mt-2 ${isFullyPaid ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:underline"}`}
+                                                        disabled={isFullyPaid}
+                                                    >
+                                                        + Add Payment Option
+                                                    </button>
+                                                </div>
+                                            )}
+                                    </div>
 
                                     <div className="grid grid-cols-2 gap-6 mt-4">
-                                        {/* Left Side - Form Inputs */}
-                                        <div className="space-y-4">
-                                            <label className="block text-sm font-medium text-gray-700">Payment Options:</label>
-                                            <div className="relative max-h-40 overflow-y-auto">
-                                                {paymentOptions.map((option, idx) => (
-                                                    <div key={idx} className="flex gap-2 mb-2 items-center">
-                                                        {/* Payment Type Dropdown */}
-                                                        <select
-                                                            value={JSON.stringify({ id: option.payment_option_id, name: option.payment_option_name })}
-                                                            onChange={(e) => {
-                                                                const selectedValue = JSON.parse(e.target.value);
-                                                                handlePaymentChange(idx, "payment_option_name", selectedValue.id, selectedValue.name);
-                                                            }}
-                                                            className="border px-3 py-2 rounded-lg flex-1"
-                                                        >
-                                                            {availablePaymentOptions.map((payment) => (
-                                                                <option key={payment.id} value={JSON.stringify({ id: payment.id, name: payment.name })}>
-                                                                    {payment.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-
-                                                        {/* Amount Paid */}
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Amount Paid"
-                                                            value={option.amount_paid}
-                                                            onChange={(e) => handlePaymentChange(idx, "amount_paid", e.target.value, e.target.value)}
-                                                            className="border px-3 py-2 rounded-lg flex-1"
-                                                        />
-                                                      
-                                                        {/* Remove Button (Only for index > 0) */}
-                                                        {idx > 0 && (
-                                                            <button 
-                                                                onClick={() => {
-                                                                    setPaymentOptions(paymentOptions.filter((_, i) => i !== idx));
-                                                                }}
-                                                                className="text-red-600 hover:text-red-800"
-                                                            >
-                                                                ❌
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                        <div className="border p-4 rounded-lg shadow-md bg-gray-100">
+                                            <h3 className="text-lg font-semibold mb-4 text-center">Summary</h3>
+                                            
+                                            <div className="flex justify-between mb-2">
+                                                <span className="text-blue-600"><strong>Service Price:</strong></span>
+                                                <span className="text-right">{formatPrice(servicePrice)}</span>
                                             </div>
 
-                                            {/* Disable the Add Payment Option button if total is fully paid */}
-                                            <button 
-                                                onClick={addPaymentOption}
-                                                className={`mt-2 ${isFullyPaid ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:underline"}`}
-                                                disabled={isFullyPaid}
-                                            >
-                                                + Add Payment Option
-                                            </button>
+                                            <div className="flex justify-between mb-2">
+                                                <span className="text-red-600"><strong>Less Discount:</strong></span>
+                                                <span className="text-right">{formatPrice(discount)}</span>
+                                            </div>
+
+                                            <div className="flex justify-between mb-2">
+                                                <span><strong>Amount to Pay:</strong></span>
+                                                <span className="text-right">{formatPrice(amountToPaid)}</span>
+                                            </div>
+
+                                            <div className="flex justify-between mb-2">
+                                                <span className="text-green-600"><strong>Total Paid:</strong></span>
+                                                <span className="text-right">{formatPrice(paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid) || 0), 0))}</span>
+                                            </div>
+
+                                            {paymentStatus > 1 && (
+                                                <div className="flex justify-between mb-2">
+                                                    <p>
+                                                        <strong>Change:</strong>
+                                                    </p>
+                                                    <p className={`${amountToPaid - paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid) || 0), 0) > 0 ? 'text-red-600' : 'text-green-600'} text-right`}>
+                                                        {formatPrice(paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid) || 0), 0) - amountToPaid)}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="block text-sm font-medium mt-2">Remarks:</label>
+                                            <div className="relative">
+                                                <textarea
+                                                    value={remarks}
+                                                    onChange={(e) => setRemarks(e.target.value)}
+                                                    className="w-full p-2 border rounded resize-none"
+                                                    placeholder="Enter remarks about the transaction of service..."
+                                                    rows={4}
+                                                ></textarea>
+                                            </div>
                                         </div>
                                     </div>
 

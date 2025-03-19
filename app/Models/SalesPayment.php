@@ -20,6 +20,8 @@ class SalesPayment extends Model
         'amount',
         'amount_paid',
         'amount_change',
+        'total_amount',
+        'payment_status',
         'updated_by',
         'created_by',
     ];

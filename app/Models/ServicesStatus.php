@@ -9,12 +9,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class ServiceStatus extends Model
+class ServicesStatus extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'name',
+        'color',
         'updated_by',
         'created_by'
     ];

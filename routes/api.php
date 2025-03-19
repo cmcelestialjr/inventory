@@ -46,6 +46,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     Route::get('/fetch-customers', [CustomerController::class, 'fetch']);
     Route::get('/fetch-payment-options', [PaymentOptionController::class, 'fetch']);
+    Route::get('/fetch-payment-statuses', [PaymentOptionController::class, 'fetchStatuses']);
 
     Route::get('/returns', [ReturnController::class, 'index']);
     Route::get('/fetch-return-options', [ReturnController::class, 'fetchOptions']);
@@ -72,6 +73,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/services/statusTotal', [ServicesController::class, 'statusTotal']);
     Route::get('/fetch-services', [ServicesController::class, 'fetch']);
     
-    Route::get('/serviceTransactions', [ServiceTransactionsController::class, 'index']);
-    
+    Route::get('/service-transactions', [ServiceTransactionsController::class, 'index']);
+    Route::post('/service-transactions/manage', [ServiceTransactionsController::class, 'manage']);
+    Route::post('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
+    Route::post('/service-transactions/removePayment', [ServiceTransactionsController::class, 'removePayment']);
 });

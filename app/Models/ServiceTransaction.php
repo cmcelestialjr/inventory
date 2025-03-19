@@ -27,6 +27,7 @@ class ServiceTransaction extends Model
         'discount',
         'total_cost',
         'amount',
+        'income',
         'paid',
         'remaining',
         'date_started',
@@ -51,6 +52,14 @@ class ServiceTransaction extends Model
     }
     public function serviceStatus(): BelongsTo
     {
-        return $this->belongsTo(PaymentStatus::class, 'payment_status_id', 'id');
+        return $this->belongsTo(ServicesStatus::class, 'service_status_id', 'id');
+    }
+    public function products(): HasMany
+    {
+        return $this->hasMany(ServiceTransactionProduct::class, 'service_transaction_id', 'id');
+    }
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ServiceTransactionPayment::class, 'service_transaction_id', 'id');
     }
 }

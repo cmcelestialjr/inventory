@@ -23,7 +23,7 @@ class Sale extends Model
         'total_qty',
         'total_amount',
         'amount_paid',
-        'amount_change',
+        'amount_change',        
         'cashier_id',
         'cashier_name',
         'sales_status_id',

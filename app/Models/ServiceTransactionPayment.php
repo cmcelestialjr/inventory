@@ -15,6 +15,8 @@ class ServiceTransactionPayment extends Model
 
     protected $fillable = [
         'service_transaction_id',
+        'payment_option_id',
+        'payment_option_name',
         'amount',
         'payment_date',
         'updated_by',

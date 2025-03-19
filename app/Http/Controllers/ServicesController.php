@@ -95,11 +95,7 @@ class ServicesController extends Controller
     }
     public function manage(Request $request)
     {
-        if($request->serviceId==null){
-            return $this->store($request);
-        }else{
-            return $this->edit($request);
-        }
+        return $request->serviceId==null ? $this->store($request) : $this->edit($request);
     }
     private function store($request)
     {
@@ -145,7 +141,7 @@ class ServicesController extends Controller
             $this->manageServiceProducts($validatedData, $service_id, $cashier_id);
 
             DB::commit();
-            return response()->json(['message' => 'Successful! New supplier saved..'], 200);
+            return response()->json(['message' => 'Successful! New service saved..'], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
