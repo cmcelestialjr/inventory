@@ -77,4 +77,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/service-transactions/manage', [ServiceTransactionsController::class, 'manage']);
     Route::post('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
     Route::post('/service-transactions/removePayment', [ServiceTransactionsController::class, 'removePayment']);
+
+    Route::post('/service-transaction-payment/payment', [ServiceTransactionsController::class, 'payment']);
 });

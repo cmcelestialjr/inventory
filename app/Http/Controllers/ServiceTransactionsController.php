@@ -276,6 +276,63 @@ class ServiceTransactionsController extends Controller
             ]);
         }
     }
+    public function payment(Request $request)
+    {
+        $validatedData = $request->validate([
+            'serviceTransactionId' => 'required|integer|exists:service_transactions,id',
+            'payment' => 'required|array',
+            'payment.*.id' => 'integer|exists:service_transaction_payments,id',
+            'payment.*.payment_option_id' => 'integer|exists:payment_options,id',
+            'payment.*.payment_option_name' => 'string|max:255',
+            'payment.*.amount' => 'numeric|min:0',
+            'payment.*.payment_date' => 'date',
+        ]);
+
+        $service_transaction_id = $validatedData['serviceTransactionId'];
+        
+        $serviceTransaction = ServiceTransaction::findOrFail($service_transaction_id);
+        $amount = $serviceTransaction->amount;
+
+        try{
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            $cashier_id = $user->id;
+        
+            if(isset($validatedData['payment']['id'])){
+                $payment = ServiceTransactionPayment::findOrFail($validatedData['payment']['id']);
+                
+            }else{
+                $payment = new ServiceTransactionPayment;
+                $payment->service_transaction_id = $service_transaction_id;
+            }
+
+            $payment->amount = $validatedData['payment_option_id']['payment_option_id'];
+            $payment->amount = $validatedData['payment_option_name']['payment_option_name'];
+            $payment->amount = $validatedData['payment']['amount'];
+            $payment->amount = $validatedData['payment_date']['payment_date'];
+            $payment->updated_by = $cashier_id;
+            $payment->save();
+
+            $totalAmount = ServiceTransactionPayment::where('service_transaction_id', $service_transaction_id)->sum('amount');
+
+            ServiceTransaction::where('id', $service_transaction_id)->update([
+                'paid' => $totalAmount,
+                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount
+            ]);
+
+            DB::commit();
+            return response()->json(['message' => 'Successful! Updated payment transaction saved..'], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function removeProduct(Request $request)
     {
         $validatedData = $request->validate([

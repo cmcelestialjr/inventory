@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
+import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle, Wallet, Save } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -21,6 +21,7 @@ const TransactionTransactions = () => {
     const [step, setStep] = useState(1);
     const didFetch = useRef(false);
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+    const [isTransactionPayModalOpen, setIsTransactionPayModalOpen] = useState(false);
     
     const [searchService, setSearchService] = useState(null);
     const [services, setServices] = useState([]);
@@ -58,6 +59,9 @@ const TransactionTransactions = () => {
     const [paymentStatus, setPaymentStatus] = useState(1);
     const [availablePaymentStatuses, setAvailablePaymentStatuses] = useState([]);
     const [availablePaymentOptions, setAvailablePaymentOptions] = useState([]);
+
+    const [transactionPayments, setTransactionPayments] = useState([]);
+    const [editingRow, setEditingRow] = useState(null);
 
     const formatDateTime = (dateString) => {
         const formattedDate = moment(dateString);
@@ -143,10 +147,6 @@ const TransactionTransactions = () => {
         } catch (error) {
             // console.error("Error fetching sales:", error);
         }
-    };
-
-    const handleServiceEdit = () => {
-
     };
 
     const handleServiceModal = (transaction) => {
@@ -493,6 +493,21 @@ const TransactionTransactions = () => {
         setPaymentOptions(updatedPayments);
     };
 
+    const handleTransactionPaymentChange = (idx, field, id, value) => {
+        let updatedPayments = [...transactionPayments];
+    
+        if (field === "payment_option_name") {
+            updatedPayments[idx][field] = value;
+            updatedPayments[idx]["payment_option_id"] = id; 
+        } else if (field === "payment_date") {
+            updatedPayments[idx][field] = value;
+        } else {
+            updatedPayments[idx][field] = parseFloat(value) || 0;
+        }
+
+        setTransactionPayments(updatedPayments);
+    };
+
     const addPaymentOption = () => {
         let totalPaid = paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0);
         
@@ -586,7 +601,45 @@ const TransactionTransactions = () => {
             const errorMessage = error.response?.data?.message || "An error occurred while saving the service transaction.";
             toastr.error(errorMessage);
         }
-    };    
+    };
+
+    const handlePayModal = (transaction) => {
+        setIsTransactionPayModalOpen(true);
+        setServiceTransactionId(transaction.id);
+        setTransactionPayments(transaction.payments);
+    };
+
+    const handleTransactionPayModalClose = () => {
+        setIsTransactionPayModalOpen(false);
+    };
+
+    const handleEditClick = (idx) => {
+        setEditingRow(editingRow === idx ? null : idx);
+    };
+
+    const handleSaveClick = async (transactionPayment, idx) => {        
+        try {
+            const formData = {
+                serviceTransactionId: serviceTransactionId,
+                payment: transactionPayment
+            };
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/service-transaction-payment/payment`, 
+                formData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                setEditingRow(null);
+                setServiceTransactionId(null);
+            }else{
+                toastr.error("Error! There is something wrong in saving payment transaction.");
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "An error occurred while saving the payment transaction.";
+            toastr.error(errorMessage);
+        }
+    };
 
     const formatPhoneNumber = (value) => {
 
@@ -597,7 +650,7 @@ const TransactionTransactions = () => {
         if (!match) return cleaned;
       
         return [match[1], match[2], match[3]].filter(Boolean).join('-');
-    };
+    };    
 
     const formatPrice = (price) => {
         if (Number(price) === 0) return ' -';
@@ -762,6 +815,10 @@ const TransactionTransactions = () => {
                                                     className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
                                                     <Edit size={16} /> Edit
                                                 </button>
+                                                <button onClick={() => handlePayModal(transaction)}
+                                                    className="flex items-center gap-1 text-blue-900 hover:text-blue-600 hover:underline">
+                                                    <Wallet size={16} /> Pay
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -824,7 +881,7 @@ const TransactionTransactions = () => {
 
                             {/* Step 1: Service Info */}
                             {step === 1 && (
-                                <div className="mt-4">                    
+                                <div className="mt-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">Service:</label>
                                         <div className="relative">
@@ -1227,6 +1284,116 @@ const TransactionTransactions = () => {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {isTransactionPayModalOpen && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
+                            {/* Header */}
+                            <div className="flex justify-between mt-4">
+                                <h2 className="text-xl font-semibold">
+                                    Payment Transaction
+                                </h2>
+                                <button 
+                                    onClick={handleTransactionPayModalClose} 
+                                    className="text-gray-500 hover:text-gray-700 transition"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse border border-gray-300">
+                                    <thead>
+                                        <tr className="bg-gray-100 text-gray-700">
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Date</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Type of Payment</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactionPayments?.length > 0 ? (
+                                            transactionPayments.map((transactionPayment, idx) => {
+
+                                                const paymentDate = new Date(transactionPayment.payment_date);
+                                                const isEditing = editingRow === idx;
+
+                                                return (
+                                                    <tr key={transactionPayment.id}>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <DatePicker
+                                                                    selected={paymentDate}
+                                                                    onChange={(date) => handleTransactionPaymentChange(idx, "payment_date", date, date)}
+                                                                    showTimeSelect
+                                                                    dateFormat="Pp"
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                />
+                                                            ) : (
+                                                                formatDateTime(transactionPayment.payment_date)
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <select
+                                                                    value={JSON.stringify({ payment_option_id: transactionPayment.payment_option_id, payment_option_name: transactionPayment.payment_option_name })}
+                                                                    onChange={(e) => {
+                                                                        const selectedValue = JSON.parse(e.target.value);
+                                                                        handleTransactionPaymentChange(idx, "payment_option_name", selectedValue.payment_option_id, selectedValue.payment_option_name);
+                                                                    }}
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                >
+                                                                    {availablePaymentOptions.map((payment) => (
+                                                                        <option key={payment.id} value={JSON.stringify({ id: payment.id, name: payment.name })}>
+                                                                            {payment.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                transactionPayment.payment_option_name
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Amount Paid"
+                                                                    value={transactionPayment.amount}
+                                                                    onChange={(e) => handleTransactionPaymentChange(idx, "amount", e.target.value, e.target.value)}
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                />
+                                                            ) : (
+                                                                formatPrice(transactionPayment.amount)
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2 gap-2">
+                                                            <button 
+                                                                onClick={() => isEditing ? handleSaveClick(transactionPayment, idx) : handleEditClick(idx)}
+                                                                className={`flex items-center gap-1 ${isEditing ? "text-green-600 hover:text-green-800 hover:underline" : "text-blue-600 hover:text-blue-800 hover:underline"}`}
+                                                            >
+                                                                {isEditing ? (
+                                                                    <span><Save size={16} /></span>
+                                                                ) : (
+                                                                    <span><Edit size={16} /></span>
+                                                                )}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="10" className="border border-gray-300 px-4 py-2 text-center">
+                                                    No Payment found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
