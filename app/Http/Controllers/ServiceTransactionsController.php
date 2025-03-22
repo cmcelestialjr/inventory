@@ -280,12 +280,11 @@ class ServiceTransactionsController extends Controller
     {
         $validatedData = $request->validate([
             'serviceTransactionId' => 'required|integer|exists:service_transactions,id',
-            'payment' => 'required|array',
-            'payment.*.id' => 'integer|exists:service_transaction_payments,id',
-            'payment.*.payment_option_id' => 'integer|exists:payment_options,id',
-            'payment.*.payment_option_name' => 'string|max:255',
-            'payment.*.amount' => 'numeric|min:0',
-            'payment.*.payment_date' => 'date',
+            'payment.id' => 'integer|exists:service_transaction_payments,id',
+            'payment.payment_option_id' => 'integer|exists:payment_options,id',
+            'payment.payment_option_name' => 'string|max:255',
+            'payment.amount' => 'numeric|min:0',
+            'payment.payment_date' => 'date',
         ]);
 
         $service_transaction_id = $validatedData['serviceTransactionId'];
@@ -298,31 +297,43 @@ class ServiceTransactionsController extends Controller
 
             $user = Auth::user();
             $cashier_id = $user->id;
-        
+            
             if(isset($validatedData['payment']['id'])){
                 $payment = ServiceTransactionPayment::findOrFail($validatedData['payment']['id']);
                 
             }else{
                 $payment = new ServiceTransactionPayment;
                 $payment->service_transaction_id = $service_transaction_id;
+                $payment->created_by = $cashier_id;
             }
 
-            $payment->amount = $validatedData['payment_option_id']['payment_option_id'];
-            $payment->amount = $validatedData['payment_option_name']['payment_option_name'];
+            $payment->payment_option_id = $validatedData['payment']['payment_option_id'];
+            $payment->payment_option_name = $validatedData['payment']['payment_option_name'];
             $payment->amount = $validatedData['payment']['amount'];
-            $payment->amount = $validatedData['payment_date']['payment_date'];
+            $payment->payment_date = date('Y-m-d H:i:s',strtotime($validatedData['payment']['payment_date']));
             $payment->updated_by = $cashier_id;
             $payment->save();
 
             $totalAmount = ServiceTransactionPayment::where('service_transaction_id', $service_transaction_id)->sum('amount');
+            $remaining = $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount;
+            if($remaining==0){
+                $payment_status_id = 3;
+            }elseif($remaining>0 && $totalAmount>0){
+                $payment_status_id = 2;
+            }else{
+                $payment_status_id = 1;
+            }
 
             ServiceTransaction::where('id', $service_transaction_id)->update([
                 'paid' => $totalAmount,
-                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount
+                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount,
+                'payment_status_id' => $payment_status_id
             ]);
 
             DB::commit();
-            return response()->json(['message' => 'Successful! Updated payment transaction saved..'], 200);
+            return response()->json(['message' => 'Successful! Updated payment transaction saved..',
+                'data' => ServiceTransaction::with('paymentStatus','payments')->where('id',$service_transaction_id)->first()
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();

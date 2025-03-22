@@ -61,6 +61,8 @@ const TransactionTransactions = () => {
     const [availablePaymentOptions, setAvailablePaymentOptions] = useState([]);
 
     const [transactionPayments, setTransactionPayments] = useState([]);
+    const [transactionInfo, setTransactionInfo] = useState(null);
+    const [isNewPayment, setIsNewPayment] = useState(false);
     const [editingRow, setEditingRow] = useState(null);
 
     const formatDateTime = (dateString) => {
@@ -81,6 +83,8 @@ const TransactionTransactions = () => {
             date: new Date(),
         }
     ]);
+
+    const [newPayment, setNewPayment] = useState([]);
 
     useEffect(() => {
          if (didFetch.current) return;
@@ -191,7 +195,7 @@ const TransactionTransactions = () => {
                     payment_date: new Date()
                 }]
             ).map((paymentOption) => {
-                const paymentDate = new Date(paymentOption.payment_date);
+                let paymentDate = new Date(paymentOption.payment_date);
 
                 if (isNaN(paymentDate.getTime())) {
                     paymentDate = new Date();
@@ -477,7 +481,7 @@ const TransactionTransactions = () => {
         setCustomerAddress(e.address);
         setShowDropdownCustomers(false);
     };
-
+    
     const handlePaymentChange = (idx, field, id, value) => {
         let updatedPayments = [...paymentOptions];
     
@@ -504,7 +508,7 @@ const TransactionTransactions = () => {
         } else {
             updatedPayments[idx][field] = parseFloat(value) || 0;
         }
-
+        
         setTransactionPayments(updatedPayments);
     };
 
@@ -607,10 +611,13 @@ const TransactionTransactions = () => {
         setIsTransactionPayModalOpen(true);
         setServiceTransactionId(transaction.id);
         setTransactionPayments(transaction.payments);
+        setTransactionInfo(transaction);
     };
 
     const handleTransactionPayModalClose = () => {
         setIsTransactionPayModalOpen(false);
+        setServiceTransactionId(null);
+        setTransactionPayments([]);
     };
 
     const handleEditClick = (idx) => {
@@ -631,7 +638,10 @@ const TransactionTransactions = () => {
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
                 setEditingRow(null);
-                setServiceTransactionId(null);
+
+                const paymentData = response.data.data;
+                setTransactionInfo(paymentData);
+                setTransactionPayments(paymentData.payments);
             }else{
                 toastr.error("Error! There is something wrong in saving payment transaction.");
             }
@@ -640,6 +650,54 @@ const TransactionTransactions = () => {
             toastr.error(errorMessage);
         }
     };
+
+    const handleNewPayment = () => {
+        setNewPayment({
+            service_transaction_id: transactionInfo.id,
+            payment_option_id: 1,
+            payment_option_name: "Cash",
+            amount: transactionInfo.remaining,
+            payment_date: new Date(),
+            amount_paid: transactionInfo.remaining,
+            change: 0,
+        });
+        setIsNewPayment(true);
+    };
+
+    
+    const handleNewPaymentChange = (field, id, value) => {
+        let updatedPayments = { ...newPayment };
+    
+        if (field === "payment_option_name") {
+            updatedPayments[field] = value;
+            updatedPayments["payment_option_id"] = id; 
+        } else if (field === "date") {
+            updatedPayments[field] = value;
+        } else {
+            updatedPayments[field] = parseFloat(value) || 0;
+
+            if (field === "amount_paid") {
+                updatedPayments["change"] = Number(value) - Number(newPayment.amount);
+            }else{
+                updatedPayments["change"] = Number(newPayment.amount_paid) - Number(value);
+            }
+        }
+
+        setNewPayment(updatedPayments);
+    };
+
+    const handleCancelNewPayment = () => {
+        setNewPayment({
+            service_transaction_id: transactionInfo.id,
+            payment_option_id: 1,
+            payment_option_name: "Cash",
+            amount: transactionInfo.remaining,
+            payment_date: new Date(),
+            amount_paid: transactionInfo.remaining,
+            change: 0,
+        });
+        setIsNewPayment(false);
+    }
 
     const formatPhoneNumber = (value) => {
 
@@ -788,22 +846,24 @@ const TransactionTransactions = () => {
                                                 <span className={`text-${transaction.payment_status?.color}-800`}>
                                                     {transaction.payment_status?.name}
                                                 </span>
-                                                <div className="text-sm">
-                                                    <div className="text-green-800">
-                                                        <span className="font-medium">Paid:</span> 
-                                                        <span>
-                                                            {Number(transaction.paid) === 0 ? ' -' : formatPrice(transaction.paid)}
-                                                        </span>
-                                                    </div>
-                                                    {transaction.remaining > 0 && (
-                                                        <div className="text-red-600">
-                                                            <span className="font-medium">Remaining:</span> 
+                                                {Number(transaction.paid) > 0 && (
+                                                    <div className="text-sm">
+                                                        <div className="text-green-800">
+                                                            <span className="font-medium">Paid:</span> 
                                                             <span>
-                                                                {Number(transaction.remaining) === 0 ? ' -' : formatPrice(transaction.remaining)}
+                                                                {Number(transaction.paid) === 0 ? ' -' : formatPrice(transaction.paid)}
                                                             </span>
                                                         </div>
-                                                    )}
-                                                </div>
+                                                        {transaction.remaining > 0 && (
+                                                            <div className="text-red-600">
+                                                                <span className="font-medium">Remaining:</span> 
+                                                                <span>
+                                                                    {Number(transaction.remaining) === 0 ? ' -' : formatPrice(transaction.remaining)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="border border-gray-300 px-4 py-2">{transaction.remarks}</td>
                                             <td className="border border-gray-300 px-4 py-2 gap-2">
@@ -816,7 +876,7 @@ const TransactionTransactions = () => {
                                                     <Edit size={16} /> Edit
                                                 </button>
                                                 <button onClick={() => handlePayModal(transaction)}
-                                                    className="flex items-center gap-1 text-blue-900 hover:text-blue-600 hover:underline">
+                                                    className="flex items-center gap-1 text-green-800 hover:text-green-600 hover:underline">
                                                     <Wallet size={16} /> Pay
                                                 </button>
                                             </td>
@@ -1195,7 +1255,7 @@ const TransactionTransactions = () => {
                                                                 {idx > 0 && (
                                                                     <button
                                                                         onClick={() => {
-                                                                           handleRemovePayment(option, idx);
+                                                                            handleRemovePayment(option, idx);
                                                                         }}
                                                                         className="text-red-600 hover:text-red-800"
                                                                     >
@@ -1304,7 +1364,133 @@ const TransactionTransactions = () => {
                                 </button>
                             </div>
 
-                            <div className="overflow-x-auto">
+                            <div className="mt-4">
+                                <div>
+                                    <label>Status: </label>
+                                    <span className={`text-${transactionInfo.payment_status?.color}-800`}>
+                                        {transactionInfo.payment_status?.name}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label>Total Paid: </label> 
+                                    <span className="text-green-800">
+                                        {Number(transactionInfo.paid) === 0 ? ' -' : formatPrice(transactionInfo.paid)}
+                                    </span>
+                                </div>
+                                {transactionInfo.remaining > 0 && (
+                                    <div>
+                                        <label>Remaining Amount: </label> 
+                                        <span className="text-red-600">
+                                            {Number(transactionInfo.remaining) === 0 ? ' -' : formatPrice(transactionInfo.remaining)}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {Number(transactionInfo.remaining) > 0 && (
+                                <div>
+                                    {isNewPayment ? (
+                                        <div className="mt-2 flex gap-2 mb-2 items-center">
+                                            <div className="space-y-4 border px-3 py-2 rounded-lg w-2/3">
+                                                <div className="w-full">
+                                                    <label>To Pay</label>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Amount to be Paid"
+                                                        value={newPayment.amount}
+                                                        onChange={(e) => handleNewPaymentChange("amount", e.target.value, e.target.value)}
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-2 mb-2 items-center">
+                                                    <select
+                                                        value={JSON.stringify({ payment_option_id: newPayment.payment_option_id, payment_option_name: newPayment.payment_option_name })}
+                                                        onChange={(e) => {
+                                                            const selectedValue = JSON.parse(e.target.value);
+                                                            handleNewPaymentChange("payment_option_name", selectedValue.payment_option_id, selectedValue.payment_option_name);
+                                                        }}
+                                                        className="border px-3 py-2 rounded-lg w-1/3"
+                                                    >
+                                                        {availablePaymentOptions.map((payment) => (
+                                                            <option key={payment.id} value={JSON.stringify({ payment_option_id: payment.id, payment_option_name: payment.name })}>
+                                                                {payment.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Amount Paid"
+                                                        value={newPayment.amount_paid}
+                                                        onChange={(e) => handleNewPaymentChange("amount_paid", e.target.value, e.target.value)}
+                                                        className="border px-3 py-2 rounded-lg w-1/3"
+                                                    />
+
+                                                    <DatePicker
+                                                        selected={newPayment.payment_date}
+                                                        onChange={(date) => handleNewPaymentChange("date", date, date)}
+                                                        showTimeSelect
+                                                        dateFormat="Pp"
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-2 mb-2 items-center">
+                                                    <button
+                                                        onClick={() => {
+                                                            handleSaveClick(newPayment,null);
+                                                        }}
+                                                        className="flex items-center gap-2 bg-green-600 text-sm text-white px-4 py-2 rounded-lg shadow w-1/2 hover:text-green-800 transition"
+                                                    >
+                                                        <span><Save size={16} /></span> Save
+                                                    </button>
+                                                
+                                                    <button
+                                                        onClick={handleCancelNewPayment}
+                                                        className="flex items-center gap-2 bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow w-1/2 hover:text-red-800 transition"
+                                                    >
+                                                        <span><X size={16} /></span> Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="border p-4 rounded-lg shadow-md bg-gray-100 w-1/3">
+                                                <h3 className="text-lg font-semibold mb-4 text-center">Summary</h3>
+                                                    
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-blue-600"><strong>To Pay:</strong></span>
+                                                    <span className="text-right">{formatPrice(newPayment.amount)}</span>
+                                                </div>
+
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-green-600"><strong>Paid:</strong></span>
+                                                    <span className="text-right">{formatPrice(newPayment.amount_paid)}</span>
+                                                </div>
+
+                                                <div className="flex justify-between mb-2">
+                                                    <p>
+                                                        <strong>Change:</strong>
+                                                    </p>
+                                                    <p className={`${newPayment.change < 0 ? 'text-red-600' : 'text-green-600'} text-right`}>
+                                                        {formatPrice(newPayment.change)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                onClick={handleNewPayment}
+                                                className="flex items-center gap-2 bg-blue-600 text-sm text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                                            >
+                                                <Plus size={18} /> New Payment
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="overflow-x-auto mt-4">
                                 <table className="w-full border-collapse border border-gray-300">
                                     <thead>
                                         <tr className="bg-gray-100 text-gray-700">
@@ -1347,7 +1533,7 @@ const TransactionTransactions = () => {
                                                                     className="border px-3 py-2 rounded-lg w-full"
                                                                 >
                                                                     {availablePaymentOptions.map((payment) => (
-                                                                        <option key={payment.id} value={JSON.stringify({ id: payment.id, name: payment.name })}>
+                                                                        <option key={payment.id} value={JSON.stringify({ payment_option_id: payment.id, payment_option_name: payment.name })}>
                                                                             {payment.name}
                                                                         </option>
                                                                     ))}
