@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote } from "lucide-react";
+import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote, Wrench, TrendingDown } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [endDateTopSection, setEndDateTopSection] = useState(new Date());
   const [summaryTopSection, setSummaryTopSection] = useState({
     totalSales: 0.00,
+    totalServices: 0.00,
     totalCost: 0.00,
     totalReturns: 0.00,
     totalExpenses: 0.00,
@@ -69,6 +70,7 @@ const Dashboard = () => {
         setSummaryTopSection(prevState => ({
           ...prevState,
           totalSales: data.totalSales || prevState.totalSales,
+          totalServices: data.totalServices || prevState.totalServices,
           totalCost: data.totalCost || prevState.totalCost,
           totalReturns: data.totalReturns || prevState.totalReturns,
           totalExpenses: data.totalExpenses || prevState.totalExpenses,
@@ -78,6 +80,7 @@ const Dashboard = () => {
         setSummaryTopSection(prevState => ({
           ...prevState,
           totalSales: 0.00,
+          totalServices: 0.00,
           totalCost: 0.00,
           totalReturns: 0.00,
           totalExpenses: 0.00,
@@ -225,11 +228,13 @@ const Dashboard = () => {
   );
 
   const summaryDataTopSection = [
-    { title: "Total Sales", value: summaryTopSection.totalSales, icon: <ShoppingCart size={20} />, bgColor: "bg-blue-100", textColor: "text-blue-600" },
-    { title: "Total Cost", value: summaryTopSection.totalCost, icon: <TrendingUp size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
-    { title: "Total Returns", value: summaryTopSection.totalReturns, icon: <RefreshCw size={20} />, bgColor: "bg-red-100", textColor: "text-red-600" },
-    { title: "Total Expenses", value: summaryTopSection.totalExpenses, icon: <Wallet size={20} />, bgColor: "bg-gray-100", textColor: "text-gray-600" },
-    { title: "Total Income", value: summaryTopSection.totalIncome, icon: <PesoSign size={20} />, bgColor: "bg-green-100", textColor: "text-green-600" },
+    { title: "Sales", value: summaryTopSection.totalSales, icon: <ShoppingCart size={20} />, bgColor: "bg-blue-100", textColor: "text-blue-600" },
+    { title: "Services", value: summaryTopSection.totalServices, icon: <Wrench size={20} />, bgColor: "bg-purple-100", textColor: "text-purple-600" },
+    { title: "Cost", value: summaryTopSection.totalCost, icon: <Package size={20} />, bgColor: "bg-amber-100", textColor: "text-amber-600" },
+    { title: "Returns", value: summaryTopSection.totalReturns, icon: <RefreshCw size={20} />, bgColor: "bg-orange-100", textColor: "text-orange-600" },
+    { title: "Expenses", value: summaryTopSection.totalExpenses, icon: <TrendingDown size={20} />, bgColor: "bg-red-100", textColor: "text-red-600" },
+    { title: "Receivables", value: summaryTopSection.totalExpenses, icon: <Wallet size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
+    { title: "Income", value: summaryTopSection.totalIncome, icon: <PesoSign size={20} />, bgColor: "bg-green-100", textColor: "text-green-600" },
   ];
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28"];
@@ -272,7 +277,7 @@ const Dashboard = () => {
           Filter
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mt-6">
         {summaryDataTopSection.map((item, index) => (
           <div
             key={index}
@@ -285,7 +290,7 @@ const Dashboard = () => {
             </div>
 
             <h2 className="text-sm font-medium text-gray-600">{item.title}</h2>
-            <p className="text-xl font-bold text-gray-900">{item.value}</p>
+            <p className="text-lg font-bold text-gray-900">{item.value}</p>
           </div>
         ))}
       </div>

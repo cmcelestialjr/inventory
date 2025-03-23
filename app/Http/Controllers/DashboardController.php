@@ -30,17 +30,20 @@ class DashboardController extends Controller
         $getSales = DB::table('sales')->where('sales_status_id',1);
         $getReturns = DB::table('returns');
         $getExpenses = DB::table('expenses');
+        $getServices = DB::table('service_transaction_payments');
 
         switch ($selected) {
             case "last_7_days":
                 $getSales->whereBetween('date_time_of_sale', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 $getReturns->whereBetween('date_time_returned', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 $getExpenses->whereBetween('date_time_of_expense', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
+                $getServices->whereBetween('payment_date', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 break;
             case "this_month":
                 $getSales->whereBetween('date_time_of_sale', [now()->startOfMonth(), now()->endOfMonth()]);
                 $getReturns->whereBetween('date_time_returned', [now()->startOfMonth(), now()->endOfMonth()]);
                 $getExpenses->whereBetween('date_time_of_expense', [now()->startOfMonth(), now()->endOfMonth()]);
+                $getServices->whereBetween('payment_date', [now()->startOfMonth(), now()->endOfMonth()]);
                 break;
             case "last_month":
                 $lastMonthStart = now()->subMonth()->startOfMonth();
@@ -48,23 +51,27 @@ class DashboardController extends Controller
                 $getSales->whereBetween('date_time_of_sale', [$lastMonthStart, $lastMonthEnd]);
                 $getReturns->whereBetween('date_time_returned', [$lastMonthStart, $lastMonthEnd]);
                 $getExpenses->whereBetween('date_time_of_expense', [$lastMonthStart, $lastMonthEnd]);
+                $getServices->whereBetween('payment_date', [$lastMonthStart, $lastMonthEnd]);
                 break;
             case "this_year":
                 $getSales->whereYear('date_time_of_sale', now()->year);
                 $getReturns->whereYear('date_time_returned', now()->year);
                 $getExpenses->whereYear('date_time_of_expense', now()->year);
+                $getServices->whereYear('payment_date', now()->year);
                 break;
             case "custom":
                 if ($startDate && $endDate) {
                     $getSales->whereBetween('date_time_of_sale', [$startDate, $endDate]);
                     $getReturns->whereBetween('date_time_returned', [$startDate, $endDate]);
                     $getExpenses->whereBetween('date_time_of_expense', [$startDate, $endDate]);
+                    $getServices->whereBetween('payment_date', [$startDate, $endDate]);
                 }
                 break;
             default:
                 $getSales->whereDate('date_time_of_sale', now());
                 $getReturns->whereDate('date_time_returned', now());
                 $getExpenses->whereDate('date_time_of_expense', now());
+                $getServices->whereDate('payment_date', now());
         }
 
         $salesData = $getSales->selectRaw("
@@ -80,16 +87,22 @@ class DashboardController extends Controller
             COALESCE(SUM(amount), 0) as total_amount
         ")->first();
 
+        $servicesData = $getServices->selectRaw("
+            COALESCE(SUM(amount), 0) as total_amount
+        ")->first();
+
 
         $totalSales = $salesData->total_amount;
         $totalCost = $salesData->total_cost;
         $totalReturns = $returnsData->total_amount;
         $totalExpenses = $expensesData->total_amount;
+        $totalServices = $servicesData->total_amount;
         
-        $totalIncome = $totalSales - $totalCost - $totalReturns - $totalExpenses;
+        $totalIncome = $totalSales + $totalServices - $totalCost - $totalReturns - $totalExpenses;
 
         return response()->json([
             'totalSales' => number_format($totalSales,2),
+            'totalServices' => number_format($totalServices,2),
             'totalCost' => number_format($totalCost,2),
             'totalReturns' => number_format($totalReturns,2),
             'totalExpenses' => number_format($totalExpenses,2),
