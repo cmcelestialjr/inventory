@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle, Wallet, Save } from "lucide-react";
+import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -16,13 +16,14 @@ const TransactionTransactions = () => {
     const [page, setPage] = useState(1);
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
-    const [selectedTransactionStatus, setSelectedTransactionStatus] = useState("all");
-    const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("all");
+    const [selectedTransactionStatus, setSelectedTransactionStatus] = useState("All");
+    const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("All");
     const [step, setStep] = useState(1);
     const didFetch = useRef(false);
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
     const [isTransactionPayModalOpen, setIsTransactionPayModalOpen] = useState(false);
-    
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
     const [searchService, setSearchService] = useState(null);
     const [services, setServices] = useState([]);
     const [showDropdownServices, setShowDropdownServices] = useState(false);
@@ -32,6 +33,7 @@ const TransactionTransactions = () => {
     const [serviceId, setServiceId] = useState(null);
     const [serviceName, setServiceName] = useState(null);
     const [servicePrice, setServicePrice] = useState(0);
+    const [serviceStartDate, setServiceStartDate] = useState(new Date());
     const [laborCost, setLaborCost] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [amountToPaid, setAmountToPaid] = useState(0);
@@ -64,6 +66,10 @@ const TransactionTransactions = () => {
     const [transactionInfo, setTransactionInfo] = useState(null);
     const [isNewPayment, setIsNewPayment] = useState(false);
     const [editingRow, setEditingRow] = useState(null);
+    const [serviceStatus, setServiceStatus] = useState(null);
+    const [serviceStatusesOptions, setServiceStatusesOptions] = useState([]);
+    const [serviceDateFinished, setServiceDateFinished] = useState(null);
+    const [serviceDateOut, setServiceDateOut] = useState(null);
 
     const formatDateTime = (dateString) => {
         const formattedDate = moment(dateString);
@@ -85,6 +91,21 @@ const TransactionTransactions = () => {
     ]);
 
     const [newPayment, setNewPayment] = useState([]);
+
+    const [serviceStatuses, setServiceStatuses] = useState({ 
+        all: 0, 
+        ongoing: 0, 
+        done: 0,
+        cancelled: 0,
+        onHold: 0,
+    });
+
+    const [paymentStatuses, setPaymentStatuses] = useState({ 
+        all: 0, 
+        none: 0, 
+        partial: 0,
+        fully: 0,
+    });
 
     useEffect(() => {
          if (didFetch.current) return;
@@ -113,6 +134,17 @@ const TransactionTransactions = () => {
                     setPaymentStatus(statuses[0]?.id || 1);
                 } else {
                     toastr.error("Failed to load payment statuses.");
+                }
+
+                const serviceStatusesResponse = await axios.get("/api/fetch-service-statuses", {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+
+                if (serviceStatusesResponse.data.success) {
+                    const statuses = serviceStatusesResponse.data.data;
+                    setServiceStatusesOptions(statuses);
+                } else {
+                    toastr.error("Failed to load service statuses.");
                 }
             } catch (error) {
                 toastr.error("Can't fetch data. Please refresh the page.");
@@ -174,6 +206,7 @@ const TransactionTransactions = () => {
             setCustomerAddress(transaction.customer_info?.address);
             setPaymentStatus(transaction.payment_status_id);
             setAmountToPaid(transaction.amount);
+            setServiceStartDate(transaction.date_started);
 
             const updatedProducts = transaction.products?.map((productList) => ({
                 pid: productList.id,
@@ -241,6 +274,7 @@ const TransactionTransactions = () => {
         setCustomerAddress(null);
         setAmountToPaid(null);
         setPaymentStatus(1);
+        setServiceStartDate(new Date());
         setPaymentOptions([
             {
                 transaction_payment_id: null,
@@ -550,6 +584,7 @@ const TransactionTransactions = () => {
                 serviceTransactionId: serviceTransactionId,
                 serviceId: serviceId,
                 serviceName: serviceName,
+                serviceStartDate: serviceStartDate,
                 servicePrice: servicePrice,
                 laborCost: laborCost,
                 discount: discount,
@@ -588,6 +623,7 @@ const TransactionTransactions = () => {
                 setCustomerAddress(null);
                 setAmountToPaid(null);
                 setPaymentStatus(1);
+                setServiceStartDate(new Date());
                 setPaymentOptions([
                     {
                         payment_option_id: 1,
@@ -624,7 +660,7 @@ const TransactionTransactions = () => {
         setEditingRow(editingRow === idx ? null : idx);
     };
 
-    const handleSaveClick = async (transactionPayment, idx) => {        
+    const handleSaveClick = async (transactionPayment, idx) => {
         try {
             const formData = {
                 serviceTransactionId: serviceTransactionId,
@@ -724,7 +760,64 @@ const TransactionTransactions = () => {
         
         return formattedDate.format("MMM D, YYYY");
     };
-      
+
+    const handleStatusModal = (transaction) => {
+        setIsStatusModalOpen(true);
+        setServiceTransactionId(transaction.id);
+        setServiceStatus(transaction.service_status_id);
+        setServiceStartDate(transaction.date_started);
+        setServiceDateFinished(transaction.date_finished);
+        setServiceDateOut(transaction.day_out);
+    };
+
+    const handleStatusModalClose = () => {
+        setIsStatusModalOpen(false);
+        setServiceTransactionId(null);
+        setServiceStatus(null);
+        setServiceStartDate(new Date());
+        setServiceDateFinished(null);
+        setServiceDateOut(null);
+    };
+
+    const handleSelectedServiceStatus = (status) => {
+        setSelectedTransactionStatus(status);
+    };
+
+    const handleSelectedPaymentStatus = (status) => {
+        setSelectedPaymentStatus(status);
+    };
+
+    const handleServiceStatusSubmit = async () => {
+        try {
+            const formData = {
+                serviceTransactionId: serviceTransactionId,
+                serviceStatus: serviceStatus,
+                serviceStartDate: serviceStartDate,
+                serviceDateFinished: serviceDateFinished,
+                serviceDateOut: serviceDateOut,
+            };
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/service-status/save`, 
+                formData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                setIsStatusModalOpen(false);
+                setServiceTransactionId(null);
+                setServiceStatus(null);
+                setServiceStartDate(new Date());
+                setServiceDateFinished(null);
+                setServiceDateOut(null);
+                fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
+            }else{
+                toastr.error("Error! There is something wrong in saving service status.");
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "An error occurred while saving the service status.";
+            toastr.error(errorMessage);
+        }
+    };
 
     return (
         <Layout>
@@ -737,6 +830,104 @@ const TransactionTransactions = () => {
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
                     >
                         <Plus size={18} /> New Transaction
+                    </button>
+                </div>
+
+                {/* Summary Section */}
+                <div className="grid grid-cols-5 gap-3 mb-4">
+                    <button
+                        onClick={() => handleSelectedServiceStatus("All")}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === "All" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Layers size={24} className={`${selectedTransactionStatus === "All" ? "text-white" : "text-blue-600"}`} />
+                        <span className="text-sm font-semibold">All Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.all}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedServiceStatus(1)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === 1 ? "bg-blue-500 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Clock size={24} className={`${selectedTransactionStatus === 1 ? "text-white" : "text-blue-500"}`} />
+                        <span className="text-sm font-semibold">Ongoing Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.ongoing}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedServiceStatus(2)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === 2 ? "bg-green-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <CheckCircle size={24} className={`${selectedTransactionStatus === 2 ? "text-white" : "text-green-600"}`} />
+                        <span className="text-sm font-semibold">Done Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.done}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedServiceStatus(4)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === 4 ? "bg-yellow-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <PauseCircle size={24} className={`${selectedTransactionStatus === 4 ? "text-white" : "text-yellow-600"}`} />
+                        <span className="text-sm font-semibold">On-hold Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.onHold}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedServiceStatus(3)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === 3 ? "bg-red-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <XCircle size={24} className={`${selectedTransactionStatus === 3 ? "text-white" : "text-red-600"}`} />
+                        <span className="text-sm font-semibold">Cancelled Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.cancelled}</span>
+                    </button>
+                </div>
+
+
+                <div className="grid grid-cols-4 gap-6 mb-8">
+                    <button
+                        onClick={() => handleSelectedPaymentStatus("All")}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedPaymentStatus === "All" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Layers size={24} className={`${selectedPaymentStatus === "All" ? "text-white" : "text-blue-600"}`} />
+                        <span className="text-sm font-semibold">All Payment</span>
+                        <span className="text-lg font-bold">{paymentStatuses.all}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedPaymentStatus(1)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedPaymentStatus === 1 ? "bg-red-500 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Circle size={24} className={`${selectedPaymentStatus === 1 ? "text-white" : "text-red-500"}`} />
+                        <span className="text-sm font-semibold">None Payment</span>
+                        <span className="text-lg font-bold">{paymentStatuses.none}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedPaymentStatus(2)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedPaymentStatus === 2 ? "bg-green-500 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <PieChart size={24} className={`${selectedPaymentStatus === 2 ? "text-white" : "text-yellow-500"}`} />
+                        <span className="text-sm font-semibold">Partial Payment</span>
+                        <span className="text-lg font-bold">{paymentStatuses.partial}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedPaymentStatus(4)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedPaymentStatus === 4 ? "bg-green-500 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <CheckCircle size={24} className={`${selectedPaymentStatus === 4 ? "text-white" : "text-green-500"}`} />
+                        <span className="text-sm font-semibold">Fully Paid</span>
+                        <span className="text-lg font-bold">{paymentStatuses.fully}</span>
                     </button>
                 </div>
 
@@ -879,6 +1070,10 @@ const TransactionTransactions = () => {
                                                     className="flex items-center gap-1 text-green-800 hover:text-green-600 hover:underline">
                                                     <Wallet size={16} /> Pay
                                                 </button>
+                                                <button onClick={() => handleStatusModal(transaction)}
+                                                    className="flex items-center gap-1 text-amber-800 hover:text-amber-600 hover:underline">
+                                                    <CheckSquare size={16} /> Status
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -893,7 +1088,7 @@ const TransactionTransactions = () => {
                         </tbody>
                     </table>
                 </div>
-                                
+
                 {/* Pagination Controls */}
                 {meta && (
                     <div className="flex justify-between items-center mt-4">
@@ -918,8 +1113,8 @@ const TransactionTransactions = () => {
                 )}
                 
                 {isTransactionModalOpen && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
+                    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full relative">
                             {/* Header */}
                             <div className="flex justify-between mt-4">
                                 <h2 className="text-xl font-semibold">
@@ -942,30 +1137,42 @@ const TransactionTransactions = () => {
                             {/* Step 1: Service Info */}
                             {step === 1 && (
                                 <div className="mt-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Service:</label>
-                                        <div className="relative">
-                                            <input 
-                                                type="text"
-                                                placeholder="Search Service"
-                                                value={searchService}
-                                                onChange={handleServiceSearch}
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                        <div className="col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700">Service:</label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Search Service"
+                                                    value={searchService}
+                                                    onChange={handleServiceSearch}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                                {/* Dropdown */}
+                                                {showDropdownServices && services?.length > 0 && (
+                                                    <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
+                                                        {services.map((service) => (
+                                                            <li 
+                                                                key={service.id} 
+                                                                className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                onClick={() => handleSelectService(service)}
+                                                            >
+                                                                {service.name}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Date and Time Picker */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700">Start of Service:</label>
+                                            <DatePicker
+                                                selected={serviceStartDate}
+                                                onChange={(date) => setServiceStartDate(date)}
                                                 className="border px-3 py-2 rounded-lg w-full"
                                             />
-                                            {/* Dropdown */}
-                                            {showDropdownServices && services?.length > 0 && (
-                                                <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
-                                                    {services.map((service) => (
-                                                        <li 
-                                                            key={service.id} 
-                                                            className="p-2 cursor-pointer hover:bg-gray-200"
-                                                            onClick={() => handleSelectService(service)}
-                                                        >
-                                                            {service.name}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
                                         </div>
                                     </div>
 
@@ -1349,7 +1556,7 @@ const TransactionTransactions = () => {
                 )}
 
                 {isTransactionPayModalOpen && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                         <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
                             {/* Header */}
                             <div className="flex justify-between mt-4">
@@ -1387,7 +1594,7 @@ const TransactionTransactions = () => {
                                 )}
                             </div>
 
-                            {Number(transactionInfo.remaining) > 0 && (
+                            {Number(transactionInfo.remaining) > 0 || transactionInfo.payment_status_id != 2  && (
                                 <div>
                                     {isNewPayment ? (
                                         <div className="mt-2 flex gap-2 mb-2 items-center">
@@ -1579,6 +1786,88 @@ const TransactionTransactions = () => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isStatusModalOpen && (
+                    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-xs w-full relative">
+                            {/* Header */}
+                            <div className="flex justify-between mt-4">
+                                <h2 className="text-xl font-semibold">
+                                    Service Status
+                                </h2>
+                                <button 
+                                    onClick={handleStatusModalClose} 
+                                    className="text-gray-500 hover:text-gray-700 transition"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="mt-4 w-full">
+                                <label className="block text-sm font-medium text-gray-700">Status:</label>
+                                <select
+                                    value={serviceStatus}
+                                    onChange={(e) => setServiceStatus(e.target.value)}
+                                    className="border py-2 rounded-lg w-full"
+                                >
+                                    {serviceStatusesOptions.map((option) => (
+                                         <option key={option.id} value={option.id}>
+                                            {option.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="mt-4 w-full">
+                                <label className="block text-sm font-medium text-gray-700">Start of Service:</label>
+                                <DatePicker
+                                    selected={serviceStartDate}
+                                    onChange={(date) => setServiceStartDate(date)}
+                                    isClearable
+                                    className="w-full border px-3 py-2 rounded-lg"
+                                    wrapperClassName="w-full"
+                                />
+                            </div>
+
+                            <div className="mt-4 w-full">
+                                <label className="block text-sm font-medium text-gray-700">Date Finished:</label>
+                                <DatePicker
+                                    selected={serviceDateFinished}
+                                    onChange={(date) => setServiceDateFinished(date)}
+                                    isClearable
+                                    className="w-full border px-3 py-2 rounded-lg"
+                                    wrapperClassName="w-full"
+                                />
+                            </div>
+
+                            <div className="mt-4 w-full">
+                                <label className="block text-sm font-medium text-gray-700">Date Out:</label>
+                                <DatePicker
+                                    selected={serviceDateOut}
+                                    onChange={(date) => setServiceDateOut(date)}
+                                    isClearable
+                                    className="w-full border px-3 py-2 rounded-lg"
+                                    wrapperClassName="w-full"
+                                />
+                            </div>
+
+                            <div className="flex justify-between mt-4">
+                                <button
+                                    onClick={handleStatusModalClose} 
+                                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    onClick={handleServiceStatusSubmit}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-800"
+                                >
+                                    Save
+                                </button>
                             </div>
                         </div>
                     </div>

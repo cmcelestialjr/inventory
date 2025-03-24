@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Service;
+use App\Models\ServicesStatus;
 use App\Models\ServiceTransaction;
 use App\Models\ServiceTransactionPayment;
 use App\Models\ServiceTransactionProduct;
@@ -32,19 +33,19 @@ class ServiceTransactionsController extends Controller
 
         if ($request->has('filterStatus')){
             $filter = $request->filterStatus;
-            if($filter!='all'){
+            if($filter!='All'){
                 $query->where('service_status_id', $filter);
             }
         }
 
         if ($request->has('filterPayment')){
             $filter = $request->filterPayment;
-            if($filter!='all'){
+            if($filter!='All'){
                 $query->where('payment_status_id', $filter);
             }
         }
 
-        $transactions = $query->paginate(10);
+        $transactions = $query->orderBy('created_at','DESC')->paginate(5);
 
         return response()->json([
             'data' => $transactions->items(),
@@ -67,6 +68,7 @@ class ServiceTransactionsController extends Controller
             'serviceId' => 'required|integer|exists:services,id',
             'serviceName' => 'required|string|max:255',
             'servicePrice' => 'required|numeric|min:0',
+            'serviceStartDate' => 'required|date',
             'laborCost' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0|max:100',
             'remarks' => 'nullable|string|max:255',
@@ -115,6 +117,7 @@ class ServiceTransactionsController extends Controller
                 'labor_cost' => $validatedData['laborCost'],
                 'discount' => $validatedData['discount'],
                 'amount' => $amount,
+                'date_started' => date('Y-m-d',strtotime($validatedData['serviceStartDate'])),
                 'remarks' => $validatedData['remarks'],
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
@@ -147,6 +150,7 @@ class ServiceTransactionsController extends Controller
             'serviceId' => 'required|integer|exists:services,id',
             'serviceName' => 'required|string|max:255',
             'servicePrice' => 'required|numeric|min:0',
+            'serviceStartDate' => 'required|date',
             'laborCost' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0|max:100',
             'remarks' => 'nullable|string|max:255',
@@ -194,6 +198,7 @@ class ServiceTransactionsController extends Controller
                 'labor_cost' => $validatedData['laborCost'],                
                 'discount' => $validatedData['discount'],
                 'amount' => $amount,
+                'date_started' => date('Y-m-d',strtotime($validatedData['serviceStartDate'])),
                 'remarks' => $validatedData['remarks'],
                 'updated_by' => $cashier_id,
             ]);
@@ -371,6 +376,54 @@ class ServiceTransactionsController extends Controller
         } else {
             return response()->json(['message' => 'Payment not found.'], 404);
         }
+    }
+    public function serviceStatuses(Request $request)
+    {
+        try {
+            $paymentOptions = ServicesStatus::select('id', 'name')->orderBy('id','ASC')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $paymentOptions
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch payment statuses',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function statusSave(Request $request)
+    {
+        $validatedData = $request->validate([
+            'serviceTransactionId' => 'required|integer|exists:service_transactions,id',
+            'serviceStatus' => 'required|integer|exists:services_statuses,id',
+            'serviceStartDate' => 'required|date',
+            'serviceDateFinished' => 'nullable|date',
+            'serviceDateOut' => 'nullable|date',
+        ]);
+
+        $user = Auth::user();
+        $cashier_id = $user->id;
+
+        $day_out = strtotime($validatedData['serviceDateOut']) ? date('Y-m-d', strtotime($validatedData['serviceDateOut'])) : null;
+        $date_finished = strtotime($validatedData['serviceDateFinished']) ? date('Y-m-d', strtotime($validatedData['serviceDateFinished'])) : null;
+        $service_status_id = $validatedData['serviceStatus'];
+        if($day_out){
+            $service_status_id = 2;
+        }
+        $query = ServiceTransaction::findOrFail($validatedData['serviceTransactionId']);
+        $query->service_status_id = $service_status_id;
+        $query->date_started = date('Y-m-d', strtotime($validatedData['serviceStartDate']));
+        $query->date_finished = $date_finished;
+        $query->day_out = $day_out;
+        $query->updated_by = $cashier_id;
+        $query->save();
+
+        return response()->json([
+            'message' => 'Successful! Updated service status saved..',
+        ], 200);
     }
     private function getCustomer($name,$contactNo,$email,$address,$cashier_id)
     {

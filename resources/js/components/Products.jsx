@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle  } from "lucide-react";
+import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle  } from "lucide-react";
 import Layout from "./Layout";
 import axios from 'axios';
 import DatePicker from "react-datepicker";
@@ -27,6 +27,7 @@ const Products = () => {
     available: 0,
     out_of_stock: 0,
     low_stock: 0,
+    phaseout: 0,
   });
   const [editFormData, setEditFormData] = useState({ 
     id: "", 
@@ -114,12 +115,58 @@ const Products = () => {
   };
 
   // Handle input change
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = async (e) => {
+    const { name, value } = e.target;
 
+    if (e.target.name === "productCategoryId") {
+      if(e.target.value!=""){
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+        const authToken = localStorage.getItem("token");
+
+        const formDataCategory = {
+          id: e.target.value
+        };
+
+        const response = await axios.post(
+          "/api/product/category/code",
+          formDataCategory,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-TOKEN": csrfToken,
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        
+        if (response.status === 200 || response.status === 201) {
+          if(response.data.message=="success"){
+            setFormData((prevFormData) => ({
+              ...prevFormData,
+              code: response.data.code,
+              [name]: value,
+            }));
+          
+          }
+        }
+      }else{
+        setFormData((prevFormData) => ({
+          ...prevFormData,
+          code: "",
+          [name]: value,
+        }));
+      }
+      
+    }else{
+      setFormData((prevFormData) => ({
+        ...prevFormData,
+        [name]: value,
+      }));
+    }
     if (e.target.value.trim() !== "") {
       setErrors((prevErrors) => ({ ...prevErrors, [e.target.name]: null }));
     }
+    
   };
 
   // Handle date change
@@ -183,6 +230,7 @@ const Products = () => {
             cost: "",
             price: "",
             qty: "",
+            productCategoryId: "",
             effective_date: null,
           });
           setErrors({});
@@ -337,7 +385,7 @@ const Products = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           {/* Total Products */}
           <button
             onClick={() => handleFilter("all")}
@@ -384,6 +432,18 @@ const Products = () => {
             <AlertTriangle size={25} className={`${filterType === "low-stock" ? "text-white" : "text-yellow-600"}`} />
             <span className="mt-2 text-base font-semibold">Low Stock</span>
             <span className="text-lg font-bold">{summary.low_stock}</span>
+          </button>
+
+          {/* Phaseout Stock */}
+          <button
+            onClick={() => handleFilter("phaseout")}
+            className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
+              filterType === "phaseout" ? "bg-yellow-600 text-white" : "bg-white border border-gray-300"
+            }`}
+          >
+            <Recycle size={25} className={`${filterType === "phaseout" ? "text-white" : "text-gray-600"}`} />
+            <span className="mt-2 text-base font-semibold">Phaseout</span>
+            <span className="text-lg font-bold">{summary.phaseout}</span>
           </button>
         </div>
 
@@ -466,7 +526,7 @@ const Products = () => {
 
         {/* Modal Component */}
         {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg p-6 w-[500px] md:w-[600px] shadow-lg">
               <div className="flex justify-between items-center border-b pb-2 mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Add New Product</h2>
@@ -476,88 +536,6 @@ const Products = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Code</label>
-                    <input
-                      type="text"
-                      name="code"
-                      value={formData.code}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.code ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}                      
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}                      
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Variant</label>
-                    <input
-                      type="text"
-                      name="variant"
-                      value={formData.variant}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.variant ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Cost</label>
-                    <input
-                      type="number"
-                      name="cost"
-                      value={formData.cost}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.cost ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}                      
-                    />
-                  </div>
-                  
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Price</label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.price ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}                      
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                    <input
-                      type="number"
-                      name="qty"
-                      value={formData.qty}
-                      onChange={handleChange}
-                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
-                        errors.qty ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
-                      }`}                      
-                    />
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Product Category:</label>
@@ -580,6 +558,87 @@ const Products = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Code</label>
+                    <input
+                      type="text"
+                      name="code"
+                      value={formData.code}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.code ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}                      
+                    />
+                  </div>                  
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.name ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}                      
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Variant</label>
+                    <input
+                      type="text"
+                      name="variant"
+                      value={formData.variant}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.variant ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Cost</label>
+                    <input
+                      type="number"
+                      name="cost"
+                      value={formData.cost}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.cost ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}                      
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Price</label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.price ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}                      
+                    />
+                  </div>                  
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                    <input
+                      type="number"
+                      name="qty"
+                      value={formData.qty}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 ${
+                        errors.qty ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                      }`}                      
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Effective Date:</label>
@@ -618,7 +677,7 @@ const Products = () => {
         )}
 
         {showEditModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg p-6 w-[500px] md:w-[600px] shadow-lg">
               <div className="flex justify-between items-center border-b pb-2 mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Edit Product</h2>

@@ -17,6 +17,7 @@ const Dashboard = () => {
     totalCost: 0.00,
     totalReturns: 0.00,
     totalExpenses: 0.00,
+    totalReceivables: 0.00,
     totalIncome: 0.00,
   });
 
@@ -74,6 +75,7 @@ const Dashboard = () => {
           totalCost: data.totalCost || prevState.totalCost,
           totalReturns: data.totalReturns || prevState.totalReturns,
           totalExpenses: data.totalExpenses || prevState.totalExpenses,
+          totalReceivables: data.totalReceivables || prevState.totalReceivables,
           totalIncome: data.totalIncome || prevState.totalIncome,
         }));
       }else{
@@ -84,6 +86,7 @@ const Dashboard = () => {
           totalCost: 0.00,
           totalReturns: 0.00,
           totalExpenses: 0.00,
+          totalReceivables: 0.00,
           totalIncome: 0.00,
         }));
       }
@@ -233,7 +236,7 @@ const Dashboard = () => {
     { title: "Cost", value: summaryTopSection.totalCost, icon: <Package size={20} />, bgColor: "bg-amber-100", textColor: "text-amber-600" },
     { title: "Returns", value: summaryTopSection.totalReturns, icon: <RefreshCw size={20} />, bgColor: "bg-orange-100", textColor: "text-orange-600" },
     { title: "Expenses", value: summaryTopSection.totalExpenses, icon: <TrendingDown size={20} />, bgColor: "bg-red-100", textColor: "text-red-600" },
-    { title: "Receivables", value: summaryTopSection.totalExpenses, icon: <Wallet size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
+    { title: "Receivables", value: summaryTopSection.totalReceivables, icon: <Wallet size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
     { title: "Income", value: summaryTopSection.totalIncome, icon: <PesoSign size={20} />, bgColor: "bg-green-100", textColor: "text-green-600" },
   ];
 
@@ -305,15 +308,16 @@ const Dashboard = () => {
           <option value="today">Today</option>
           <option value="last_7_days">Last 7 Days</option>
           <option value="this_month">This Month</option>
-
+{/* 
           <option value="first_qtr">First Quarter (Jan - Mar)</option>
           <option value="second_qtr">Second Quarter (Apr - Jun)</option>
           <option value="third_qtr">Third Quarter (Jul - Sep)</option>
           <option value="fourth_qtr">Fourth Quarter (Oct - Dec)</option>
 
           <option value="first_sem">First Semester (Jan - Jun)</option>
-          <option value="second_sem">Second Semester (Jul - Dec)</option>
+          <option value="second_sem">Second Semester (Jul - Dec)</option> */}
 
+          <option value="this_year_monthly">This Year (Monthly)</option>
           <option value="this_year_qtr">This Year (QTR Breakdown)</option>
           <option value="last_3_years">Last 3 Years</option>
           <option value="last_5_years">Last 5 Years</option>
@@ -326,8 +330,7 @@ const Dashboard = () => {
           Filter
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-4">
-        <div className="pb-1 pr-7 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md flex flex-col items-center justify-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
+      <div className="mt-4 pb-1 pr-7 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md flex flex-col items-center justify-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
           <h2 className="text-lg font-semibold mb-3">📈 Sales Trends</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={salesTrends}>
@@ -338,8 +341,8 @@ const Dashboard = () => {
               <Line type="monotone" dataKey="value" stroke="#8884d8" />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-        <div className="pb-1 pr-7 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md flex flex-col items-center justify-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
+      </div>
+      <div className="mt-4 pb-1 pr-7 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md flex flex-col items-center justify-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
           <h2 className="text-lg font-semibold mb-3">💸 Expenses Trends</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={expensesTrends}>
@@ -350,7 +353,8 @@ const Dashboard = () => {
               <Line type="monotone" dataKey="value" stroke="#FF5733" />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-4">
         <div className="pb-1 pr-7 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md flex flex-col items-center justify-center transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
           <h2 className="text-lg font-semibold mb-3">🔥 Top-Selling Products</h2>
           <ResponsiveContainer width="100%" height={300}>

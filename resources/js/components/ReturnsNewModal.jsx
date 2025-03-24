@@ -451,7 +451,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
     const prevStep = () => setStep(step - 1);
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg p-6 shadow-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="flex justify-between">
                     <h2 className="text-xl font-semibold">New Return</h2>

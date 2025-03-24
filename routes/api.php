@@ -37,6 +37,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/product-pricing/{id}', [ProductController::class, 'updatePricing']);
     Route::post('/product-pricing', [ProductController::class, 'storePricing']);
     Route::get('/fetch-products', [ProductController::class, 'fetch']);
+    Route::post('/product/category/code', [ProductController::class, 'categoryCode']);
 
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
@@ -77,6 +78,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/service-transactions/manage', [ServiceTransactionsController::class, 'manage']);
     Route::post('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
     Route::post('/service-transactions/removePayment', [ServiceTransactionsController::class, 'removePayment']);
-
+    Route::post('/service-status/save', [ServiceTransactionsController::class, 'statusSave']);
+    
     Route::post('/service-transaction-payment/payment', [ServiceTransactionsController::class, 'payment']);
+    Route::get('/fetch-service-statuses', [ServiceTransactionsController::class, 'serviceStatuses']);
 });

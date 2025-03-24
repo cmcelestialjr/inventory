@@ -31,6 +31,10 @@ class DashboardController extends Controller
         $getReturns = DB::table('returns');
         $getExpenses = DB::table('expenses');
         $getServices = DB::table('service_transaction_payments');
+        $getReceivables = DB::table('service_transactions')->whereIn('service_status_id',[1,2,3]);
+        $getServiceProducts = DB::table('service_transaction_products')
+            ->join('service_transactions', 'service_transaction_products.service_transaction_id', '=', 'service_transactions.id')
+            ->whereIn('service_transactions.service_status_id',[1,2,3]);
 
         switch ($selected) {
             case "last_7_days":
@@ -38,12 +42,16 @@ class DashboardController extends Controller
                 $getReturns->whereBetween('date_time_returned', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 $getExpenses->whereBetween('date_time_of_expense', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 $getServices->whereBetween('payment_date', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
+                $getReceivables->whereBetween('created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
+                $getServiceProducts->whereBetween('service_transactions.created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
                 break;
             case "this_month":
                 $getSales->whereBetween('date_time_of_sale', [now()->startOfMonth(), now()->endOfMonth()]);
                 $getReturns->whereBetween('date_time_returned', [now()->startOfMonth(), now()->endOfMonth()]);
                 $getExpenses->whereBetween('date_time_of_expense', [now()->startOfMonth(), now()->endOfMonth()]);
                 $getServices->whereBetween('payment_date', [now()->startOfMonth(), now()->endOfMonth()]);
+                $getReceivables->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
+                $getServiceProducts->whereBetween('service_transactions.created_at', [now()->startOfMonth(), now()->endOfMonth()]);
                 break;
             case "last_month":
                 $lastMonthStart = now()->subMonth()->startOfMonth();
@@ -52,12 +60,16 @@ class DashboardController extends Controller
                 $getReturns->whereBetween('date_time_returned', [$lastMonthStart, $lastMonthEnd]);
                 $getExpenses->whereBetween('date_time_of_expense', [$lastMonthStart, $lastMonthEnd]);
                 $getServices->whereBetween('payment_date', [$lastMonthStart, $lastMonthEnd]);
+                $getReceivables->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
+                $getServiceProducts->whereBetween('service_transactions.created_at', [$lastMonthStart, $lastMonthEnd]);
                 break;
             case "this_year":
                 $getSales->whereYear('date_time_of_sale', now()->year);
                 $getReturns->whereYear('date_time_returned', now()->year);
                 $getExpenses->whereYear('date_time_of_expense', now()->year);
                 $getServices->whereYear('payment_date', now()->year);
+                $getReceivables->whereYear('created_at', now()->year);
+                $getServiceProducts->whereYear('service_transactions.created_at', now()->year);
                 break;
             case "custom":
                 if ($startDate && $endDate) {
@@ -65,6 +77,8 @@ class DashboardController extends Controller
                     $getReturns->whereBetween('date_time_returned', [$startDate, $endDate]);
                     $getExpenses->whereBetween('date_time_of_expense', [$startDate, $endDate]);
                     $getServices->whereBetween('payment_date', [$startDate, $endDate]);
+                    $getReceivables->whereBetween('created_at', [$startDate, $endDate]);
+                    $getServiceProducts->whereBetween('service_transactions.created_at', [$startDate, $endDate]);
                 }
                 break;
             default:
@@ -72,6 +86,8 @@ class DashboardController extends Controller
                 $getReturns->whereDate('date_time_returned', now());
                 $getExpenses->whereDate('date_time_of_expense', now());
                 $getServices->whereDate('payment_date', now());
+                $getReceivables->whereDate('created_at', now());
+                $getServiceProducts->whereDate('service_transactions.created_at', now());
         }
 
         $salesData = $getSales->selectRaw("
@@ -91,14 +107,24 @@ class DashboardController extends Controller
             COALESCE(SUM(amount), 0) as total_amount
         ")->first();
 
+        $receivablesData = $getReceivables->selectRaw("
+            COALESCE(SUM(remaining), 0) as total_amount
+        ")->first();
+
+        $serviceProductsCostData = $getServiceProducts->selectRaw("
+            COALESCE(SUM(total), 0) as total_amount
+        ")->first();
+
 
         $totalSales = $salesData->total_amount;
         $totalCost = $salesData->total_cost;
         $totalReturns = $returnsData->total_amount;
         $totalExpenses = $expensesData->total_amount;
         $totalServices = $servicesData->total_amount;
+        $totalReceivables = $receivablesData->total_amount;
+        $totalServiceProductsCost = $serviceProductsCostData->total_amount;
         
-        $totalIncome = $totalSales + $totalServices - $totalCost - $totalReturns - $totalExpenses;
+        $totalIncome = $totalSales + $totalServices + $totalReceivables - $totalCost - $totalServiceProductsCost - $totalReturns - $totalExpenses;
 
         return response()->json([
             'totalSales' => number_format($totalSales,2),
@@ -106,6 +132,7 @@ class DashboardController extends Controller
             'totalCost' => number_format($totalCost,2),
             'totalReturns' => number_format($totalReturns,2),
             'totalExpenses' => number_format($totalExpenses,2),
+            'totalReceivables' => number_format($totalReceivables,2),
             'totalIncome' => number_format($totalIncome,2),
         ], 200);
     }
@@ -116,7 +143,7 @@ class DashboardController extends Controller
             'selected' => [
                 'required',
                 'string',
-                'in:today,last_7_days,this_month,first_qtr,second_qtr,third_qtr,fourth_qtr,first_sem,second_sem,this_year_qtr,last_3_years,last_5_years,last_7_years'
+                'in:today,last_7_days,this_month,first_qtr,second_qtr,third_qtr,fourth_qtr,first_sem,second_sem,this_year_monthly,this_year_qtr,last_3_years,last_5_years,last_7_years'
             ]
         ]);
 
@@ -167,6 +194,11 @@ class DashboardController extends Controller
                 $salesTrends = $this->getBySem($getSales, 2, 'date_time_of_sale', 'total_amount');
                 $expensesTrends = $this->getBySem($getExpenses, 2, 'date_time_of_expense', 'amount');
                 $sellingProducts = $this->getBySemSellingProducts($getSellingProducts,2);
+                break;
+            case "this_year_monthly":
+                $salesTrends = $this->getThisYearMonthly($getSales, 'date_time_of_sale', 'total_amount');
+                $expensesTrends = $this->getThisYearMonthly($getExpenses, 'date_time_of_expense', 'amount');
+                $sellingProducts = $this->getByThisYearSellingProducts($getSellingProducts);
                 break;
             case "this_year_qtr":
                 $salesTrends = $this->getThisYearQtr($getSales, 'date_time_of_sale', 'total_amount');
@@ -373,8 +405,8 @@ class DashboardController extends Controller
     private function getBySem($query, $sem, $columnDateTime, $columnTotalAmount)
     {
         $months = ($sem == 1) 
-            ? [1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June']
-            : [7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'];
+            ? [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun']
+            : [7 => 'Jul', 8 => 'Aug', 9 => 'Sept', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'];
 
         if ($sem == 1) {
             $query->whereBetween($columnDateTime, [
@@ -424,6 +456,37 @@ class DashboardController extends Controller
             ]);
         }
         return $getSellingProducts;
+    }
+
+    private function getThisYearMonthly($query, $columnDateTime, $columnTotalAmount)
+    {
+        $months = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug', 9 => 'Sept', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'];
+
+        $query->whereBetween($columnDateTime, [
+            now()->startOfYear()->startOfMonth(), 
+            now()->endOfYear()->endOfMonth()
+        ]);
+
+        $queryData = $query->selectRaw('
+            MONTH('.$columnDateTime.') as month_number,
+            MONTHNAME('.$columnDateTime.') as name, 
+            SUM('.$columnTotalAmount.') as value
+        ')
+        ->groupBy('month_number', 'name')
+        ->orderBy('month_number', 'asc')
+        ->get()
+        ->keyBy('month_number'); 
+
+        $queryTrends = [];
+        foreach ($months as $num => $name) {
+            $queryTrends[] = [
+                'month_number' => $num,
+                'name' => $name,
+                'value' => $queryData[$num]->value ?? 0 
+            ];
+        }
+
+        return $queryTrends;
     }
 
     private function getThisYearQtr($getSales, $columnDateTime, $columnTotalAmount)

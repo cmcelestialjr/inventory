@@ -129,7 +129,7 @@ const Sidebar = () => {
                 <Truck size={20} className="mr-2" />
                 Suppliers
               </Link>
-            </li>            
+            </li>
             <li>
               <Link 
                 to="/users" 

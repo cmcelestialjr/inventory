@@ -29,14 +29,21 @@ class ProductController extends Controller
             switch ($filter) {
                 case 'available':
                     $query->where('qty', '>', 0);
+                    $query->where('product_status', 'Available');
                     break;
             
                 case 'out-of-stock':
                     $query->where('qty', '=', 0);
+                    $query->where('product_status', 'Available');
                     break;
             
                 case 'low-stock':
                     $query->whereBetween('qty', [1, 4]);
+                    $query->where('product_status', 'Available');
+                    break;
+
+                case 'phaseout':
+                    $query->where('product_status', 'Phaseout');
                     break;
             }
         }
@@ -58,16 +65,19 @@ class ProductController extends Controller
     {
         $summary = Product::selectRaw("
             COUNT(*) as total,
-            SUM(CASE WHEN qty > 0 THEN 1 ELSE 0 END) as available,
-            SUM(CASE WHEN qty = 0 THEN 1 ELSE 0 END) as out_of_stock,
-            SUM(CASE WHEN qty BETWEEN 1 AND 4 THEN 1 ELSE 0 END) as low_stock
+            SUM(CASE WHEN qty > 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as available,
+            SUM(CASE WHEN qty = 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as out_of_stock,
+            SUM(CASE WHEN qty BETWEEN 1 AND 4 AND product_status = 'Available' THEN 1 ELSE 0 END) as low_stock,
+            SUM(CASE WHEN product_status = 'Phaseout' THEN 1 ELSE 0 END) as phaseout
         ")->first();
+
 
         return response()->json([
             'total' => $summary->total,
             'available' => $summary->available,
             'out_of_stock' => $summary->out_of_stock,
             'low_stock' => $summary->low_stock,
+            'phaseout' => $summary->phaseout,
         ]);
     }
 
@@ -296,5 +306,30 @@ class ProductController extends Controller
             $update->qty = $qty;
             $update->save();
         }
+    }
+    public function categoryCode(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|numeric|exists:products_categories,id',
+        ]);
+
+        $productCategory = ProductsCategory::where('id', $request->id)->first();
+
+        if (!$productCategory) {
+            return response()->json(['message' => 'Product Category not found'], 404);
+        }
+
+        if($productCategory->increment=="Y"){
+            $getCode = Product::where('product_category_id',$productCategory->id)->orderBy('code','DESC')->first();
+            $code = $getCode ? $getCode->code + 1 : $productCategory->code_start;
+        }else{
+            $code = "";
+        }
+
+        return response()->json([
+            'message' => 'success',
+            'increment' => $productCategory->increment,
+            'code' => $code
+        ], 200);
     }
 }

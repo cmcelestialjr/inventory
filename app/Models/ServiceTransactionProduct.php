@@ -18,6 +18,7 @@ class ServiceTransactionProduct extends Model
         'product_id',
         'qty',
         'cost',
+        'total',
         'updated_by',
         'created_by'
     ];

@@ -6,7 +6,7 @@ const SalesViewsModal = ({ isOpen, onClose, sale }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="flex justify-between">
                     <h2 className="text-xl font-semibold">New Sale</h2>
