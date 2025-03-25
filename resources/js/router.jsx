@@ -7,6 +7,7 @@ import Sales from './components/Sales';
 import ServiceTransactions from './components/ServiceTransactions';
 import Returns from './components/Returns';
 import Expenses from './components/Expenses';
+import PurchaseOrders from './components/PurchaseOrders';
 import Products from './components/Products';
 import Services from './components/Services';
 import Suppliers from './components/Suppliers';
@@ -48,6 +49,12 @@ function RouterApp() {
           element={
             <ProtectedRoute allowedRoles={["1"]}>
               <Expenses />
+            </ProtectedRoute>} 
+        />
+        <Route path="/purchase-orders" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <PurchaseOrders />
             </ProtectedRoute>} 
         />
         <Route path="/products" 

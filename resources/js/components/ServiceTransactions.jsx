@@ -93,15 +93,15 @@ const TransactionTransactions = () => {
     const [newPayment, setNewPayment] = useState([]);
 
     const [serviceStatuses, setServiceStatuses] = useState({ 
-        all: 0, 
+        total: 0, 
         ongoing: 0, 
         done: 0,
         cancelled: 0,
-        onHold: 0,
+        onhold: 0,
     });
 
     const [paymentStatuses, setPaymentStatuses] = useState({ 
-        all: 0, 
+        total: 0, 
         none: 0, 
         partial: 0,
         fully: 0,
@@ -146,6 +146,7 @@ const TransactionTransactions = () => {
                 } else {
                     toastr.error("Failed to load service statuses.");
                 }
+                
             } catch (error) {
                 toastr.error("Can't fetch data. Please refresh the page.");
             }
@@ -180,9 +181,27 @@ const TransactionTransactions = () => {
             });
             setTransactions(response.data.data);
             setMeta(response.data.meta);
+
+            const serviceStatusesCountResponse = await axios.get("/api/fetch-service-statuses-count", {
+                params: {
+                    search: search,
+                    filterPayment: filterPayment,
+                    filterStatus: filterStatus,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+    
+            if (serviceStatusesCountResponse.data.success) {
+                const statuses = serviceStatusesCountResponse.data.data;
+                setServiceStatuses(statuses);
+                setPaymentStatuses(statuses);
+            }
         } catch (error) {
             // console.error("Error fetching sales:", error);
         }
+        
     };
 
     const handleServiceModal = (transaction) => {
@@ -275,6 +294,7 @@ const TransactionTransactions = () => {
         setAmountToPaid(null);
         setPaymentStatus(1);
         setServiceStartDate(new Date());
+        setShowProductSelection(false);
         setPaymentOptions([
             {
                 transaction_payment_id: null,
@@ -430,6 +450,7 @@ const TransactionTransactions = () => {
                         });
                         if (response.data.message === 'Product deleted successfully.') {
                             setProductsSelected((prevProducts) => prevProducts.filter((_, i) => i !== index));
+                            fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
                             Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
                         } else {
                             Swal.fire("Error", response.data.message, "error");
@@ -467,6 +488,7 @@ const TransactionTransactions = () => {
                         });
                         if (response.data.message === 'Payment deleted successfully.') {
                             setPaymentOptions(paymentOptions.filter((_, i) => i !== idx));
+                            fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
                             Swal.fire("Removed!", `"${option.payment_option_name}" costed at ${option.amount_paid} has been removed.`, "success");
                         } else {
                             Swal.fire("Error", response.data.message, "error");
@@ -624,6 +646,7 @@ const TransactionTransactions = () => {
                 setAmountToPaid(null);
                 setPaymentStatus(1);
                 setServiceStartDate(new Date());
+                setShowProductSelection(false);
                 setPaymentOptions([
                     {
                         payment_option_id: 1,
@@ -645,6 +668,7 @@ const TransactionTransactions = () => {
 
     const handlePayModal = (transaction) => {
         setIsTransactionPayModalOpen(true);
+        setIsNewPayment(false);
         setServiceTransactionId(transaction.id);
         setTransactionPayments(transaction.payments);
         setTransactionInfo(transaction);
@@ -652,6 +676,7 @@ const TransactionTransactions = () => {
 
     const handleTransactionPayModalClose = () => {
         setIsTransactionPayModalOpen(false);
+        setIsNewPayment(false);
         setServiceTransactionId(null);
         setTransactionPayments([]);
     };
@@ -674,10 +699,11 @@ const TransactionTransactions = () => {
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
                 setEditingRow(null);
-
+                setIsNewPayment(false);
                 const paymentData = response.data.data;
                 setTransactionInfo(paymentData);
                 setTransactionPayments(paymentData.payments);
+                fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
             }else{
                 toastr.error("Error! There is something wrong in saving payment transaction.");
             }
@@ -781,10 +807,12 @@ const TransactionTransactions = () => {
 
     const handleSelectedServiceStatus = (status) => {
         setSelectedTransactionStatus(status);
+        setSelectedPaymentStatus("All");
     };
 
     const handleSelectedPaymentStatus = (status) => {
         setSelectedPaymentStatus(status);
+        setSelectedTransactionStatus(null);
     };
 
     const handleServiceStatusSubmit = async () => {
@@ -834,7 +862,7 @@ const TransactionTransactions = () => {
                 </div>
 
                 {/* Summary Section */}
-                <div className="grid grid-cols-5 gap-3 mb-4">
+                <div className="grid grid-cols-8 gap-3 mb-4">
                     <button
                         onClick={() => handleSelectedServiceStatus("All")}
                         className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
@@ -843,7 +871,7 @@ const TransactionTransactions = () => {
                     >
                         <Layers size={24} className={`${selectedTransactionStatus === "All" ? "text-white" : "text-blue-600"}`} />
                         <span className="text-sm font-semibold">All Services</span>
-                        <span className="text-lg font-bold">{serviceStatuses.all}</span>
+                        <span className="text-lg font-bold">{serviceStatuses.total}</span>
                     </button>
                     <button
                         onClick={() => handleSelectedServiceStatus(1)}
@@ -873,7 +901,7 @@ const TransactionTransactions = () => {
                     >
                         <PauseCircle size={24} className={`${selectedTransactionStatus === 4 ? "text-white" : "text-yellow-600"}`} />
                         <span className="text-sm font-semibold">On-hold Services</span>
-                        <span className="text-lg font-bold">{serviceStatuses.onHold}</span>
+                        <span className="text-lg font-bold">{serviceStatuses.onhold}</span>
                     </button>
                     <button
                         onClick={() => handleSelectedServiceStatus(3)}
@@ -885,20 +913,10 @@ const TransactionTransactions = () => {
                         <span className="text-sm font-semibold">Cancelled Services</span>
                         <span className="text-lg font-bold">{serviceStatuses.cancelled}</span>
                     </button>
-                </div>
+                {/* </div>
 
 
-                <div className="grid grid-cols-4 gap-6 mb-8">
-                    <button
-                        onClick={() => handleSelectedPaymentStatus("All")}
-                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
-                            selectedPaymentStatus === "All" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
-                        }`}
-                    >
-                        <Layers size={24} className={`${selectedPaymentStatus === "All" ? "text-white" : "text-blue-600"}`} />
-                        <span className="text-sm font-semibold">All Payment</span>
-                        <span className="text-lg font-bold">{paymentStatuses.all}</span>
-                    </button>
+                <div className="grid grid-cols-4 gap-6 mb-8"> */}
                     <button
                         onClick={() => handleSelectedPaymentStatus(1)}
                         className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
@@ -920,12 +938,12 @@ const TransactionTransactions = () => {
                         <span className="text-lg font-bold">{paymentStatuses.partial}</span>
                     </button>
                     <button
-                        onClick={() => handleSelectedPaymentStatus(4)}
+                        onClick={() => handleSelectedPaymentStatus(3)}
                         className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
-                            selectedPaymentStatus === 4 ? "bg-green-500 text-white" : "bg-white border border-gray-300"
+                            selectedPaymentStatus === 3 ? "bg-green-500 text-white" : "bg-white border border-gray-300"
                         }`}
                     >
-                        <CheckCircle size={24} className={`${selectedPaymentStatus === 4 ? "text-white" : "text-green-500"}`} />
+                        <CheckCircle size={24} className={`${selectedPaymentStatus === 3 ? "text-white" : "text-green-500"}`} />
                         <span className="text-sm font-semibold">Fully Paid</span>
                         <span className="text-lg font-bold">{paymentStatuses.fully}</span>
                     </button>
@@ -1594,7 +1612,7 @@ const TransactionTransactions = () => {
                                 )}
                             </div>
 
-                            {Number(transactionInfo.remaining) > 0 || transactionInfo.payment_status_id != 2  && (
+                            {(Number(transactionInfo.remaining) > 0 || transactionInfo.payment_status_id != 3)  && (
                                 <div>
                                     {isNewPayment ? (
                                         <div className="mt-2 flex gap-2 mb-2 items-center">

@@ -31,6 +31,19 @@ class ServiceTransactionsController extends Controller
             });
         }
 
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('date_started', [$startDate, $endDate])
+                        ->orWhereBetween('date_finished', [$startDate, $endDate])
+                        ->orWhereBetween('day_out', [$startDate, $endDate]);
+                });
+            }
+        }
+
         if ($request->has('filterStatus')){
             $filter = $request->filterStatus;
             if($filter!='All'){
@@ -354,7 +367,7 @@ class ServiceTransactionsController extends Controller
         $validatedData = $request->validate([
             'id' => 'required|integer|exists:service_transaction_products,id',
         ]);
-
+        
         $deleted = ServiceTransactionProduct::where('id', $validatedData['id'])->delete();
 
         if ($deleted) {
@@ -424,6 +437,57 @@ class ServiceTransactionsController extends Controller
         return response()->json([
             'message' => 'Successful! Updated service status saved..',
         ], 200);
+    }
+    public function serviceStatusCount(Request $request)
+    {
+        try {
+            $query = ServiceTransaction::selectRaw("
+                COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN service_status_id = 1 THEN 1 ELSE 0 END), 0) as ongoing,
+                COALESCE(SUM(CASE WHEN service_status_id = 2 THEN 1 ELSE 0 END), 0) as done,
+                COALESCE(SUM(CASE WHEN service_status_id = 3 THEN 1 ELSE 0 END), 0) as cancelled,
+                COALESCE(SUM(CASE WHEN service_status_id = 4 THEN 1 ELSE 0 END), 0) as onhold,
+                COALESCE(SUM(CASE WHEN payment_status_id = 1 THEN 1 ELSE 0 END), 0) as none,
+                COALESCE(SUM(CASE WHEN payment_status_id = 2 THEN 1 ELSE 0 END), 0) as partial,
+                COALESCE(SUM(CASE WHEN payment_status_id = 3 THEN 1 ELSE 0 END), 0) as fully
+            ")
+            ->when($request->has('search') && !empty($request->search), function ($query) use ($request) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('code', 'LIKE', "%{$search}%")
+                    ->where('service_name', 'LIKE', "%{$search}%")
+                    ->orWhere('customer_name', 'LIKE', "%{$search}%")
+                    ->orWhere('date_started', 'LIKE', "%{$search}%")
+                    ->orWhere('date_finished', 'LIKE', "%{$search}%")
+                    ->orWhere('day_out', 'LIKE', "%{$search}%");
+                });
+            })
+            ->when($request->has('start_date') && $request->has('end_date'), function ($query) use ($request) {
+                $startDate = $request->start_date;
+                $endDate = $request->end_date;
+    
+                if ($startDate && $endDate) {
+                    $query->where(function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('date_started', [$startDate, $endDate])
+                          ->orWhereBetween('date_finished', [$startDate, $endDate])
+                          ->orWhereBetween('day_out', [$startDate, $endDate]);
+                    });
+                }
+            });
+
+            $summary = $query->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => $summary
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch service statuses count..',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
     private function getCustomer($name,$contactNo,$email,$address,$cashier_id)
     {

@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ServicesController;
@@ -76,10 +77,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     
     Route::get('/service-transactions', [ServiceTransactionsController::class, 'index']);
     Route::post('/service-transactions/manage', [ServiceTransactionsController::class, 'manage']);
-    Route::post('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
-    Route::post('/service-transactions/removePayment', [ServiceTransactionsController::class, 'removePayment']);
+    Route::get('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
+    Route::get('/service-transactions/removePayment', [ServiceTransactionsController::class, 'removePayment']);
     Route::post('/service-status/save', [ServiceTransactionsController::class, 'statusSave']);
-    
+    Route::get('/fetch-service-statuses-count', [ServiceTransactionsController::class, 'serviceStatusCount']);
     Route::post('/service-transaction-payment/payment', [ServiceTransactionsController::class, 'payment']);
     Route::get('/fetch-service-statuses', [ServiceTransactionsController::class, 'serviceStatuses']);
+
+    Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
 });

@@ -10,7 +10,8 @@ import { Menu,
         Users, 
         Truck,
         Banknote,
-        Settings, 
+        Package,
+        Settings,
         LogOut } 
         from "lucide-react";
 
@@ -95,6 +96,17 @@ const Sidebar = () => {
               >
                 <Banknote size={20} className="mr-2" />
                 Expenses
+              </Link>
+            </li>
+            <li>
+              <Link 
+                to="/purchase-orders" 
+                className={`flex items-center p-2 rounded transition ${
+                  isActive("/purchase-orders") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                }`}
+              >
+                <Package size={20} className="mr-2" />
+                Purchase Orders
               </Link>
             </li>
             <li>
