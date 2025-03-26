@@ -1,7 +1,7 @@
 import Layout from "./Layout";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Plus, Trash, X } from "lucide-react";
+import { Plus, Edit, X, Clipboard } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -15,10 +15,57 @@ const PurchaseOrders = () => {
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
     const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
+    const [isManagePurchaseOrderModal, setIsManagePurchaseOrderModal] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
     const [filterStatus, setFilterStatus] = useState("All");
+    const [suppliers, setSuppliers] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [productsSelected, setProductsSelected] = useState([]);
+    const [showProductSelection, setShowProductSelection] = useState(false);
+    const [purchaseOrderStatuses, setPurchaseOrderStatuses] = useState([]);
+    const didFetch = useRef(false);
+    const [poFormData, setPoFormData] = useState({        
+        poId: null,
+        code: null,
+        supplierId: null,
+        supplierName: null,
+        dateTime: new Date(),
+        remarks: "",
+        productId: null,
+        productName: "",
+        productCost: 0,
+        productQty: 1,
+        productTotal: 0,
+        products: [],
+    });
+
+    useEffect(() => {
+        if (didFetch.current) return;
+       didFetch.current = true;
+       const fetchData = async () => {
+           try {
+               const authToken = localStorage.getItem("token");
+
+               const purchaseOrderStatusesResponse = await axios.get("/api/purchase-orders/statuses", {
+                   headers: { Authorization: `Bearer ${authToken}` },
+               });
+
+               if (purchaseOrderStatusesResponse.data.success) {
+                   const statuses = purchaseOrderStatusesResponse.data.data;
+                   setPurchaseOrderStatuses(statuses);
+               } else {
+                   toastr.error("Failed to load service statuses.");
+               }
+               
+           } catch (error) {
+               toastr.error("Can't fetch data. Please refresh the page.");
+           }
+       };
+   
+       fetchData();
+   }, []);
 
     useEffect(() => {
         fetchPurchaseOrders();
@@ -49,34 +96,212 @@ const PurchaseOrders = () => {
         }
     };
 
+    const handleOpenPurchaseOrderModal = (po) => {
+        setShowProductSelection(false);
+        if(po==null){
+            setPoFormData(prevData => ({
+                ...prevData,
+                poId: null
+            }));
+        }else{
+            setPoFormData({
+                poId: po.id,
+                supplierId: po.supplier_id,
+                supplierName: po.supplier_info?.name,
+                dateTime: po.date_time_ordered,
+                remarks: po.remarks,
+                productId: null,
+                productName: "",
+                productCost: 0,
+                productQty: 1,
+                productTotal: 0,
+                products: po.products.map(product => ({
+                    poProductId: product.id, 
+                    productId: product.product_id, 
+                    productName: product.product_info.name,
+                    productCost: product.cost,
+                    productQty: product.qty,
+                    productTotal: product.total
+                }))
+            });
+        }
+        setIsPurchaseOrderModalOpen(true);
+    };
+
+    const handleClosePurchaseOrderModal = () => {
+        setPoFormData({
+            poId: null,
+            code: null,
+            supplierId: null,
+            supplierName: null,
+            dateTime: new Date(),
+            remarks: "",
+            productId: null,
+            productName: "",
+            productCost: 0,
+            productQty: 1,
+            productTotal: 0,
+            products: [],
+        });
+        setIsPurchaseOrderModalOpen(false);
+        setShowProductSelection(false);
+    };
+
+    const handleSupplierSearch = async (e) => {
+        const search = e.target.value;
+        setPoFormData(prevData => ({
+            ...prevData,
+            supplierName: search
+        }));
+        if (search.length > 1) {
+            try {
+                const authToken = localStorage.getItem("token");
+                const response = await axios.get("/api/fetch-suppliers", {
+                    params: { search: search },
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+                setSuppliers(response.data);
+            } catch (error) {
+                // console.error("Error fetching products:", error);
+            }
+        } else {
+            setSuppliers([]);
+        }
+    };
+
+    const handleProductSearch = async (e) => {
+        const search = e.target.value;
+        setPoFormData(prevData => ({
+            ...prevData,
+            productName: search
+        }));
+        if (search.length > 1) {
+            try {
+                const authToken = localStorage.getItem("token");
+                const response = await axios.get("/api/fetch-products", {
+                    params: { search: search },
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+                setProducts(response.data);
+            } catch (error) {
+                // console.error("Error fetching products:", error);
+            }
+        } else {
+            setProducts([]);
+        }
+    };
+
+    const handleSelectSupplier = (supplier) => {
+        setPoFormData(prevData => ({
+            ...prevData,
+            supplierId: supplier.id,
+            supplierName: supplier.name
+        }));
+        setSuppliers([]);
+    };
+
+    const handleSelectProduct = (product) => {
+        setPoFormData(prevData => ({
+            ...prevData,
+            productId: product.id,
+            productName: product.name_variant,
+            productCost: product.cost,
+            productQty: 1,
+            productTotal: product.cost * 1
+        }));
+        setProducts([]);
+    };
+
+    const handleChangeProduct = (e) => {
+        const { name, value } = e.target;
+        const numericValue = name === "productCost" || name === "productQty" ? parseFloat(value) : value;
+        setPoFormData(prevData => {
+            const updatedData = {
+                ...prevData,
+                [name]: numericValue
+            };
+    
+            const productTotal = updatedData.productCost * updatedData.productQty;
+    
+            return {
+                ...updatedData,
+                productTotal: productTotal 
+            };
+        });
+    };
+
+    const handleAddProduct = () => {
+        if(poFormData.productId==null){
+            toastr.error("Error! Please select a product.");
+            return;
+        }
+        setPoFormData(prevData => {
+            const newProduct = {
+                poProductId: null,
+                productId: prevData.productId,
+                productName: prevData.productName,
+                productCost: prevData.productCost,
+                productQty: prevData.productQty,
+                productTotal: prevData.productTotal
+            };
+    
+            return {
+                ...prevData,
+                products: [
+                    ...prevData.products,
+                    newProduct
+                ],
+                
+                productId: null,
+                productName: "",
+                productCost: 0,
+                productQty: 1,
+                productTotal: 0
+            };
+        });
+    };
+    
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!expenseName || !expenseAmount || expenseAmount <= 0 || !expenseDate) {
-            toastr.error("Please input PurchaseOrder name and amount!");
+
+        if (!poFormData.supplierId) {
+            toastr.error("Please select supplier!");
             return;
         }
 
-        try {            
-            const formData = {
-                name: expenseName,
-                amount: expenseAmount,
-                dateTime: expenseDate,
-                remarks: expenseRemarks
-            };
+        if (poFormData.products.length <= 0) {
+            toastr.error("Please select atleast 1 product to order!");
+            return;
+        }
+
+        try {
             const token = localStorage.getItem("token");
-            const response = await axios.post(`/api/purchaseOrders/store`, 
-                formData, {
+            const response = await axios.post(`/api/purchase-orders/manage`, 
+                poFormData, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
-                fetchPurchaseOrders();
-                setPurchaseOrderName("");
-                setPurchaseOrderAmount("");
-                setPurchaseOrderRemarks("");
+                setPoFormData({
+                    poId: null,
+                    code: null,
+                    supplierId: null,
+                    supplierName: null,
+                    dateTime: new Date(),
+                    remarks: "",
+                    productId: null,
+                    productName: "",
+                    productCost: 0,
+                    productQty: 1,
+                    productTotal: 0,
+                    products: [],
+                });
                 setIsPurchaseOrderModalOpen(false);
+                setShowProductSelection(false);
+                fetchPurchaseOrders();
             }else{
-                toastr.error("Error! There is something wrong in saving new expense.");
+                toastr.error("Error! There is something wrong in saving purchase orders.");
             }
         } catch (error) {
             toastr.error("Error!", error.response?.data);
@@ -84,41 +309,171 @@ const PurchaseOrders = () => {
 
     };
 
-    const handleDelete = (expenseId) => {
+    const handleRemoveProduct = async (product, index) => {
         Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
+            title: `Remove ${product.productName}?`,
+            text: `Are you sure you want to remove "${product.productName}" costed at ${product.productCost}? This action cannot be undone!`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#d33",
-            cancelButtonColor: "#3085d6",
-            confirmButtonText: "Yes, delete it!"
-        }).then( async (result) => {
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, remove it!",
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                
-                try {
-                    const authToken = localStorage.getItem("token");
-                    const response = await axios.post("/api/purchaseOrders/delete",
-                        { expenseId: expenseId },
-                        {
-                            headers: { Authorization: `Bearer ${authToken}` }
+                if(product.poProductId!=null){
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/purchase-orders/removeProduct", {
+                            params: { id: product.poProductId },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Product deleted successfully.') {
+                            setPoFormData(prevData => ({
+                                ...prevData,
+                                products: prevData.products.filter((_, i) => i !== index)
+                            }));
+                            fetchPurchaseOrders();
+                            Swal.fire("Removed!", `"${product.productName}" has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
                         }
-                    );
-                    if (response.status === 200 || response.status === 201) {
-                        Swal.fire("Deleted!", response.data.message, "success");
-
-                        setPurchaseOrdersList((prevList) =>
-                            prevList.filter((item) => item.id !== expenseId)
-                        );
-                    }else{
-                        Swal.fire("Error!", "There was a problem", "success");
-                        
+                    } catch (error) {
+                        Swal.fire("Error", "An error occurred while removing the product.", "error");
                     }
-                } catch (error) {
-                    Swal.fire("Error!", "There was a problem", "error");
+                }else{
+                    setPoFormData(prevData => ({
+                        ...prevData,
+                        products: prevData.products.filter((_, i) => i !== index)
+                    }));
+                    Swal.fire("Removed!", `"${product.productName}" has been removed.`, "success");
                 }
             }
         });
+    };
+
+    const handleCloseManagePurchaseOrderModal = () => {
+        setPoFormData({
+            poId: null,
+            code: null,
+            supplierId: null,
+            supplierName: null,
+            dateTime: new Date(),
+            remarks: "",
+            productId: null,
+            productName: "",
+            productCost: 0,
+            productQty: 1,
+            productTotal: 0,
+            products: [],
+        });
+        setIsManagePurchaseOrderModal(false);
+    };
+
+    const handleManagePurchaseOrderModal = (po) => {
+        setPoFormData({
+            poId: po.id,
+            code: po.code,
+            statusId: po.status_id,
+            statusName: po.status_info?.name,
+            statusColor: po.status_info?.color,
+            supplierId: po.supplier_id,
+            supplierName: po.supplier_info?.name,
+            dateTime: po.date_time_ordered,
+            dateTimeReceived: po.date_time_received ? po.date_time_received : new Date(),
+            remarks: po.remarks,
+            productId: null,
+            productName: "",
+            productCost: 0,
+            productQty: 1,
+            productTotal: 0,
+            products: po.products.map(product => ({
+                poProductId: product.id, 
+                productId: product.product_id, 
+                productName: product.product_info.name,
+                productCost: product.cost,
+                productQty: product.qty,
+                productTotal: product.total,
+                productCostReceived: product.cost,
+                productQtyReceived: product.qty,
+                productTotalReceived: product.total,
+                productStatusId: product.status_id
+            }))
+        });
+        setShowProductSelection(false);
+        setIsManagePurchaseOrderModal(true);        
+    };
+
+    const handleChangeProductReceived = (e, index) => {
+        const { name, value } = e.target;
+        const numericValue = name === "productCostReceived" || name === "productQtyReceived" ? parseFloat(value) : value;
+        setPoFormData(prevData => {
+            const updatedProducts = prevData.products.map((product, i) => {
+                if (i === index) {
+                    const updatedProduct = {
+                        ...product,
+                        [name]: numericValue
+                    };
+    
+                    const productTotal = updatedProduct.productCostReceived * updatedProduct.productQtyReceived;
+                    return {
+                        ...updatedProduct,
+                        productTotalReceived: productTotal
+                    };
+                }
+                return product; 
+            });
+    
+            return {
+                ...prevData,
+                products: updatedProducts 
+            };
+        });
+    };
+
+    const handleSubmitManagePurchaseOrder = async (e) => {
+        e.preventDefault();
+
+        if (!poFormData.poId) {
+            toastr.error("Error! Please select purchase order..");
+            return;
+        }
+
+        if (poFormData.products.length <= 0) {
+            toastr.error("Please select atleast 1 product to order!");
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/purchase-orders/manageStatus`, 
+                poFormData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                setPoFormData({
+                    poId: null,
+                    code: null,
+                    supplierId: null,
+                    supplierName: null,
+                    dateTime: new Date(),
+                    remarks: "",
+                    productId: null,
+                    productName: "",
+                    productCost: 0,
+                    productQty: 1,
+                    productTotal: 0,
+                    products: [],
+                });
+                setIsPurchaseOrderModalOpen(false);
+                setShowProductSelection(false);
+                fetchPurchaseOrders();
+            }else{
+                toastr.error("Error! There is something wrong in saving purchase orders.");
+            }
+        } catch (error) {
+            toastr.error("Error!", error.response?.data);
+        }
     };
 
     return (
@@ -128,7 +483,7 @@ const PurchaseOrders = () => {
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Purchase Orders (PO)</h1>
                     <button
-                        onClick={() => setIsPurchaseOrderModalOpen(true)}
+                        onClick={() => handleOpenPurchaseOrderModal(null)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
                     >
                         <Plus size={18} /> New PO
@@ -183,20 +538,28 @@ const PurchaseOrders = () => {
                                     <tr key={po.id}>
                                         <td className="border border-gray-300 px-4 py-2">{po.code}</td>
                                         <td className="border border-gray-300 px-4 py-2">{po.supplier_info?.name}</td>
-                                        <td className="border border-gray-300 px-4 py-2 relative">
+                                        <td className="border border-gray-300 px-1 py-1 relative">
                                             {po.products?.length > 0 && (
-                                                <div className="max-h-40 overflow-y-auto">
+                                                <div className="max-h-80 overflow-y-auto">
                                                     {po.products.map((product, index) => (
                                                         <div 
                                                             key={index} 
-                                                            className="w-full bg-white border rounded-lg shadow-lg mt-1 mb-2 relative"
+                                                            className="w-full bg-white border rounded-lg shadow-lg p-2 relative"
                                                         >
                                                             <span className="text-gray-800">
                                                                 {product.product_info?.name_variant}
                                                             </span>
                                                             <div className="text-sm">
                                                                 <div>
-                                                                    <span className="font-medium">Qty:</span>{product.qty}
+                                                                    <span className="font-medium">Qty:</span> {product.qty}
+                                                                </div>
+                                                                <div>
+                                                                    <span className="font-medium">Total:</span> ₱{Number((product.total)).toFixed(2).toLocaleString()}
+                                                                </div>
+                                                                <div>
+                                                                    <span className={`font-medium text-${product.status_info?.color}-600`}>
+                                                                        {product.status_info?.name}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -210,17 +573,30 @@ const PurchaseOrders = () => {
                                         <td className="border border-gray-300 px-4 py-2">
                                             {moment(po.date_time_received).isValid() ? moment(po.date_time_received).format("MMM D, YY h:mma") : ""}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">{po.status_info?.name}</td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            <span className={`font-medium text-${po.status_info?.color}-600`}>
+                                                {po.status_info?.name}
+                                            </span>
+                                        </td>
                                         <td className="border border-gray-300 px-4 py-2">{po.remarks}</td>
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
                                             <button 
-                                                    onClick={() => handleDelete(po.id)}
-                                                    className="flex items-center gap-2 px-3 py-1 text-white bg-red-600 border border-red-600 
+                                                    onClick={() => handleOpenPurchaseOrderModal(po)}
+                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-600 border border-blue-600 
                                                             rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-red-600 hover:border-red-600"
+                                                            hover:bg-white hover:text-blue-600 hover:border-blue-600"
                                                 >
-                                                    <Trash size={16} />
-                                                    {/* <span>Delete</span> */}
+                                                    <Edit size={14} />
+                                                    <span className="text-sm">Edit</span>
+                                            </button>
+                                            <button 
+                                                    onClick={() => handleManagePurchaseOrderModal(po)}
+                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-green-600 border border-green-600 
+                                                            rounded-lg shadow transition duration-200 
+                                                            hover:bg-white hover:text-green-600 hover:border-green-600"
+                                                >
+                                                    <Clipboard size={14} />
+                                                    <span className="text-sm">Manage</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -262,12 +638,14 @@ const PurchaseOrders = () => {
 
             {isPurchaseOrderModalOpen && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] relative">
                         {/* Header */}
                         <div className="flex justify-between">
-                            <h2 className="text-xl font-semibold">New Purchase Order (PO)</h2>
+                            <h2 className="text-xl font-semibold">
+                                {poFormData.poId ? 'Edit Purchase Order (PO)' : 'New Purchase Order (PO)'}
+                            </h2>
                             <button 
-                                onClick={() => setIsPurchaseOrderModalOpen(false)} 
+                                onClick={() => handleClosePurchaseOrderModal()} 
                                 className="text-gray-500 hover:text-gray-700 transition"
                             >
                                 <X size={24} />
@@ -276,67 +654,448 @@ const PurchaseOrders = () => {
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="mt-4">
                             {/* PurchaseOrder Name with Suggestions */}
-                            <label className="block text-sm font-medium">PurchaseOrder Name</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={expenseName}
-                                    onChange={(e) => setPurchaseOrderName(e.target.value)}
-                                    className="w-full p-2 border rounded"
-                                    placeholder="Type to search..."
-                                />
-                                {suggestions.length > 0 && (
-                                    <ul className="absolute bg-white border rounded w-full mt-1 shadow-lg max-h-40 overflow-auto z-50">
-                                        {suggestions.map((name) => (
-                                            <li
-                                                key={name}
-                                                // onClick={() => handleSelectPurchaseOrder(name)}
-                                                className="p-2 hover:bg-gray-100 cursor-pointer"
-                                            >
-                                                {name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium">Supplier</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={poFormData.supplierName}
+                                            onChange={handleSupplierSearch}
+                                            className="w-full p-2 border rounded"
+                                            placeholder="Type to search..."
+                                        />
+                                        {suppliers.length > 0 && (
+                                            <ul className="absolute bg-white border rounded w-full mt-1 shadow-lg max-h-40 overflow-auto z-50">
+                                                {suppliers.map((supplier) => (
+                                                    <li
+                                                        key={supplier.id}
+                                                        onClick={() => handleSelectSupplier(supplier)}
+                                                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                                                    >
+                                                        {supplier.name}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium">Date Time</label>
+                                    <DatePicker
+                                        selected={poFormData.dateTime}
+                                        onChange={(date) => setPoFormData(prevData => ({
+                                                ...prevData,
+                                                dateTime: date
+                                            }))
+                                        }
+                                        showTimeSelect
+                                        dateFormat="Pp"
+                                        className="border px-3 py-2 rounded-lg w-full"
+                                    />
+                                </div>
                             </div>
+                            <div className="mt-2">
+                                <label className="block text-sm font-medium mt-2">Remarks:</label>
+                                <div className="relative">
+                                    <textarea
+                                        value={poFormData.remarks}
+                                        onChange={(e) => setPoFormData(prevData => ({
+                                                ...prevData,
+                                                remarks: e.target.value
+                                            }))
+                                        }
+                                        className="w-full p-2 border rounded resize-none"
+                                        placeholder="Enter remarks about the purchase order..."
+                                        rows={2}
+                                    ></textarea>
+                                </div>
+                            </div>
+                            
+                            <div className="w-full mt-4">
+                                {/* Product Search & Selection Section */}
+                                {showProductSelection ? (
+                                    <div>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {/* Product Search & Selection */}
+                                            <div className="col-span-2 w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Product:</label>
+                                                <div className="relative">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Search Product"
+                                                        value={poFormData.productName}
+                                                        onChange={handleProductSearch}
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                    />
+                                                    {/* Dropdown */}
+                                                    {products.length > 0 && (
+                                                        <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
+                                                            {products.map((product) => (
+                                                                <li 
+                                                                    key={product.id} 
+                                                                    className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                    onClick={() => handleSelectProduct(product)}
+                                                                >
+                                                                    {product.name_variant}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Cost:</label>
+                                                <input 
+                                                    type="number"
+                                                    name="productCost"
+                                                    value={poFormData.productCost}
+                                                    onChange={handleChangeProduct}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                            </div>
+                                            <div className="w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Qty:</label>
+                                                <input 
+                                                    type="number"
+                                                    name="productQty"
+                                                    value={poFormData.productQty}
+                                                    onChange={handleChangeProduct}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 w-full flex justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowProductSelection(!showProductSelection)}
+                                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                            >
+                                               Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddProduct}
+                                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
+                                            >
+                                                Add Product
+                                            </button>                                            
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowProductSelection(!showProductSelection)}
+                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
+                                        >
+                                           Add New Product
+                                        </button>
+                                    </div>
+                                )}
 
-                            {/* Amount */}
-                            <label className="block mt-3 text-sm font-medium">Amount</label>
-                            <input
-                                type="number"
-                                value={expenseAmount}
-                                onChange={(e) => setPurchaseOrderAmount(e.target.value)}
-                                className="w-full p-2 border rounded"
-                                placeholder="Enter amount"
-                            />
-
-                            {/* Date */}
-                            <label className="block mt-3 text-sm font-medium">Date & Time</label>
-                            <input
-                                type="datetime-local"
-                                value={expenseDate}
-                                onChange={(e) => setPurchaseOrderDate(e.target.value)}
-                                className="w-full p-2 border rounded"
-                            />
-
-                            {/* Remarks */}
-                            <label className="block text-sm font-medium text-gray-700">Remarks:</label>
-                            <textarea 
-                                value={expenseRemarks || ""}
-                                onChange={(e) => setPurchaseOrderRemarks(e.target.value)}
-                                className="mt-1 block w-full rounded-md border shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                rows={3}
-                                placeholder="Enter remarks here..."
-                            ></textarea>
-
-                            {/* Submit Button */}
+                                <div className="mb-4">
+                                    <table className="w-full mt-4 border border-gray-300 text-sm">
+                                        <thead className="bg-gray-100 text-gray-700">
+                                            <tr>
+                                            <th className="border px-4 py-2 text-left">Product Name</th>
+                                            <th className="border px-4 py-2 text-left">Unit Cost</th>
+                                            <th className="border px-4 py-2 text-left">Quantity</th>
+                                            <th className="border px-4 py-2 text-left">Total</th>
+                                            <th className="border px-4 py-2 text-left">Actions</th>
+                                            </tr>
+                                        </thead>  
+                                        <tbody>
+                                            {poFormData.products?.map((product, index) => (
+                                                <tr key={index}>
+                                                    <td className="border px-4 py-2">{product.productName}</td>
+                                                    <td className="border px-4 py-2">₱{Number((product.productCost)).toFixed(2).toLocaleString()}</td>
+                                                    <td className="border px-4 py-2">{product.productQty}</td>
+                                                    <td className="border px-4 py-2">₱{Number((product.productTotal)).toFixed(2).toLocaleString()}</td>
+                                                    <td className="border px-4 py-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveProduct(product, index)}
+                                                        className="text-red-500 hover:underline text-sm"
+                                                    >
+                                                        <X size={24} />
+                                                    </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                          
                             <button
                                 type="submit"
                                 className="w-full mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
                             >
-                                Save PurchaseOrder
+                                Save Purchase Order
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {isManagePurchaseOrderModal && (
+                <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] relative">
+                        {/* Header */}
+                        <div className="flex justify-between">
+                            <h2 className="text-xl font-semibold">
+                                Manage Purchase Order Status
+                            </h2>
+                            <button 
+                                onClick={handleCloseManagePurchaseOrderModal} 
+                                className="text-gray-500 hover:text-gray-700 transition"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                            <div>
+                                <label>Code: </label>
+                                <span className="font-medium">
+                                    {poFormData.code}
+                                </span>
+                            </div>                            
+                            <div>
+                                <label>Supplier: </label>
+                                <span className="font-medium">
+                                    {poFormData.supplierName}
+                                </span>
+                            </div>                            
+                            <div>
+                                <label>Ordered: </label>
+                                <span className="font-medium">
+                                    {poFormData.dateTime}
+                                </span>
+                            </div>
+                            <div></div>
+                            <div className="flex items-center gap-2">
+                                <label className="block text-sm font-medium" style={{minWidth: '60px'}}>Received:</label>
+                                <DatePicker
+                                    selected={poFormData.dateTimeReceived}
+                                    onChange={(date) => setPoFormData(prevData => ({
+                                            ...prevData,
+                                            dateTimeReceived: date
+                                        }))
+                                    }
+                                    showTimeSelect
+                                    dateFormat="Pp"
+                                    className="border px-3 py-2 rounded-lg w-full"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className={`font-medium text-${poFormData.statusColor}-600`} style={{minWidth: '50px'}}>Status: </label>
+                                <select
+                                    value={poFormData.statusId}
+                                    onChange={(e) =>{ 
+                                        const newStatusId = e.target.value;        
+                                        setPoFormData(prevData => ({
+                                            ...prevData,
+                                            statusId: newStatusId
+                                        }));
+                                    }}
+                                    className="border py-2 rounded-lg w-full"
+                                >
+                                    {purchaseOrderStatuses.map((status) => (
+                                        <option key={status.id} value={status.id}>
+                                            {status.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="w-full mt-4">
+                                {/* Product Search & Selection Section */}
+                                {showProductSelection ? (
+                                    <div>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {/* Product Search & Selection */}
+                                            <div className="col-span-2 w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Product:</label>
+                                                <div className="relative">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Search Product"
+                                                        value={poFormData.productName}
+                                                        onChange={handleProductSearch}
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                    />
+                                                    {/* Dropdown */}
+                                                    {products.length > 0 && (
+                                                        <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
+                                                            {products.map((product) => (
+                                                                <li 
+                                                                    key={product.id} 
+                                                                    className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                    onClick={() => handleSelectProduct(product)}
+                                                                >
+                                                                    {product.name_variant}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Cost:</label>
+                                                <input 
+                                                    type="number"
+                                                    name="productCost"
+                                                    value={poFormData.productCost}
+                                                    onChange={handleChangeProduct}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                            </div>
+                                            <div className="w-full">
+                                                <label className="block text-sm font-medium text-gray-700">Qty:</label>
+                                                <input 
+                                                    type="number"
+                                                    name="productQty"
+                                                    value={poFormData.productQty}
+                                                    onChange={handleChangeProduct}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 w-full flex justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowProductSelection(!showProductSelection)}
+                                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                            >
+                                               Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddProduct}
+                                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
+                                            >
+                                                Add Product
+                                            </button>                                            
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowProductSelection(!showProductSelection)}
+                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
+                                        >
+                                           Add New Product
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="mb-4">
+                                    <table className="w-full mt-4 border border-gray-300 text-sm">
+                                        <thead className="bg-gray-100 text-gray-700">
+                                            <tr>
+                                            <th className="border px-4 py-2 text-left">Product Name</th>
+                                            <th className="border px-4 py-2 text-left">Unit Cost</th>
+                                            <th className="border px-4 py-2 text-left">Quantity</th>
+                                            <th className="border px-4 py-2 text-left">Total</th>
+                                            <th className="border px-4 py-2 text-left">Status</th>
+                                            <th className="border px-4 py-2 text-left">Actions</th>
+                                            </tr>
+                                        </thead>  
+                                        <tbody>
+                                            {poFormData.products?.map((product, index) => (
+                                                <tr key={index}>
+                                                    <td className="border px-4 py-2">{product.productName}</td>
+                                                    <td className="border px-4 py-2">
+                                                        ₱{Number((product.productCost)).toFixed(2).toLocaleString()}
+                                                        <div className="w-full">
+                                                            <label className="block text-sm font-medium text-gray-700">Received:</label>
+                                                            <input 
+                                                                type="number"
+                                                                name="productCostReceived"
+                                                                value={product.productCostReceived}
+                                                                onChange={(e) => handleChangeProductReceived(e, index)}
+                                                                className="border px-3 py-2 rounded-lg w-full"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td className="border px-4 py-2">
+                                                        {product.productQty}
+                                                        <div className="w-full">
+                                                            <label className="block text-sm font-medium text-gray-700">Received:</label>
+                                                            <input 
+                                                                type="number"
+                                                                name="productQtyReceived"
+                                                                value={product.productQtyReceived}
+                                                                onChange={(e) => handleChangeProductReceived(e, index)}
+                                                                className="border px-3 py-2 rounded-lg w-full"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td className="border px-4 py-2">
+                                                        ₱{Number((product.productTotal)).toFixed(2).toLocaleString()}
+                                                        <div className="w-full">
+                                                            <label className="block text-sm font-medium text-gray-700">Received:</label>
+                                                            <span className="font-medium">
+                                                                ₱{product.productTotalReceived}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="border px-4 py-2">
+                                                        <select
+                                                            value={product.productStatusId}
+                                                            onChange={(e) =>{ 
+                                                                const newStatusId = e.target.value;
+        
+                                                                setPoFormData(prevData => ({
+                                                                    ...prevData,
+                                                                    products: prevData.products.map((prod, i) =>
+                                                                        i === index 
+                                                                            ? {
+                                                                                ...prod,
+                                                                                productStatusId: newStatusId 
+                                                                            }
+                                                                            : prod
+                                                                    )
+                                                                }));
+                                                            }}
+                                                            className="border py-2 rounded-lg w-full"
+                                                        >
+                                                            {purchaseOrderStatuses.map((status) => (
+                                                                <option key={status.id} value={status.id}>
+                                                                    {status.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="border px-4 py-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveProduct(product, index)}
+                                                            className="text-red-500 hover:underline text-sm"
+                                                        >
+                                                            <X size={24} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div>
+                                <button
+                                        type="button"
+                                        onClick={handleSubmitManagePurchaseOrder}
+                                        className="w-full mt-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
+                        </div>
                     </div>
                 </div>
             )}

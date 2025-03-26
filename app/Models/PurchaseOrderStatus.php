@@ -9,6 +9,7 @@ class PurchaseOrderStatus extends Model
 {
     protected $fillable = [
         'name',
+        'color',
     ];
 
     public function purchaseOrders(): HasMany

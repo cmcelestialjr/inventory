@@ -43,6 +43,17 @@ class SuppliersController extends Controller
         ]);
     }
 
+    public function fetch(Request $request)
+    {
+        $query = Supplier::when($request->has('search') && !empty($request->search), function ($query) use ($request) {
+                $search = $request->search;
+                $query->where('name', 'LIKE', "%{$search}%");
+            });
+        $suppliers = $query->limit(10)->get();
+
+        return response()->json($suppliers);
+    }
+
     public function manage(Request $request)
     {
         if($request->supplierId==null){

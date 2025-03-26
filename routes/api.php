@@ -68,6 +68,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
+    Route::get('/fetch-suppliers', [SuppliersController::class, 'fetch']);
 
     Route::get('/services', [ServicesController::class, 'index']);
     Route::post('/services/manage', [ServicesController::class, 'manage']);
@@ -85,4 +86,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-service-statuses', [ServiceTransactionsController::class, 'serviceStatuses']);
 
     Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+    Route::post('/purchase-orders/manage', [PurchaseOrderController::class, 'manage']);
+    Route::get('/purchase-orders/removeProduct', [PurchaseOrderController::class, 'removeProduct']);
+    Route::get('/purchase-orders/statuses', [PurchaseOrderController::class, 'statuses']);
+    Route::get('/purchase-orders/manageStatus', [PurchaseOrderController::class, 'manageStatus']);
 });

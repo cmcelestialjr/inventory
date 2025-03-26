@@ -47,7 +47,7 @@ class ExpensesController extends Controller
 
     public function names()
     {
-        return Expense::distinct()->pluck('name');
+        return Expense::distinct()->pluck('expense_name');
     }
 
     public function store(Request $request)
