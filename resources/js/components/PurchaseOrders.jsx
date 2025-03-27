@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Plus, Edit, X, Clipboard } from "lucide-react";
+import { Plus, Edit, X, Clipboard, File, PrinterIcon } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -25,6 +25,7 @@ const PurchaseOrders = () => {
     const [productsSelected, setProductsSelected] = useState([]);
     const [showProductSelection, setShowProductSelection] = useState(false);
     const [purchaseOrderStatuses, setPurchaseOrderStatuses] = useState([]);
+    const [printData, setPrintData] = useState([]);
     const didFetch = useRef(false);
     const [poFormData, setPoFormData] = useState({        
         poId: null,
@@ -104,11 +105,12 @@ const PurchaseOrders = () => {
                 poId: null
             }));
         }else{
+            const parsedDate = new Date(po.date_time_ordered);
             setPoFormData({
                 poId: po.id,
                 supplierId: po.supplier_id,
                 supplierName: po.supplier_info?.name,
-                dateTime: po.date_time_ordered,
+                dateTime: parsedDate,
                 remarks: po.remarks,
                 productId: null,
                 productName: "",
@@ -242,7 +244,11 @@ const PurchaseOrders = () => {
                 productName: prevData.productName,
                 productCost: prevData.productCost,
                 productQty: prevData.productQty,
-                productTotal: prevData.productTotal
+                productTotal: prevData.productTotal,
+                productCostReceived: prevData.productCost,
+                productQtyReceived: prevData.productQty,
+                productTotalReceived: prevData.productTotal,
+                productStatusId: 1,
             };
     
             return {
@@ -370,6 +376,8 @@ const PurchaseOrders = () => {
     };
 
     const handleManagePurchaseOrderModal = (po) => {
+        const parsedDate = new Date(po.date_time_ordered).toISOString();
+        const parsedDateReceived = po.date_time_received ? new Date(po.date_time_received) : new Date();
         setPoFormData({
             poId: po.id,
             code: po.code,
@@ -378,8 +386,8 @@ const PurchaseOrders = () => {
             statusColor: po.status_info?.color,
             supplierId: po.supplier_id,
             supplierName: po.supplier_info?.name,
-            dateTime: po.date_time_ordered,
-            dateTimeReceived: po.date_time_received ? po.date_time_received : new Date(),
+            dateTime: parsedDate,
+            dateTimeReceived: parsedDateReceived,
             remarks: po.remarks,
             productId: null,
             productName: "",
@@ -451,21 +459,7 @@ const PurchaseOrders = () => {
             });
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
-                setPoFormData({
-                    poId: null,
-                    code: null,
-                    supplierId: null,
-                    supplierName: null,
-                    dateTime: new Date(),
-                    remarks: "",
-                    productId: null,
-                    productName: "",
-                    productCost: 0,
-                    productQty: 1,
-                    productTotal: 0,
-                    products: [],
-                });
-                setIsPurchaseOrderModalOpen(false);
+                setIsManagePurchaseOrderModal(false);
                 setShowProductSelection(false);
                 fetchPurchaseOrders();
             }else{
@@ -476,9 +470,79 @@ const PurchaseOrders = () => {
         }
     };
 
+    const handlePrintPurchaseOrder = (po) => {
+        setPrintData(po);
+        const printWindow = window.open('', '', 'height=600,width=800');
+
+        // Create the HTML structure for the print content manually
+        const body = printWindow.document.createElement('body');
+        const title = printWindow.document.createElement('h2');
+        title.innerText = 'Purchase Order';
+        
+        const table = printWindow.document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+
+        const thead = printWindow.document.createElement('thead');
+        const headerRow = printWindow.document.createElement('tr');
+        const headers = ['Description', 'Quantity', 'Unit Price', 'Total'];
+        headers.forEach(header => {
+            const th = printWindow.document.createElement('th');
+            th.style.padding = '5px';
+            th.style.border = '1px solid #ddd';
+            th.style.textAlign = 'center';
+            th.innerText = header;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = printWindow.document.createElement('tbody');
+        printData.products?.forEach(product => {
+          const row = printWindow.document.createElement('tr');
+        
+          const descriptionCell = printWindow.document.createElement('td');
+          descriptionCell.innerText = product.product_info?.name_variant;
+          row.appendChild(descriptionCell);
+        
+        //   const quantityCell = printWindow.document.createElement('td');
+        //   quantityCell.innerText = item.quantity;
+        //   row.appendChild(quantityCell);
+        
+        //   const priceCell = printWindow.document.createElement('td');
+        //   priceCell.innerText = item.price.toFixed(2);
+        //   row.appendChild(priceCell);
+
+        //   const totalCell = printWindow.document.createElement('td');
+        //   totalCell.innerText = (item.quantity * item.price).toFixed(2);
+        //   row.appendChild(totalCell);
+
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        
+        body.appendChild(title);
+        body.appendChild(table);
+        printWindow.document.body.appendChild(body);
+
+        // Apply print styles
+        const style = printWindow.document.createElement('style');
+        style.innerText = `
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        h2 { text-align: center; }
+        `;
+        printWindow.document.head.appendChild(style);
+
+        // Trigger the print dialog
+        printWindow.document.close();
+        printWindow.print();
+    };
+
     return (
         <Layout>
-            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto max-w-7xl mt-10">
+            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Purchase Orders (PO)</h1>
@@ -521,7 +585,7 @@ const PurchaseOrders = () => {
                             <tr className="bg-gray-100 text-gray-700">
                                 <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Code</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Supplier</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Products</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2" style={{ minWidth: '250px' }}>Products</th>
                                 <th className="border border-gray-300 px-4 py-2 text-center" colSpan="2">DateTime</th>
                                 <th className="border border-gray-300 px-4 py-2 text-center" rowSpan="2">Status</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Remarks</th>
@@ -557,6 +621,7 @@ const PurchaseOrders = () => {
                                                                     <span className="font-medium">Total:</span> ₱{Number((product.total)).toFixed(2).toLocaleString()}
                                                                 </div>
                                                                 <div>
+                                                                    Status: 
                                                                     <span className={`font-medium text-${product.status_info?.color}-600`}>
                                                                         {product.status_info?.name}
                                                                     </span>
@@ -582,21 +647,30 @@ const PurchaseOrders = () => {
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
                                             <button 
                                                     onClick={() => handleOpenPurchaseOrderModal(po)}
-                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-600 border border-blue-600 
+                                                    className="flex items-center gap-1 px-1 py-1 text-white bg-blue-500 border border-blue-500 
                                                             rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-blue-600 hover:border-blue-600"
+                                                            hover:bg-white hover:text-blue-500 hover:border-blue-500"
                                                 >
                                                     <Edit size={14} />
                                                     <span className="text-sm">Edit</span>
                                             </button>
                                             <button 
                                                     onClick={() => handleManagePurchaseOrderModal(po)}
-                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-green-600 border border-green-600 
+                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-700 border border-blue-700 
                                                             rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-green-600 hover:border-green-600"
+                                                            hover:bg-white hover:text-blue-700 hover:border-blue-700"
                                                 >
                                                     <Clipboard size={14} />
                                                     <span className="text-sm">Manage</span>
+                                            </button>
+                                            <button 
+                                                    onClick={() => handlePrintPurchaseOrder(po)}
+                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-900 border border-blue-900 
+                                                            rounded-lg shadow transition duration-200 
+                                                            hover:bg-white hover:text-blue-900 hover:border-blue-900"
+                                                >
+                                                    <PrinterIcon size={14} />
+                                                    <span className="text-sm">Print</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -638,7 +712,7 @@ const PurchaseOrders = () => {
 
             {isPurchaseOrderModalOpen && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
                         {/* Header */}
                         <div className="flex justify-between">
                             <h2 className="text-xl font-semibold">
@@ -692,6 +766,7 @@ const PurchaseOrders = () => {
                                         showTimeSelect
                                         dateFormat="Pp"
                                         className="border px-3 py-2 rounded-lg w-full"
+                                        wrapperClassName="w-full z-60"
                                     />
                                 </div>
                             </div>
@@ -841,7 +916,7 @@ const PurchaseOrders = () => {
 
             {isManagePurchaseOrderModal && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl max-h-[90vh] overflow-y-auto w-full">
                         {/* Header */}
                         <div className="flex justify-between">
                             <h2 className="text-xl font-semibold">
@@ -861,17 +936,17 @@ const PurchaseOrders = () => {
                                 <span className="font-medium">
                                     {poFormData.code}
                                 </span>
-                            </div>                            
+                            </div>
                             <div>
                                 <label>Supplier: </label>
                                 <span className="font-medium">
                                     {poFormData.supplierName}
                                 </span>
-                            </div>                            
+                            </div>
                             <div>
                                 <label>Ordered: </label>
                                 <span className="font-medium">
-                                    {poFormData.dateTime}
+                                    {moment(poFormData.dateTime).format("MMM D, YY h:mma")}
                                 </span>
                             </div>
                             <div></div>
@@ -887,6 +962,7 @@ const PurchaseOrders = () => {
                                     showTimeSelect
                                     dateFormat="Pp"
                                     className="border px-3 py-2 rounded-lg w-full"
+                                    wrapperClassName="w-full z-60"
                                 />
                             </div>
                             <div className="flex items-center gap-2">
@@ -945,7 +1021,7 @@ const PurchaseOrders = () => {
                                             </div>
                                             <div className="w-full">
                                                 <label className="block text-sm font-medium text-gray-700">Cost:</label>
-                                                <input 
+                                                <input
                                                     type="number"
                                                     name="productCost"
                                                     value={poFormData.productCost}
@@ -993,7 +1069,7 @@ const PurchaseOrders = () => {
                                     </div>
                                 )}
 
-                                <div className="mb-4">
+                                <div className="mb-4 max-h-[50vh] overflow-y-auto relative">
                                     <table className="w-full mt-4 border border-gray-300 text-sm">
                                         <thead className="bg-gray-100 text-gray-700">
                                             <tr>
@@ -1096,6 +1172,27 @@ const PurchaseOrders = () => {
                                     </button>
                                 </div>
                         </div>
+                    </div>
+
+                    <div id="printable" style={{ display: 'none' }}>
+                        <h2>Purchase Order</h2>
+                        <table border="1" cellPadding="10">
+                        <thead>
+                            <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* {printData.products?.map(product => (
+                            <tr key={product.id}>
+                                <td>{product.product_info?.name_variant}</td>
+                            </tr>
+                            ))} */}
+                        </tbody>
+                        </table>
                     </div>
                 </div>
             )}

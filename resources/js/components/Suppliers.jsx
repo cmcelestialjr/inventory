@@ -135,7 +135,7 @@ const Suppliers = () => {
 
     return (
         <Layout>
-            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto max-w-7xl mt-10">
+            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Suppliers</h1>

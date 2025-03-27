@@ -96,7 +96,7 @@ class PurchaseOrderController extends Controller
 
             $purchase_order_id = $po->id;
 
-            $this->productsManage($cashier_id, $purchase_order_id, $validatedData['products']);
+            $this->productsManage($cashier_id, $purchase_order_id, 1, $validatedData['products']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! Purchase order saved..',
@@ -119,7 +119,7 @@ class PurchaseOrderController extends Controller
             'dateTimeReceived' => 'required',
             'statusId' => 'required|integer|exists:purchase_order_statuses,id',
             'products' => 'required|array|min:1',
-            'products.*.poProductId' => 'required|integer|exists:purchase_order_products,id',
+            'products.*.poProductId' => 'nullable|integer|exists:purchase_order_products,id',
             'products.*.productId' => 'required|integer|exists:products,id',
             'products.*.productCost' => 'required|numeric|min:0',
             'products.*.productQty' => 'required|numeric|min:0',
@@ -127,8 +127,9 @@ class PurchaseOrderController extends Controller
             'products.*.productCostReceived' => 'required|numeric|min:0',
             'products.*.productQtyReceived' => 'required|numeric|min:0',
             'products.*.productTotalReceived' => 'required|numeric|min:0',
+            'products.*.productStatusId' => 'required|integer|exists:purchase_order_statuses,id',
         ]);
-
+        // dd($validatedData);
         try{
             DB::beginTransaction();
 
@@ -144,7 +145,7 @@ class PurchaseOrderController extends Controller
 
             $purchase_order_id = $po->id;
 
-            $this->productsManage($cashier_id, $purchase_order_id, $validatedData['products']);
+            $this->productsManage($cashier_id, $purchase_order_id,  $validatedData['statusId'], $validatedData['products']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! Purchase order saved..',
@@ -204,7 +205,7 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    private function productsManage($cashier_id, $purchase_order_id, $products)
+    private function productsManage($cashier_id, $purchase_order_id, $status_id, $products)
     {
         foreach($products as $product){
             if($product['poProductId']){
@@ -219,7 +220,23 @@ class PurchaseOrderController extends Controller
             $query->cost = $product['productCost'];
             $query->qty = $product['productQty'];
             $query->total = $product['productTotal'];
-            $query->status_id = 1;
+
+            if(isset($product['productCostReceived'])){
+                $query->cost_received = $product['productCostReceived'];
+            }
+            if(isset($product['productQtyReceived'])){
+                $query->qty_received = $product['productQtyReceived'];
+            }
+            if(isset($product['productTotalReceived'])){
+                $query->total_received = $product['productTotalReceived'];
+            }
+            if(isset($product['productStatusId'])){
+                if($status_id!=$product['productStatusId'] && ($status_id>1 && $product['productStatusId']>1)){
+                    $status_id = $product['productStatusId'];
+                }
+            }
+
+            $query->status_id = $status_id;
             $query->updated_by = $cashier_id;
             $query->save();
         }

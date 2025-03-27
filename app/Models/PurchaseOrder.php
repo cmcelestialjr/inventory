@@ -15,6 +15,7 @@ class PurchaseOrder extends Model
         'date_time_received',
         'status_id',
         'remarks',
+        'src',
         'updated_by',
         'created_by',
     ];

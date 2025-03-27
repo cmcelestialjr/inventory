@@ -849,7 +849,7 @@ const TransactionTransactions = () => {
 
     return (
         <Layout>
-            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto max-w-7xl mt-10">
+            <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Service Transanctions</h1>
@@ -1132,7 +1132,7 @@ const TransactionTransactions = () => {
                 
                 {isTransactionModalOpen && (
                     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full relative">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
                             {/* Header */}
                             <div className="flex justify-between mt-4">
                                 <h2 className="text-xl font-semibold">
@@ -1474,6 +1474,7 @@ const TransactionTransactions = () => {
                                                                     showTimeSelect
                                                                     dateFormat="Pp"
                                                                     className="border px-3 py-2 rounded-lg w-full"
+                                                                    wrapperClassName="w-full z-60"
                                                                 />
                                                             
                                                                 {/* Remove Button (Only for index > 0) */}
@@ -1575,7 +1576,7 @@ const TransactionTransactions = () => {
 
                 {isTransactionPayModalOpen && (
                     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full relative">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
                             {/* Header */}
                             <div className="flex justify-between mt-4">
                                 <h2 className="text-xl font-semibold">
@@ -1658,6 +1659,7 @@ const TransactionTransactions = () => {
                                                         showTimeSelect
                                                         dateFormat="Pp"
                                                         className="border px-3 py-2 rounded-lg w-full"
+                                                        wrapperClassName="w-full z-60"
                                                     />
                                                 </div>
 
@@ -1742,6 +1744,7 @@ const TransactionTransactions = () => {
                                                                     showTimeSelect
                                                                     dateFormat="Pp"
                                                                     className="border px-3 py-2 rounded-lg w-full"
+                                                                    wrapperClassName="w-full z-60"
                                                                 />
                                                             ) : (
                                                                 formatDateTime(transactionPayment.payment_date)
@@ -1847,7 +1850,7 @@ const TransactionTransactions = () => {
                                     onChange={(date) => setServiceStartDate(date)}
                                     isClearable
                                     className="w-full border px-3 py-2 rounded-lg"
-                                    wrapperClassName="w-full"
+                                    wrapperClassName="w-full z-60"
                                 />
                             </div>
 
@@ -1858,7 +1861,7 @@ const TransactionTransactions = () => {
                                     onChange={(date) => setServiceDateFinished(date)}
                                     isClearable
                                     className="w-full border px-3 py-2 rounded-lg"
-                                    wrapperClassName="w-full"
+                                    wrapperClassName="w-full z-60"
                                 />
                             </div>
 
@@ -1869,7 +1872,7 @@ const TransactionTransactions = () => {
                                     onChange={(date) => setServiceDateOut(date)}
                                     isClearable
                                     className="w-full border px-3 py-2 rounded-lg"
-                                    wrapperClassName="w-full"
+                                    wrapperClassName="w-full z-60"
                                 />
                             </div>
 
