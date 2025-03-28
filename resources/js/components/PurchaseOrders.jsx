@@ -401,9 +401,9 @@ const PurchaseOrders = () => {
                 productCost: product.cost,
                 productQty: product.qty,
                 productTotal: product.total,
-                productCostReceived: product.cost,
-                productQtyReceived: product.qty,
-                productTotalReceived: product.total,
+                productCostReceived: product.cost_received>0 ? product.cost_received : product.cost,
+                productQtyReceived: product.qty_received>0 ? product.qty_received : product.qty,
+                productTotalReceived: product.total_received>0 ? product.total_received : product.total,
                 productStatusId: product.status_id
             }))
         });
@@ -473,72 +473,266 @@ const PurchaseOrders = () => {
     const handlePrintPurchaseOrder = (po) => {
         setPrintData(po);
         const printWindow = window.open('', '', 'height=600,width=800');
+    
+        if (!printWindow) return;
+    
+        const doc = printWindow.document;
+        doc.title = "Purchase Order - Rockfil Stainless Metal Works"; 
+        doc.head.innerHTML += `<title>Purchase Order</title>`;
+        const body = doc.createElement('body');
+    
+        // Create styles
+        const style = doc.createElement('style');
+        style.textContent = `
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;
+                border-bottom: 2px solid black; 
+                padding-bottom: 10px; 
+                gap: 15px;
+            }
+            .header img { width: 70px; height: auto; }
+            .header .middle-logo { margin: 0 0px; }
+            .header-text { text-align: left; line-height: 1.2; flex: 1; }
+            .header-text h4 { text-align: left; margin: 0; font-size: 18px; }
+            .header-text p { margin: 0px 0; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 5px; border: 1px solid #000; text-align: left; font-size: 12px; }
+            th { text-align: center; font-size: 14px; }
+            h2, h4 { text-align: center; }
+            .supplier-date-container { 
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 3px;
+                margin-top: 0px;
+                align-items: start;
+                font-size: 14px;
+            }
+            .supplier {
+                text-align: left;
+                margin-bottom: 0px;
+                padding-bottom: 0px;
+            }
+            .date {
+                text-align: right;
+                align-self: start;
+                margin-bottom: 0px;
+            }
+            .address {
+                grid-column: span 2;
+                text-align: left; 
+                margin-top: 0px;
+            }
+            .underline {
+                display: inline-block;
+                border-bottom: 1px solid black;
+            }
+            .font-medium {
+                font-weight: bold;
+            }
+            .no-border {
+                border: none !important;
+            }
+        `;
+        doc.head.appendChild(style);
+    
+        const header = doc.createElement('div');
+        header.className = 'header';
+    
+        const leftLogo = doc.createElement('img');
+        leftLogo.src = '/images/clstldev2.png'; 
+        leftLogo.alt = 'Company Logo';
 
-        // Create the HTML structure for the print content manually
-        const body = printWindow.document.createElement('body');
-        const title = printWindow.document.createElement('h2');
+        const middleLogo = doc.createElement('img');
+        middleLogo.src = '/images/rockfil.png';
+        middleLogo.alt = 'Company Logo';
+        middleLogo.className = 'middle-logo';
+    
+        const headerText = doc.createElement('div');
+        headerText.className = 'header-text';
+        headerText.innerHTML = `
+            <h4>ROCKFIL STAINLESS METAL WORK DOT SUPPLY CORP.</h4>
+            <p>Delgado Bldg., Brgy. 110 Utap, Diversion Rd., Tacloban City</p>
+            <p>Telephone No: (053) 888 1003 | Mobile Nos: 0918-903-5706 / 0920-959-5734</p>
+            <p>Email Address: rockfilstainless@gmail.com</p>
+        `;
+    
+        header.appendChild(leftLogo);
+        header.appendChild(middleLogo);
+        header.appendChild(headerText);
+    
+        const title = doc.createElement('h4');
         title.innerText = 'Purchase Order';
-        
-        const table = printWindow.document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
 
-        const thead = printWindow.document.createElement('thead');
-        const headerRow = printWindow.document.createElement('tr');
-        const headers = ['Description', 'Quantity', 'Unit Price', 'Total'];
-        headers.forEach(header => {
-            const th = printWindow.document.createElement('th');
-            th.style.padding = '5px';
-            th.style.border = '1px solid #ddd';
-            th.style.textAlign = 'center';
-            th.innerText = header;
+        // Create supplier and date container
+        const supplierDateContainer = doc.createElement('div');
+        supplierDateContainer.className = 'supplier-date-container';
+
+        // Supplier Section
+        const supplierDiv = doc.createElement('div');
+        supplierDiv.className = 'supplier';
+        supplierDiv.innerHTML = `<span class="font-medium">Supplier: </span> <span class="underline">${po.supplier}</span>`;
+
+        // Date Section
+        const dateDiv = doc.createElement('div');
+        dateDiv.className = 'date';
+        const currentDate = new Date().toLocaleDateString();
+        dateDiv.innerHTML = `<span class="font-medium">Date: </span> <span class="underline">${po.date || currentDate}</span>`;
+
+        // Address Section (below supplier & date)
+        const addressDiv = doc.createElement('div');
+        addressDiv.className = 'address';
+        addressDiv.innerHTML = `<span class="font-medium">Address: </span> <span class="underline">${po.address}</span>`;
+
+        // Append elements
+        supplierDateContainer.appendChild(supplierDiv);
+        supplierDateContainer.appendChild(dateDiv);
+        supplierDateContainer.appendChild(addressDiv);
+
+    
+        const table = doc.createElement('table');
+    
+        const thead = doc.createElement('thead');
+        const headerRow = doc.createElement('tr');
+        const headers = ['#', 'Code', 'Description', 'Qty', 'Cost', 'Total'];
+        const columnWidths = {
+            '#': '5%',
+            'Code': '10%',
+            'Description': '40%',
+            'Qty': '10%',
+            'Cost': '15%',
+            'Total': '20%'
+        };
+        headers.forEach(headerText => {
+            const th = doc.createElement('th');
+            th.innerText = headerText;
+            th.style.width = columnWidths[headerText];
             headerRow.appendChild(th);
         });
         thead.appendChild(headerRow);
         table.appendChild(thead);
+    
+        const totalRows = 20;
 
-        const tbody = printWindow.document.createElement('tbody');
-        printData.products?.forEach(product => {
-          const row = printWindow.document.createElement('tr');
-        
-          const descriptionCell = printWindow.document.createElement('td');
-          descriptionCell.innerText = product.product_info?.name_variant;
-          row.appendChild(descriptionCell);
-        
-        //   const quantityCell = printWindow.document.createElement('td');
-        //   quantityCell.innerText = item.quantity;
-        //   row.appendChild(quantityCell);
-        
-        //   const priceCell = printWindow.document.createElement('td');
-        //   priceCell.innerText = item.price.toFixed(2);
-        //   row.appendChild(priceCell);
-
-        //   const totalCell = printWindow.document.createElement('td');
-        //   totalCell.innerText = (item.quantity * item.price).toFixed(2);
-        //   row.appendChild(totalCell);
-
-          tbody.appendChild(row);
+        const tbody = doc.createElement('tbody');
+        po.products?.forEach((product, index) => {
+            const row = doc.createElement('tr');
+    
+            const numberCell = doc.createElement('td');
+            numberCell.style.textAlign = 'center';
+            numberCell.innerText = index + 1;
+            row.appendChild(numberCell);
+    
+            const codeCell = doc.createElement('td');
+            codeCell.innerText = product.product_info?.code || 'N/A';
+            row.appendChild(codeCell);
+    
+            const descriptionCell = doc.createElement('td');
+            descriptionCell.innerText = product.product_info?.name_variant || 'No description';
+            row.appendChild(descriptionCell);
+    
+            const qtyCell = doc.createElement('td');
+            qtyCell.style.textAlign = 'center';
+            const qtyValue = product.qty ? (Number(product.qty) % 1 === 0 ? Number(product.qty) : Number(product.qty).toFixed(2)) : '0';
+            qtyCell.innerText = qtyValue;
+            row.appendChild(qtyCell);
+    
+            const costCell = doc.createElement('td');
+            costCell.style.textAlign = 'right';
+            costCell.innerText = product.cost ? `${Number(product.cost).toFixed(2).toLocaleString()}` : '0.00';
+            row.appendChild(costCell);
+    
+            const totalCell = doc.createElement('td');
+            totalCell.style.textAlign = 'right';
+            totalCell.innerText = product.total ? `${Number(product.total).toFixed(2).toLocaleString()}` : '0.00';
+            row.appendChild(totalCell);
+    
+            tbody.appendChild(row);
         });
+
+        const currentRows = po.products?.length || 0;
+        for (let i = currentRows; i < totalRows; i++) {
+            const emptyRow = doc.createElement('tr');
+
+            for (let j = 0; j < 6; j++) {
+                const emptyCell = doc.createElement('td');
+                emptyCell.innerHTML = '&nbsp;';                
+                emptyRow.appendChild(emptyCell);
+            }
+
+            tbody.appendChild(emptyRow);
+        }
+
         table.appendChild(tbody);
-        
+
+
+        const tfoot = doc.createElement('tfoot');
+        const totalRow = doc.createElement('tr');
+
+        const emptyCells = 3; 
+        for (let i = 0; i < emptyCells; i++) {
+            const emptyCell = doc.createElement('td');
+            emptyCell.className = 'no-border';
+            totalRow.appendChild(emptyCell);
+        }
+
+        const labelCell = doc.createElement('td');
+        labelCell.style.textAlign = 'right';
+        labelCell.style.fontWeight = 'bold';
+        labelCell.style.fontSize = '16px';
+        labelCell.className = 'no-border';
+        labelCell.colSpan = 2;
+        labelCell.innerText = 'Overall Total:';
+        totalRow.appendChild(labelCell);
+
+        const totalAmountCell = doc.createElement('td');
+        totalAmountCell.style.textAlign = 'right';
+        totalAmountCell.style.fontWeight = 'bold';
+        totalAmountCell.style.borderLeft  = '0px';
+        totalAmountCell.style.borderRight = '0px';
+        totalAmountCell.style.borderTop  = '0px';
+        totalAmountCell.style.borderBottom = '3px double black';
+        totalAmountCell.style.fontSize = '16px';
+        const overallTotal = po.products?.reduce((sum, product) => sum + (Number(product.total) || 0), 0);
+        totalAmountCell.innerText = overallTotal.toFixed(2).toLocaleString();
+        totalRow.appendChild(totalAmountCell);
+
+        tfoot.appendChild(totalRow);
+        table.appendChild(tfoot);
+    
+        // Append everything
+        body.appendChild(header);
         body.appendChild(title);
+        body.appendChild(supplierDateContainer);
         body.appendChild(table);
-        printWindow.document.body.appendChild(body);
+        doc.body.replaceWith(body);
+    
+        // Wait for images to load before printing
+        let imagesLoaded = 0;
+        const totalImages = 2; // Update if adding more images
 
-        // Apply print styles
-        const style = printWindow.document.createElement('style');
-        style.innerText = `
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        h2 { text-align: center; }
-        `;
-        printWindow.document.head.appendChild(style);
+        function checkAndPrint() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }
 
-        // Trigger the print dialog
-        printWindow.document.close();
-        printWindow.print();
+        leftLogo.onload = checkAndPrint;
+        middleLogo.onload = checkAndPrint;
+
+        // If images fail to load, still proceed with printing after 3 seconds
+        setTimeout(() => {
+            if (imagesLoaded < totalImages) {
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }, 3000);
     };
+    
 
     return (
         <Layout>

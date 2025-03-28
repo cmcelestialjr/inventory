@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProductsPrice;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderProduct;
 use App\Models\PurchaseOrderStatus;
@@ -210,35 +211,85 @@ class PurchaseOrderController extends Controller
         foreach($products as $product){
             if($product['poProductId']){
                 $query = PurchaseOrderProduct::findOrFail($product['poProductId']);
+                $status_id_old = $query->status_id;
+                $cost_old = $query->cost_received;
+                $qty_old = $query->qty_received;
             }else{
                 $query = new PurchaseOrderProduct;
                 $query->purchase_order_id = $purchase_order_id;
                 $query->created_by = $cashier_id;
+                $status_id_old = $status_id;
+                $cost_old = 0;
+                $qty_old = 0;
             }
+            $product_id = $product['productId'];
+            $cost = $product['productCost'];
             
-            $query->product_id = $product['productId'];
-            $query->cost = $product['productCost'];
+            $query->product_id = $product_id;
+            $query->cost = $cost;
             $query->qty = $product['productQty'];
             $query->total = $product['productTotal'];
 
-            if(isset($product['productCostReceived'])){
-                $query->cost_received = $product['productCostReceived'];
-            }
-            if(isset($product['productQtyReceived'])){
-                $query->qty_received = $product['productQtyReceived'];
-            }
-            if(isset($product['productTotalReceived'])){
-                $query->total_received = $product['productTotalReceived'];
-            }
             if(isset($product['productStatusId'])){
                 if($status_id!=$product['productStatusId'] && ($status_id>1 && $product['productStatusId']>1)){
                     $status_id = $product['productStatusId'];
                 }
             }
 
+            $cost_received = 0;
+            $qty_received = 0;
+            $total_received = 0;
+
+            if($status_id==2){
+                if(isset($product['productCostReceived'])){
+                    $cost_received = $product['productCostReceived'];
+                }
+                if(isset($product['productQtyReceived'])){
+                    $qty_received = $product['productQtyReceived'];
+                }
+                if(isset($product['productTotalReceived'])){
+                    $total_received = $product['productTotalReceived'];
+                }
+            }
+
+            $this->productsUpdate($cashier_id,$product_id, $status_id, $status_id_old, $cost_received, $cost, $cost_old, $qty_received, $qty_old);
+
+            $query->cost_received = $cost_received;
+            $query->qty_received = $qty_received;
+            $query->total_received = $total_received;
             $query->status_id = $status_id;
             $query->updated_by = $cashier_id;
             $query->save();
+        }
+    }
+
+    private function productsUpdate($cashier_id, $product_id, $status_id, $status_id_old, $cost, $cost_product, $cost_old, $qty, $qty_old)
+    {
+        $cost_check = $cost>0 ? $cost : $cost_product;
+        $cost_check = $cost_old>0 && $cost!=$cost_old ? $cost_old : $cost_check;
+        $query = ProductsPrice::where('product_id', $product_id)
+            ->where('cost', $cost_check)
+            ->first();
+        if($query){
+            $update = ProductsPrice::find($query->id);
+            $update->qty = $status_id_old==2 && $status_id!=2 ? $query->qty - $qty_old : $query->qty + $qty;
+            $update->save();
+        }else{
+            $productInfo = ProductsPrice::where('product_id', $product_id)
+                ->where('cost', $cost_product)
+                ->first();
+            $product_price = $productInfo->price;
+            $insert = new ProductsPrice;
+            $insert->product_id = $product_id;
+            $insert->cost = $cost;
+            $insert->price = $product_price;
+            $insert->qty = $qty;
+            $insert->discount = 0;
+            $insert->discount_percentage = 0;
+            $insert->effective_date = date('Y-m-d');
+            $insert->updated_by = $cashier_id;
+            $insert->created_by = $cashier_id;
+            $insert->save();
         }
     }
 
