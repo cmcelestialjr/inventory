@@ -18,7 +18,7 @@ class DashboardController extends Controller
     public function topSection(Request $request)
     {
         $validated = $request->validate([
-            'selected' => ['required', 'string', 'in:today,last_7_days,this_month,last_month,this_year,custom'],
+            'selected' => ['required', 'string', 'in:today,last_10_days,this_month,last_month,this_year,custom'],
             'startDate' => ['nullable', 'date', 'before_or_equal:endDate'],
             'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
         ]);
@@ -37,13 +37,13 @@ class DashboardController extends Controller
             ->whereIn('service_transactions.service_status_id',[1,2,3]);
 
         switch ($selected) {
-            case "last_7_days":
-                $getSales->whereBetween('date_time_of_sale', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
-                $getReturns->whereBetween('date_time_returned', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
-                $getExpenses->whereBetween('date_time_of_expense', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
-                $getServices->whereBetween('payment_date', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
-                $getReceivables->whereBetween('created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
-                $getServiceProducts->whereBetween('service_transactions.created_at', [now()->subDays(6)->startOfDay(), now()->endOfDay()]);
+            case "last_10_days":
+                $getSales->whereBetween('date_time_of_sale', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
+                $getReturns->whereBetween('date_time_returned', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
+                $getExpenses->whereBetween('date_time_of_expense', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
+                $getServices->whereBetween('payment_date', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
+                $getReceivables->whereBetween('created_at', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
+                $getServiceProducts->whereBetween('service_transactions.created_at', [now()->subDays(9)->startOfDay(), now()->endOfDay()]);
                 break;
             case "this_month":
                 $getSales->whereBetween('date_time_of_sale', [now()->startOfMonth(), now()->endOfMonth()]);
@@ -143,7 +143,7 @@ class DashboardController extends Controller
             'selected' => [
                 'required',
                 'string',
-                'in:today,last_7_days,this_month,first_qtr,second_qtr,third_qtr,fourth_qtr,first_sem,second_sem,this_year_monthly,this_year_qtr,last_3_years,last_5_years,last_7_years'
+                'in:today,last_10_days,this_month,first_qtr,second_qtr,third_qtr,fourth_qtr,first_sem,second_sem,this_year_monthly,this_year_qtr,last_3_years,last_5_years,last_7_years'
             ]
         ]);
 
@@ -155,15 +155,15 @@ class DashboardController extends Controller
         
         
         switch ($selected) {
-            case "last_7_days":
-                $salesTrends = $this->getByDays($getSales, 7, 'date_time_of_sale', 'total_amount');
-                $expensesTrends = $this->getByDays($getExpenses, 7, 'date_time_of_expense', 'amount');
+            case "last_10_days":
+                $salesTrends = $this->getByDays($getSales, 10, 'date_time_of_sale', 'total_amount');
+                $expensesTrends = $this->getByDays($getExpenses, 10, 'date_time_of_expense', 'amount');
                 $sellingProducts = $this->getByDaysSellingProducts($getSellingProducts);
                 break;
             case "this_month":                
                 $salesTrends = $this->getByThisMonth($getSales, 'date_time_of_sale', 'total_amount');
                 $expensesTrends = $this->getByThisMonth($getExpenses, 'date_time_of_expense', 'amount');
-                $sellingProducts = $this->getByThisMonthSellingProducts($getSellingProducts);                
+                $sellingProducts = $this->getByThisMonthSellingProducts($getSellingProducts);
                 break;
             case "first_qtr":
                 $salesTrends = $this->getByQtr($getSales, 'first_qtr', 'date_time_of_sale', 'total_amount');
@@ -221,8 +221,8 @@ class DashboardController extends Controller
                 $sellingProducts = $this->getByLastAboutYearsSellingProducts($getSellingProducts,7);
                 break;
             default:
-                $salesTrends = $this->getByDays($getSales, 3, 'date_time_of_sale', 'total_amount');
-                $expensesTrends = $this->getByDays($getExpenses, 3, 'date_time_of_expense', 'amount');
+                $salesTrends = $this->getByDays($getSales, 5, 'date_time_of_sale', 'total_amount');
+                $expensesTrends = $this->getByDays($getExpenses, 5, 'date_time_of_expense', 'amount');
                 $sellingProducts = $this->getByDaysSellingProducts($getSellingProducts);
         }
 

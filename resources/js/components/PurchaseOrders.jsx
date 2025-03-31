@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Plus, Edit, X, Clipboard, File, PrinterIcon } from "lucide-react";
+import { Plus, Edit, X, Clipboard, File, PrinterIcon, Package, PackageCheck, PackagePlus, CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -26,6 +26,7 @@ const PurchaseOrders = () => {
     const [showProductSelection, setShowProductSelection] = useState(false);
     const [purchaseOrderStatuses, setPurchaseOrderStatuses] = useState([]);
     const [printData, setPrintData] = useState([]);
+    const [poStatuses, setPoStatuses] = useState([]);
     const didFetch = useRef(false);
     const [poFormData, setPoFormData] = useState({        
         poId: null,
@@ -44,12 +45,19 @@ const PurchaseOrders = () => {
 
     useEffect(() => {
         if (didFetch.current) return;
-       didFetch.current = true;
+        didFetch.current = true;
+    }, []);
+
+    useEffect(() => {
        const fetchData = async () => {
            try {
                const authToken = localStorage.getItem("token");
 
                const purchaseOrderStatusesResponse = await axios.get("/api/purchase-orders/statuses", {
+                    params: {
+                        start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                        end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    },
                    headers: { Authorization: `Bearer ${authToken}` },
                });
 
@@ -66,10 +74,10 @@ const PurchaseOrders = () => {
        };
    
        fetchData();
-   }, []);
+   }, [startDate, endDate]);
 
     useEffect(() => {
-        fetchPurchaseOrders();
+        fetchPurchaseOrders(filterStatus);
     }, [search, page, dateRange, filterStatus]);
 
     const handleSearch = (e) => {
@@ -95,6 +103,12 @@ const PurchaseOrders = () => {
         } catch (error) {
             
         }
+    };
+
+    const handleSelectedPoStatus = (poStatus) => {
+        setFilterStatus(poStatus);
+        setPage(1);
+        fetchPurchaseOrders(poStatus);
     };
 
     const handleOpenPurchaseOrderModal = (po) => {
@@ -534,6 +548,72 @@ const PurchaseOrders = () => {
             }
             .no-border {
                 border: none !important;
+            }            
+            .payment-status {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                margin-top: 5px;
+            }
+            .payment-status span {
+                display: inline-block;
+                width: 150px;
+                border-bottom: 1px solid black;
+            }
+            .cheque-receipt {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                margin-top: -15px;
+            }
+            .cheque-receipt span {
+                display: inline-block;
+                width: 200px;
+                border-bottom: 1px solid black;
+            }
+            .acknowledgment {
+                font-style: italic;
+                margin-top: -10px;
+                font-size: 12px;
+            }
+            .signatories {
+                display: flex;
+                justify-content: space-between; /* Evenly distribute signatures */
+                align-items: center;
+                margin-top: 30px;
+                font-size: 12px;
+                gap: 20px; /* Adds spacing between each signature block */
+            }
+
+            .signature-block {
+                text-align: center;
+                flex: 1;
+                position: relative;
+            }
+            .signature-line {
+                display: block;
+                width: 80%; /* Controls the length of the underline */
+                border-top: 1px solid black; /* Creates the underline */
+                margin: 0 auto 5px auto; /* Centers the line */
+                height: 0px; /* Adds spacing between the line and text */
+            }
+            .signature-block p {
+                margin: 0;
+            }
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #f8f9fa;
+                text-align: center;
+                padding: 10px 0;
+                font-size: 12px;
+                border-top: 1px solid #ccc;
+            }
+            .footer p {
+                margin: 3px 0;
+                font-size: 10px;
             }
         `;
         doc.head.appendChild(style);
@@ -556,7 +636,7 @@ const PurchaseOrders = () => {
             <h4>ROCKFIL STAINLESS METAL WORK DOT SUPPLY CORP.</h4>
             <p>Delgado Bldg., Brgy. 110 Utap, Diversion Rd., Tacloban City</p>
             <p>Telephone No: (053) 888 1003 | Mobile Nos: 0918-903-5706 / 0920-959-5734</p>
-            <p>Email Address: rockfilstainless@gmail.com</p>
+            <p>Email: rockfilstainless@gmail.com</p>
         `;
     
         header.appendChild(leftLogo);
@@ -573,18 +653,18 @@ const PurchaseOrders = () => {
         // Supplier Section
         const supplierDiv = doc.createElement('div');
         supplierDiv.className = 'supplier';
-        supplierDiv.innerHTML = `<span class="font-medium">Supplier: </span> <span class="underline">${po.supplier}</span>`;
+        supplierDiv.innerHTML = `<span class="font-medium">Supplier: </span> <span class="underline">${po.supplier_info?.name}</span>`;
 
         // Date Section
         const dateDiv = doc.createElement('div');
         dateDiv.className = 'date';
         const currentDate = new Date().toLocaleDateString();
-        dateDiv.innerHTML = `<span class="font-medium">Date: </span> <span class="underline">${po.date || currentDate}</span>`;
+        dateDiv.innerHTML = `<span class="font-medium">Date: </span> <span class="underline">${moment(po.date_time_ordered).format("MMM D, YYYY") || currentDate}</span>`;
 
         // Address Section (below supplier & date)
         const addressDiv = doc.createElement('div');
         addressDiv.className = 'address';
-        addressDiv.innerHTML = `<span class="font-medium">Address: </span> <span class="underline">${po.address}</span>`;
+        addressDiv.innerHTML = `<span class="font-medium">Address: </span> <span class="underline">${po.supplier_info?.address || ""}</span>`;
 
         // Append elements
         supplierDateContainer.appendChild(supplierDiv);
@@ -614,7 +694,7 @@ const PurchaseOrders = () => {
         thead.appendChild(headerRow);
         table.appendChild(thead);
     
-        const totalRows = 20;
+        const totalRows = 22;
 
         const tbody = doc.createElement('tbody');
         po.products?.forEach((product, index) => {
@@ -701,17 +781,63 @@ const PurchaseOrders = () => {
 
         tfoot.appendChild(totalRow);
         table.appendChild(tfoot);
-    
-        // Append everything
+
+        const footer = document.createElement('div');
+        footer.innerHTML = `
+            <div class="payment-status">
+                <p><strong>PAYMENT STATUS:</strong> <span></span></p>
+                <p><strong>W/ RECEIPT?:</strong> <span></span></p>
+            </div>
+            
+            <div class="cheque-receipt">
+                <p><strong>CHEQUE:</strong> <span></span></p>
+                <p><strong>RECEIPT NO.:</strong> <span></span></p>
+            </div>
+
+            <div class="acknowledgment">
+                <p><strong>Acknowledgment:</strong><br>
+                By signing below, the Supplier agrees to fulfill the order as specified, and the Buyer acknowledges and agrees to the stated terms and conditions.</p>
+            </div>
+
+            <div class="signatories">
+                <div class="signature-block">
+                    <span class="signature-line"></span>
+                    <p>Prepared by</p>
+                </div>
+                <div class="signature-block">
+                    <span class="signature-line"></span>
+                    <p>Checked by</p>
+                </div>
+                <div class="signature-block">
+                    <span class="signature-line"></span>
+                    <p>Approved by</p>
+                </div>
+                <div class="signature-block">
+                    <span class="signature-line"></span>
+                    <p>Supplier's Representative</p>
+                </div>
+            </div>
+
+
+            
+        `;
+
+        // <div class="footer">
+        //         <p><strong>ROCKFIL STAINLESS METAL WORK DOT SUPPLY CORP.</strong></p>
+        //         <p>Delgado Bldg., Brgy. 110 Utap, Diversion Rd., Tacloban City</p>
+        //         <p>Telephone No: (053) 888 1003 | Mobile Nos: 0918-903-5706 / 0920-959-5734</p>
+        //         <p>Email: rockfilstainless@gmail.com</p>
+        //     </div>
+
         body.appendChild(header);
         body.appendChild(title);
         body.appendChild(supplierDateContainer);
         body.appendChild(table);
+        body.appendChild(footer);
         doc.body.replaceWith(body);
     
-        // Wait for images to load before printing
         let imagesLoaded = 0;
-        const totalImages = 2; // Update if adding more images
+        const totalImages = 2; 
 
         function checkAndPrint() {
             imagesLoaded++;
@@ -724,7 +850,6 @@ const PurchaseOrders = () => {
         leftLogo.onload = checkAndPrint;
         middleLogo.onload = checkAndPrint;
 
-        // If images fail to load, still proceed with printing after 3 seconds
         setTimeout(() => {
             if (imagesLoaded < totalImages) {
                 printWindow.document.close();
@@ -733,6 +858,26 @@ const PurchaseOrders = () => {
         }, 3000);
     };
     
+    const icons = [
+        (props) => <PackageCheck size={20} {...props} />,
+        (props) => <PackagePlus size={20} {...props} />,
+        (props) => <XCircle size={20} {...props} />, 
+        (props) => <RotateCcw size={20} {...props} />, 
+    ];
+        
+    const colors = [
+        "bg-blue-600",
+        "bg-green-600",
+        "bg-red-600",
+        "bg-yellow-600",
+    ];
+        
+    const textColors = [
+        "text-blue-600", 
+        "text-green-600", 
+        "text-red-600", 
+        "text-yellow-600",
+    ];
 
     return (
         <Layout>
@@ -770,6 +915,43 @@ const PurchaseOrders = () => {
                         placeholderText="Select duration"
                         className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                </div>
+
+                <div className="grid grid-cols-5 gap-6 mb-8">
+                    <button
+                        onClick={() => handleSelectedPoStatus("All")}
+                        className={`flex flex-col items-center p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            filterStatus === "All" ? "bg-blue-800 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <Package size={24} className={`${filterStatus === "All" ? "text-white" : "text-blue-800"}`} />
+                        <span className="text-sm font-semibold">All</span>
+                        <span className="text-lg font-bold">{purchaseOrderStatuses.reduce((sum, option) => sum + (option.purchase_orders_count || 0), 0)}</span>
+                    </button>
+                    
+                    {purchaseOrderStatuses.map((poStatus, index) => {
+                        const buttonColor = colors[index % colors.length];
+                        const textColor = textColors[index % colors.length];
+                        const Icon = icons[index % icons.length];
+
+                        return (
+                            <button
+                                key={poStatus.id}
+                                onClick={() => handleSelectedPoStatus(poStatus.id)}
+                                className={`flex flex-col items-center p-5 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                                    filterStatus === poStatus.id 
+                                        ? `${buttonColor} text-white shadow-xl` 
+                                        : `bg-white border border-gray-300 hover:bg-gray-100`
+                                }`}
+                            >
+                                <Icon className={filterStatus === poStatus.id ? "text-white" : textColor} />
+                                <span className="text-sm font-semibold">{poStatus.name}</span>
+                                <span className="text-xl font-bold">
+                                    {poStatus.purchase_orders_count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Sales Table */}

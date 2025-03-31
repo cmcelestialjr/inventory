@@ -27,8 +27,8 @@ class PurchaseOrderController extends Controller
             });
         }
 
-        if ($request->has('filter')) {
-            $filter = $request->filter;
+        if ($request->has('filterStatus')) {
+            $filter = $request->filterStatus;
             if($filter!='All'){
                 $query->where('status_id', $filter);
             }
@@ -46,7 +46,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        $po = $query->paginate(5);
+        $po = $query->orderBy('date_time_ordered','DESC')->paginate(5);
 
         return response()->json([
             'data' => $po->items(),
@@ -191,7 +191,13 @@ class PurchaseOrderController extends Controller
     public function statuses(Request $request)
     {
         try {
-            $query = PurchaseOrderStatus::select('id', 'name')->orderBy('id','ASC')->get();
+            $query = PurchaseOrderStatus::withCount(['purchaseOrders' => function ($q) use ($request) {
+                if ($request->has('start_date') && $request->has('end_date')) {
+                    $startDate = $request->start_date;
+                    $endDate = $request->end_date;                    
+                    $q->whereBetween(DB::raw('DATE(date_time_ordered)'), [$startDate, $endDate]);
+                }
+            }])->orderBy('id','ASC')->get();
 
             return response()->json([
                 'success' => true,

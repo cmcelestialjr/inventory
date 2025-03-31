@@ -466,7 +466,7 @@ const Sales = () => {
                         amount_change: 0.00
                     }]
                 });
-                fetchSales();
+                fetchSales(selectedSaleStatus);
             } else {
                 toastr.error("Unexpected response");
             }

@@ -306,7 +306,7 @@ const Dashboard = () => {
           className="border px-3 py-2 rounded-lg"
         >
           <option value="today">Today</option>
-          <option value="last_7_days">Last 7 Days</option>
+          <option value="last_10_days">Last 10 Days</option>
           <option value="this_month">This Month</option>
 {/* 
           <option value="first_qtr">First Quarter (Jan - Mar)</option>
