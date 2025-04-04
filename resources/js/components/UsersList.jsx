@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Plus, X } from "lucide-react";
+import { Edit, Plus, X, Upload } from "lucide-react";
 import Swal from "sweetalert2";
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import * as XLSX from 'xlsx';
 
 const UsersList = () => {  
     const [users, setUsers] = useState([]);
@@ -20,6 +21,7 @@ const UsersList = () => {
     const [roleOfUser, setRoleOfUser] = useState(2);
     const [idOfUser, setIdOfUser] = useState(null);
     const [roles, setRoles] = useState([]);
+    const [file, setFile] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -61,6 +63,28 @@ const UsersList = () => {
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setPage(1);
+    };
+
+    const handleFileChange = (e) => {
+        setFile(e.target.files[0]);
+    };
+
+    const handleUpload = async () => {
+        if (!file) return alert('Please select a file.');
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const authToken = localStorage.getItem("token");
+            const response = await axios.post('/api/products/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data',
+                    Authorization: `Bearer ${authToken}`
+                 },
+            });
+            toastr.success("Success!");
+        } catch (error) {
+            console.error('Upload error:', error);
+        }
     };
     
     const handleEditUser = (user) => {
@@ -193,6 +217,13 @@ const UsersList = () => {
                         onChange={handleSearch}
                         className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="hidden" id="fileUpload" />
+                    <label htmlFor="fileUpload" className="flex items-center gap-2 bg-gray-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-300">
+                        <Upload size={18} /> Upload Excel
+                    </label>
+                    <button onClick={handleUpload} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        Upload
+                    </button>
                 </div>
 
                 <div className="overflow-x-auto">

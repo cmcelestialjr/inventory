@@ -15,6 +15,7 @@ class Product extends Model
 
     protected $fillable = [
         'code', 
+        'supplier_id',
         'name', 
         'variant',
         'name_variant',
@@ -24,6 +25,7 @@ class Product extends Model
         'restock_date',
         'product_status',
         'product_category_id',
+        'img',
         'updated_by',
         'created_by',
     ];

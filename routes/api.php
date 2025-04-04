@@ -39,6 +39,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/product-pricing', [ProductController::class, 'storePricing']);
     Route::get('/fetch-products', [ProductController::class, 'fetch']);
     Route::post('/product/category/code', [ProductController::class, 'categoryCode']);
+    Route::post('/products/upload', [ProductController::class, 'upload']);
 
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
@@ -65,6 +66,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/roles', [UsersController::class, 'roles']);
     Route::post('/users/store', [UsersController::class, 'store']);
     Route::put('/users/{id}', [UsersController::class, 'update']);
+    
 
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);

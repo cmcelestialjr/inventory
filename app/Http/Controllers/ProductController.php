@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\ProductImport;
 use App\Models\Product;
 use App\Models\ProductsCategory;
 use App\Models\ProductsPrice;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -49,6 +52,11 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(10);
+
+        $products->getCollection()->transform(function ($product) {
+            $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
+            return $product;
+        });
 
         return response()->json([
             'data' => $products->items(),
@@ -128,7 +136,9 @@ class ProductController extends Controller
         $insert->cost = $request->cost;
         $insert->price = $request->price;
         $insert->qty = $request->qty;
-        $insert->product_category_id = $request->productCategoryId;
+        $insert->restock_date = date('Y-m-d');
+        $insert->product_status = 'Available';        
+        $insert->product_category_id = $request->productCategoryId;        
         $insert->updated_by = $user_id;
         $insert->created_by = $user_id;
         $insert->save();
@@ -268,6 +278,11 @@ class ProductController extends Controller
 
         $products = $query->limit(10)->get();
 
+        $products->transform(function ($product) {
+            $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
+            return $product;
+        });
+
         return response()->json($products);
     }
 
@@ -331,5 +346,22 @@ class ProductController extends Controller
             'increment' => $productCategory->increment,
             'code' => $code
         ], 200);
+    }
+
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        $file = $request->file('file');
+
+        $filePath = $file->storeAs('temp/', $file->getClientOriginalName());        
+        $filePath = storage_path( 'app/private/temp/'.$file->getClientOriginalName());
+
+        Excel::import(new ProductImport($filePath), $file);
+        $count = Product::count(); // Or count records inserted by the import
+        return response()->json(['message' => "Products imported successfully! Total records: $count"]);
+       
     }
 }

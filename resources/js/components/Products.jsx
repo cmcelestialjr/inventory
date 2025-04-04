@@ -21,6 +21,8 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [productCategories, setProductCategories] = useState({});
   const [filterType, setFilterType] = useState("all");
+  const [modalImageOpen, setModalImageOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const didFetch = useRef(false);
   const [summary, setSummary] = useState({
     total: 0,
@@ -114,7 +116,16 @@ const Products = () => {
     setPage(1);
   };
 
-  // Handle input change
+  const handleImageClick = (imgSrc) => {
+    setSelectedImage(imgSrc);
+    setModalImageOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setModalImageOpen(false);
+    setSelectedImage(null);
+  };
+
   const handleChange = async (e) => {
     const { name, value } = e.target;
 
@@ -464,6 +475,7 @@ const Products = () => {
             <thead>
               <tr className="bg-gray-100 text-gray-700">
                 <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
+                <th className="border border-gray-300 px-4 py-2 text-left">Image</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Variant</th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
@@ -477,6 +489,14 @@ const Products = () => {
                 products.map((product, index) => (
                   <tr key={product.id}>
                     <td className="border border-gray-300 px-4 py-2">{product.code}</td>
+                    <td className="border border-gray-300 px-4 py-2 flex justify-center">
+                      <img
+                        src={product.img}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                        onClick={() => handleImageClick(product.img)}
+                      />
+                    </td>
                     <td className="border border-gray-300 px-4 py-2">{product.name}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.variant}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.cost}</td>
@@ -878,6 +898,25 @@ const Products = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {modalImageOpen && (
+          <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-4 rounded-lg w-full max-w-2xl max-h-[90vh]">
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="w-full max-h-[80vh] object-cover"
+              />
+              <button
+                onClick={closeImageModal}
+                className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        
         )}
 
       </div>

@@ -260,7 +260,7 @@ const Sales = () => {
     };
 
     const handleSelectProduct = (productSelected) => {
-        setSearchProduct(productSelected.name);
+        setSearchProduct(productSelected.code+ '-' +productSelected.name_variant);
         setProductName(productSelected.name);
         setProductId(productSelected.id);
         setShowDropdownProducts(false);
@@ -411,26 +411,30 @@ const Sales = () => {
     // Check if total amount is fully covered
     const isFullyPaid = newSaleData.paymentOptions.reduce((sum, p) => sum + p.amount_paid, 0) >= totalAmount;    
 
-    const confirmNewSale = async () => {
-        // Calculate the total paid amount
-        const totalPaid = newSaleData.paymentOptions.reduce(
-            (sum, option) => sum + (parseFloat(option.amount_paid) || 0),
-            0
-        );
+    const confirmNewSale = async (saleStatus) => {
 
-        // Calculate the change
-        const change = totalPaid - totalAmount;
+        if(saleStatus==2){
+            // Calculate the total paid amount
+            const totalPaid = newSaleData.paymentOptions.reduce(
+                (sum, option) => sum + (parseFloat(option.amount_paid) || 0),
+                0
+            );
 
-        // Check if the change is negative (meaning not enough payment)
-        if (change < 0) {
-            toastr.warning("The total amount paid is insufficient. Please enter a valid payment.");
-            return;
+            // Calculate the change
+            const change = totalPaid - totalAmount;
+
+            // Check if the change is negative (meaning not enough payment)
+            if (change < 0) {
+                toastr.warning("The total amount paid is insufficient. Please enter a valid payment.");
+                return;
+            }
         }
 
         const updatedSaleData = { 
             ...newSaleData,
             products,
-            saleId: saleId
+            saleId: saleId,
+            saleStatus:saleStatus
         };
         try {
             const authToken = localStorage.getItem("token");
@@ -785,13 +789,19 @@ const Sales = () => {
                                             {showDropdownProducts && productOptions.length > 0 && (
                                                 <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
                                                     {productOptions.map((product) => (
-                                                        <li 
-                                                            key={product.id} 
-                                                            className="p-2 cursor-pointer hover:bg-gray-200"
-                                                            onClick={() => handleSelectProduct(product)}
-                                                        >
-                                                            {product.name_variant}
-                                                        </li>
+                                                    <li 
+                                                        key={product.id} 
+                                                        className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
+                                                        onClick={() => handleSelectProduct(product)}
+                                                    >
+                                                        <img
+                                                        src={product.img}
+                                                        alt={product.name}
+                                                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                        onClick={() => handleImageClick(product.img)}
+                                                        />
+                                                        <span>{product.code}-{product.name_variant}</span>
+                                                    </li>
                                                     ))}
                                                 </ul>
                                             )}
@@ -1057,7 +1067,10 @@ const Sales = () => {
                                     </button>
                                 </>
                             ) : (
-                                <button onClick={confirmNewSale} className="px-4 py-2 bg-green-600 text-white rounded-lg">Confirm</button>
+                                <>
+                                <button onClick={confirmNewSale(1)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save for Payment</button>
+                                <button onClick={confirmNewSale(2)} className="px-4 py-2 bg-green-600 text-white rounded-lg">Confirm</button>
+                                </>
                             )}
                         </div>
                     </div>

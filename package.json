@@ -47,6 +47,7 @@
         "sweetalert2": "^11.17.2",
         "tailwind-merge": "^3.0.1",
         "toastr": "^2.1.4",
+        "xlsx": "^0.18.5",
         "yargs-parser": "^21.1.1"
     }
 }

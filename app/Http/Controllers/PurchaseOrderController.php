@@ -79,6 +79,7 @@ class PurchaseOrderController extends Controller
 
             $user = Auth::user();
             $cashier_id = $user->id;
+            $supplier_id = $validatedData['supplierId'];
             
             if($validatedData['poId']){
                 $po = PurchaseOrder::findOrFail($validatedData['poId']);                
@@ -97,7 +98,7 @@ class PurchaseOrderController extends Controller
 
             $purchase_order_id = $po->id;
 
-            $this->productsManage($cashier_id, $purchase_order_id, 1, $validatedData['products']);
+            $this->productsManage($cashier_id, $supplier_id, $purchase_order_id, 1, $validatedData['products']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! Purchase order saved..',
@@ -145,8 +146,9 @@ class PurchaseOrderController extends Controller
             $po->save();
 
             $purchase_order_id = $po->id;
+            $supplier_id = $po->supplier_id;
 
-            $this->productsManage($cashier_id, $purchase_order_id,  $validatedData['statusId'], $validatedData['products']);
+            $this->productsManage($cashier_id, $supplier_id, $purchase_order_id,  $validatedData['statusId'], $validatedData['products']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! Purchase order saved..',
@@ -212,7 +214,7 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    private function productsManage($cashier_id, $purchase_order_id, $status_id, $products)
+    private function productsManage($cashier_id, $supplier_id, $purchase_order_id, $status_id, $products)
     {
         foreach($products as $product){
             if($product['poProductId']){
@@ -258,7 +260,7 @@ class PurchaseOrderController extends Controller
                 }
             }
 
-            $this->productsUpdate($cashier_id,$product_id, $status_id, $status_id_old, $cost_received, $cost, $cost_old, $qty_received, $qty_old);
+            $this->productsUpdate($cashier_id, $supplier_id,$product_id, $status_id, $status_id_old, $cost_received, $cost, $cost_old, $qty_received, $qty_old);
 
             $query->cost_received = $cost_received;
             $query->qty_received = $qty_received;
@@ -269,7 +271,7 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    private function productsUpdate($cashier_id, $product_id, $status_id, $status_id_old, $cost, $cost_product, $cost_old, $qty, $qty_old)
+    private function productsUpdate($cashier_id, $supplier_id, $product_id, $status_id, $status_id_old, $cost, $cost_product, $cost_old, $qty, $qty_old)
     {
         $cost_check = $cost>0 ? $cost : $cost_product;
         $cost_check = $cost_old>0 && $cost!=$cost_old ? $cost_old : $cost_check;
@@ -278,6 +280,7 @@ class PurchaseOrderController extends Controller
             ->first();
         if($query){
             $update = ProductsPrice::find($query->id);
+            $update->supplier_id = $supplier_id;
             $update->qty = $status_id_old==2 && $status_id!=2 ? $query->qty - $qty_old : $query->qty + $qty;
             $update->save();
         }else{
@@ -286,6 +289,7 @@ class PurchaseOrderController extends Controller
                 ->first();
             $product_price = $productInfo->price;
             $insert = new ProductsPrice;
+            $insert->supplier_id = $supplier_id;
             $insert->product_id = $product_id;
             $insert->cost = $cost;
             $insert->price = $product_price;
