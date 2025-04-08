@@ -21,6 +21,8 @@ const Returns = () => {
     const [returnOptions, setReturnOptions] = useState([]);
     const [selectedReturnOption, setSelectedReturnOption] = useState("all");     
     const [totalReturns, setTotalReturns] = useState(0);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     const didFetch = useRef(false);
 
     useEffect(() => {
@@ -49,7 +51,7 @@ const Returns = () => {
 
     useEffect(() => {
         fetchReturnsList(selectedReturnOption);
-    }, [search, page, selectedReturnOption, startDate, endDate]);
+    }, [search, page, selectedReturnOption, startDate, endDate, sortColumn, sortOrder]);
 
     const fetchReturnsList = async (filter) => {
         try {
@@ -62,6 +64,8 @@ const Returns = () => {
                     filter: filter,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : "",
                     end_date: endDate ? endDate.toISOString().split("T")[0] : "",
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
             });
 
@@ -120,6 +124,15 @@ const Returns = () => {
             }
         });
     };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
+    };
+    
 
     const colors = [
         "bg-blue-800", "bg-red-500",  "bg-purple-500", 
@@ -242,12 +255,79 @@ const Returns = () => {
                     <table className="w-full border-collapse">
                         <thead className="bg-gray-200">
                             <tr>
-                                <th className="border p-3 text-left">Code</th>
-                                <th className="border p-3 text-left">DateTime</th>
-                                <th className="border p-3 text-left">Return</th>
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("code")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Code</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("date_time_returned")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>DateTime</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "date_time_returned" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("sales_code")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Return</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "sales_code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+
                                 <th className="border p-3 text-left">Change Product to</th>
-                                <th className="border p-3 text-left">Refund Amount</th>
-                                <th className="border p-3 text-left">Remarks</th>
+
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("refund_amount")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Refund Amount</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "refund_amount" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("return_option_id")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Status</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "return_option_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+
+                                <th
+                                    className="border p-3 text-left cursor-pointer"
+                                    onClick={() => handleSort("remarks")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Remarks</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border p-3 text-left">Actions</th>
                             </tr>
                         </thead>
@@ -303,6 +383,7 @@ const Returns = () => {
                                                 : <span className="text-gray-500">None</span>
                                             }
                                         </td>
+                                        <td className="border p-3">{item.return_option_info?.name}</td>
                                         <td className="border p-3">{item.remarks}</td>
                                         <td className="border p-3">
                                             <div className="flex justify-center">
@@ -357,7 +438,7 @@ const Returns = () => {
             <ReturnsNewModal 
                 isOpen={returnsNewModalOpen} 
                 onClose={() => setReturnsNewModalOpen(false)} 
-                refreshReturns={fetchReturnsList}
+                refreshReturns={() => fetchReturnsList(selectedReturnOption)}
             />
 
         </Layout>

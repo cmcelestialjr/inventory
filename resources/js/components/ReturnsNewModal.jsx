@@ -438,7 +438,8 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
     
         const selected = returnOptions.find(p => p.id === selectedReturnOption);
     
-        setSelectedReturnOption(selected.id);
+        setSelectedReturnOption(selected);
+        setRefundOptionId(selectedReturnOption);
     };
 
     const nextStep = () => {
