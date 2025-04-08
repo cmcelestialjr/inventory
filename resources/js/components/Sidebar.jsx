@@ -38,10 +38,10 @@ const Sidebar = () => {
           isOpen ? "translate-x-0" : "-translate-x-64"
         } md:translate-x-0`}
       >
-        <div className="text-center mb-5 mt-3">
-            <img src="/images/clstldev2.png" alt="Logo" className="mx-auto w-20 h-20" />
-        </div>
         <div className="overflow-y-auto max-h-screen">
+          <div className="text-center mb-5 mt-3">
+            <img src="/images/clstldev2.png" alt="Logo" className="mx-auto w-20 h-20" />
+          </div>
           <nav>
             <ul className="space-y-4 px-5">
               <li>
