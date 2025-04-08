@@ -18,8 +18,8 @@ class ReturnController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList','returnOptionInfo')
-            ->where('sales_status_id',2);
+        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList','returnOptionInfo');
+            // ->where('sales_status_id',2);
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -44,6 +44,15 @@ class ReturnController extends Controller
             $filter = $request->filter;
             if($filter!="all"){
                 $query->where('return_option_id', $filter);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'sales_code', 'refund_amount', 'sales_of_return_code', 'remarks', 'date_time_returned', 'return_option_id'])) {
+                $query->orderBy($sortColumn, $sortOrder);
             }
         }
 
@@ -145,12 +154,13 @@ class ReturnController extends Controller
             $cashier_name = $user->name;
             $cashier_id = $user->id;
             $returnCode = $this->getReturnCode();
+            $return_option_id = $validatedData['return_option_id'];
 
             $return = Returns::create([
                 'code' => $returnCode,
                 'sales_id' => $validatedData['sales_id'],
                 'sales_code' => $validatedData['sales_code'],
-                'return_option_id' => $validatedData['return_option_id'],
+                'return_option_id' => $return_option_id,
                 'refund_amount' => $validatedData['refund_amount'],
                 'total_amount' => $validatedData['returnTotalAmount'],
                 'remarks' => $validatedData['remarks'],
@@ -175,18 +185,20 @@ class ReturnController extends Controller
                     'created_by' => $cashier_id
                 ]);
 
-                $productPrice = ProductsPrice::where('product_id', $return['product_id'])
-                        ->where('price', $return['price'])
-                        ->first();
-    
-                if ($productPrice) {
-                    $newQuantity = max(0, $productPrice->qty + $return['qty']);
-    
-                    $productPrice->update(['qty' => $newQuantity]);
+                if($return_option_id!=2){
+                    $productPrice = ProductsPrice::where('product_id', $return['product_id'])
+                            ->where('price', $return['price'])
+                            ->first();
+        
+                    if ($productPrice) {
+                        $newQuantity = max(0, $productPrice->qty + $return['qty']);
+        
+                        $productPrice->update(['qty' => $newQuantity]);
+                    }
+        
+                    $totalStock = ProductsPrice::where('product_id', $return['product_id'])->sum('qty');
+                    Product::where('id', $return['id'])->update(['qty' => $totalStock]);
                 }
-    
-                $totalStock = ProductsPrice::where('product_id', $return['product_id'])->sum('qty');
-                Product::where('id', $return['id'])->update(['qty' => $totalStock]);
             }
 
             if(!empty($validatedData['changedProducts'])){
