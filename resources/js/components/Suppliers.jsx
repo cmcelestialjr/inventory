@@ -3,6 +3,7 @@ import axios from "axios";
 import Layout from "./Layout";
 import { Edit, Plus, X, } from "lucide-react";
 import toastr from 'toastr';
+import Swal from "sweetalert2";
 import 'toastr/build/toastr.min.css';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -17,6 +18,7 @@ const Suppliers = () => {
     const [supplierName, setSupplierName] = useState(null);
     const [contactPerson, setContactPerson] = useState(null);
     const [contactNo, setContactNo] = useState(null);
+    const [contacts, setContacts] = useState([]);
     const [email, setEmail] = useState(null);
     const [status, setStatus] = useState("Active");
     const didFetch = useRef(false);
@@ -24,7 +26,9 @@ const Suppliers = () => {
     useEffect(() => {
         if (didFetch.current) return;
         didFetch.current = true;
+    }, []);
 
+    useEffect(() => {
         fetchSuppliers(selectedSupplierStatus);
     }, [search, page, selectedSupplierStatus]);
 
@@ -53,8 +57,13 @@ const Suppliers = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!supplierName || !contactPerson || !contactNo) {
-            toastr.error("Please input Supplier name, Contact Person and Contact No.!");
+        if (!supplierName) {
+            toastr.error("Please input Supplier name!");
+            return;
+        }
+
+        if (contacts.length === 0) {
+            toastr.error("Please add at least one Contact No.!");
             return;
         }
 
@@ -63,7 +72,7 @@ const Suppliers = () => {
                 supplierId: supplierId,
                 supplierName: supplierName,
                 contactPerson: contactPerson,
-                contactNo: contactNo,
+                contacts: contacts,
                 email: email,
                 status: status
             };
@@ -74,14 +83,17 @@ const Suppliers = () => {
             });
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
-                setSupplierId(null);
-                setSupplierName(null);
-                setContactPerson(null);
-                setContactNo(null);
-                setEmail(null);
-                setStatus("Active");
-                setIsSupplierModalOpen(false);
-                fetchSuppliers();
+                if(supplierId==null){
+                    setSupplierId(null);
+                    setSupplierName(null);
+                    setContactPerson(null);
+                    setContactNo(null);
+                    setContacts([]);
+                    setEmail(null);
+                    setStatus("Active");
+                    setIsSupplierModalOpen(false);
+                }
+                fetchSuppliers(selectedSupplierStatus);
             }else{
                 toastr.error("Error! There is something wrong in saving supplier.");
             }
@@ -91,11 +103,63 @@ const Suppliers = () => {
         }
     };
 
+    const handleAddContact = () => {
+        if (contactNo.trim() !== '') {
+            setContacts((prevContacts) => [...prevContacts, { 
+                id: null,
+                contact_no: contactNo 
+            }]);
+            setContactNo('');
+        }
+    };
+
+    const handleRemoveContact = (index,contact) => {
+        Swal.fire({
+            title: `Remove?`,
+            text: `Are you sure you want to remove contact "${contact.contact_no}"!`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, remove it!",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                if(contact.id!=null){
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/suppliers/removeContact", {
+                            params: { id: contact.id },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Contact deleted successfully.') {
+                            setContacts((prevContacts) => {
+                                return prevContacts.filter((_, i) => i !== index);
+                            });
+                            fetchSuppliers(selectedSupplierStatus);
+                            Swal.fire("Removed!", `"${contact.contact_no}" has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
+                        }
+                    } catch (error) {
+                        Swal.fire("Error", "An error occurred while removing the contact.", "error");
+                    }
+                }else{
+                    setContacts((prevContacts) => {
+                        return prevContacts.filter((_, i) => i !== index);
+                    });
+                    Swal.fire("Removed!", `"${contact.contact_no}" has been removed.`, "success");
+                }
+            }
+        });
+        
+    };
+
     const handleSupplierNew = () => {
         setSupplierId(null);
         setSupplierName(null);
         setContactPerson(null);
         setContactNo(null);
+        setContacts([]);
         setEmail(null);
         setStatus("Active");
         setIsSupplierModalOpen(true);
@@ -105,10 +169,11 @@ const Suppliers = () => {
         setSupplierId(supplier.id);
         setSupplierName(supplier.name);
         setContactPerson(supplier.contact_person);
-        setContactNo(supplier.contact_no);
+        setContactNo(null);
+        setContacts(supplier.contacts);
         setEmail(supplier.email_address);
         setStatus(supplier.supplier_status);
-        setIsSupplierModalOpen(true);        
+        setIsSupplierModalOpen(true);
     };
 
     const handleSupplierClose = () => {
@@ -116,16 +181,16 @@ const Suppliers = () => {
         setSupplierName(null);
         setContactPerson(null);
         setContactNo(null);
+        setContacts([]);
         setEmail(null);
         setStatus("Active");
         setIsSupplierModalOpen(false);
     };
 
     const formatPhoneNumber = (value) => {
-        // Remove all non-digit characters
-        const cleaned = value.replace(/\D/g, '').slice(0, 11); // limit to 11 digits
+       
+        const cleaned = value.replace(/\D/g, '').slice(0, 11);
       
-        // Format to: 0912 345 6789
         const match = cleaned.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
       
         if (!match) return cleaned;
@@ -180,7 +245,17 @@ const Suppliers = () => {
                                             {supplier.name}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">{supplier.contact_person}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{supplier.contact_no}</td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {supplier.contacts && supplier.contacts.length > 0 ? (
+                                                <ul>
+                                                    {supplier.contacts.map((contact, index) => (
+                                                        <li key={index}>{contact.contact_no}</li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <span>None</span>
+                                            )}
+                                        </td>
                                         <td className="border border-gray-300 px-4 py-2">{supplier.email}</td>
                                             <td className="border border-gray-300 px-4 py-2">
                                                 {supplier.supplier_status === "Active" && (
@@ -281,17 +356,6 @@ const Suppliers = () => {
                                     placeholder="Contact Person..."
                                 />
                             </div>
-                            {/* Contact No */}
-                            <label className="block text-sm font-medium mt-2">Contact No.:</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={contactNo}
-                                    onChange={(e) => setContactNo(formatPhoneNumber(e.target.value))}
-                                    className="w-full p-2 border rounded"
-                                    placeholder="0912 345 6789"
-                                />
-                            </div>
                             {/* Email Address */}
                             <label className="block text-sm font-medium mt-2">Email Address:</label>
                             <div className="relative">
@@ -315,6 +379,49 @@ const Suppliers = () => {
                                 <option value="Inactive">Inactive</option>
                                 </select>
                             </div>
+                            {/* Contact No */}
+                            <label className="block text-sm font-medium mt-2">Contact No.:</label>
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="text"
+                                    value={contactNo}
+                                    onChange={(e) => setContactNo(formatPhoneNumber(e.target.value))}
+                                    className="w-full p-2 border rounded"
+                                    placeholder="0912 345 6789"
+                                />
+                                <button
+                                    onClick={handleAddContact}
+                                    type="button"
+                                    className="p-2 bg-blue-600 text-white rounded"
+                                >
+                                    Add
+                                </button>
+                            </div>
+
+                            {/* List of added contacts */}
+                            <div className="mt-4">
+                                <h3 className="text-md font-medium">Contacts:</h3>
+                                <ul className="list-disc pl-5">
+                                    {contacts.length > 0 ? (
+                                        contacts.map((contact, index) => (
+                                            <li key={index} className="flex items-center text-sm text-gray-700">
+                                                <span className="mr-2">{contact.contact_no}</span>
+                                                {/* Remove Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveContact(index,contact)}
+                                                    className="text-red-500 hover:text-red-700 text-xs"
+                                                >
+                                                    <X size={24} />
+                                                </button>
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="text-sm text-gray-500">No contacts added yet.</li>
+                                    )}
+                                </ul>
+                            </div>
+
 
                             {/* Submit Button */}
                             <button

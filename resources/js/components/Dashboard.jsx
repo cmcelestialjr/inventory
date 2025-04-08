@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote, Wrench, TrendingDown } from "lucide-react";
+import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote, Wrench, TrendingDown, Box } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -48,6 +48,8 @@ const Dashboard = () => {
   const [recentRestocks, setRecentRestocks] = useState([]);
   const [recentExpenses, setRecentExpenses] = useState([]);
   const [recentReturns, setRecentReturns] = useState([]);
+  const [recentServices, setRecentServices] = useState([]);  
+  const [noneSellingProducts, setNoneSellingProducts] = useState([]);
   
   useEffect(() => {
     handleFilterTopSection();
@@ -201,6 +203,12 @@ const Dashboard = () => {
         }
         if (data?.recentReturns?.length > 0) {
           setRecentReturns(data.recentReturns);
+        }
+        if (data?.recentServices?.length > 0) {
+          setRecentServices(data.recentServices);
+        }        
+        if (data?.noneSellingProducts?.length > 0) {
+          setNoneSellingProducts(data.noneSellingProducts);
         }
       } else {
 
@@ -382,6 +390,33 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-6 mt-6">
+        {/* None Selling Products */}
+        <div className="p-5 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Box size={20} className="text-red-600" />
+            Non-Selling Products
+          </h2>
+          {noneSellingProducts.length > 0 ? (
+            <ul className="mt-3 space-y-2 max-h-60 overflow-auto">
+              {noneSellingProducts.map((product) => (
+                <li key={product.id} className="border-b pb-2 flex">
+                  <div>
+                    <p className="text-gray-700 font-medium">{product.name_variant}</p>
+                    <p className="text-sm text-gray-500">
+                      Price: ₱ {product.price}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Qty: {product.qty}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-gray-500 text-sm text-center">No products available.</p>
+          )}
+        </div>
+
         {/* Recent Sales Transactions */}
         <div className="p-5 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -405,6 +440,34 @@ const Dashboard = () => {
             </ul>
           ) : (
             <p className="mt-3 text-gray-500 text-sm text-center">No recent sales transactions.</p>
+          )}
+        </div>
+
+        {/* Recent Services */}
+        <div className="p-5 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Wrench size={20} className="text-blue-400" />
+            Recent Services
+          </h2>
+          {recentServices.length > 0 ? (
+            <ul className="mt-3 space-y-2 max-h-60 overflow-auto">
+              {recentServices.map((service) => (
+                <li key={service.id} className="border-b pb-2 flex justify-between">
+                  <div>
+                    <p className="text-gray-700 font-medium">{service.service_info?.name}</p>
+                    <p className="text-sm text-gray-500">
+                      Customer: {service.customer_info?.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {moment(service.created_at).format("MMM D, YY h:mma")}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-700">₱ {service.amount}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-gray-500 text-sm text-center">No recent service.</p>
           )}
         </div>
 
@@ -432,7 +495,7 @@ const Dashboard = () => {
             <p className="mt-3 text-gray-500 text-sm text-center">No recent product restocks.</p>
           )}
         </div>
-
+        
         {/* Recent Expenses */}
         <div className="p-5 rounded-xl border border-white-200 bg-white-50 shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 hover:scale-100">
           <h2 className="text-lg font-semibold flex items-center gap-2">

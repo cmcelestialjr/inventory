@@ -107,6 +107,7 @@ class SaleController extends Controller
             'total_qty' => 'required|numeric|min:0',
             'total_discount' => 'required|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
+            'saleStatus' => 'required|exists:sales_statuses,id',
             'paymentOptions' => 'required|array|min:1',
             'paymentOptions.*.payment_option_id' => 'required|integer',
             'paymentOptions.*.payment_option_name' => 'required|string|max:255',
@@ -136,7 +137,7 @@ class SaleController extends Controller
         try{
             DB::beginTransaction();
 
-            $saleStatus = 2;
+            $saleStatus = $validatedData['saleStatus'];
             $this->saleService->insertSale($validatedData, $saleStatus);
 
             DB::commit();
@@ -159,7 +160,7 @@ class SaleController extends Controller
         try{
             DB::beginTransaction();
 
-            $saleStatus = 2;
+            $saleStatus = $validatedData['saleStatus'];
             $this->saleService->updateSale($sale,$validatedData, $saleStatus);
 
             DB::commit();
@@ -230,6 +231,16 @@ class SaleController extends Controller
         // }
 
         $sales = $query->orderBy('date_time_of_sale','DESC')->limit(10)->get();
+
+        $sales->transform(function ($sale) {
+            $product = $sale->productsList->first();
+            
+            $product->productInfo->img = $product && $product->productInfo && $product->productInfo->img
+                        ? asset("storage/{$product->productInfo->img}")
+                        : asset('images/no-image-icon.png');
+        
+            return $sale;
+        });
 
         return response()->json($sales);
     }    

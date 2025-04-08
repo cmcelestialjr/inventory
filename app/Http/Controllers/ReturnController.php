@@ -18,7 +18,8 @@ class ReturnController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList','returnOptionInfo');
+        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList','returnOptionInfo')
+            ->where('sales_status_id',2);
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;

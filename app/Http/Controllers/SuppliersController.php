@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use App\Models\SupplierContact;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ class SuppliersController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Supplier::query();
+        $query = Supplier::with('contacts');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -30,7 +31,7 @@ class SuppliersController extends Controller
             }
         }
 
-        $supplier = $query->paginate(10);
+        $supplier = $query->orderBy('name')->paginate(10);
 
         return response()->json([
             'data' => $supplier->items(),
@@ -54,6 +55,23 @@ class SuppliersController extends Controller
         return response()->json($suppliers);
     }
 
+    public function removeContact(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|numeric|min:0|exists:supplier_contacts,id',
+        ]);
+        try{
+            SupplierContact::where('id',$validatedData['id'])->delete();
+            return response()->json(['message' => 'Contact deleted successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function manage(Request $request)
     {
         if($request->supplierId==null){
@@ -67,8 +85,9 @@ class SuppliersController extends Controller
     {
         $validatedData = $request->validate([
             'supplierName' => 'required|string|max:255',
-            'contactPerson' => 'required|string|max:255',
-            'contactNo' => 'required|string|max:13',
+            'contactPerson' => 'nullable|string|max:255',
+            'contacts' => 'required|array|min:1',
+            'contacts.*' => 'required',
             'email' => 'nullable|email|max:255',
             'status' => 'required|in:Active,Inactive',
         ]);
@@ -85,15 +104,17 @@ class SuppliersController extends Controller
             $user = Auth::user();
             $cashier_id = $user->id;
 
-            Supplier::create([
+            $supplier = Supplier::create([
                 'name' => $validatedData['supplierName'],
                 'contact_person' => $validatedData['contactPerson'],
-                'contact_no' => $validatedData['contactNo'],
                 'email_address' => $validatedData['email'],
                 'supplier_status' => $validatedData['status'],
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
             ]);
+
+            $supplierId = $supplier->id;
+            $this->contactUpdate($cashier_id,$supplierId, $validatedData['contacts']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! New supplier saved..'], 200);
@@ -113,21 +134,24 @@ class SuppliersController extends Controller
         $validatedData = $request->validate([
             'supplierId' => 'required|integer|exists:suppliers,id',
             'supplierName' => 'required|string|max:255',
-            'contactPerson' => 'required|string|max:255',
-            'contactNo' => 'required|string|max:13',
+            'contactPerson' => 'nullable|string|max:255',
+            'contacts' => 'required|array|min:1',
+            'contacts.*' => 'required',
             'email' => 'nullable|email|max:255',
             'status' => 'required|in:Active,Inactive',
         ]);
 
+        $supplierId = $validatedData['supplierId'];
+
         $check = Supplier::where('name',$validatedData['supplierName'])
-            ->where('id','<>',$validatedData['supplierId'])
+            ->where('id','<>',$supplierId)
             ->first();
 
         if($check){
             return response()->json(['message' => 'Error! Supplier already exists..'], 409);
         }
 
-        $supplier = Supplier::findOrFail($validatedData['supplierId']);
+        $supplier = Supplier::findOrFail($supplierId);
 
         try{
             DB::beginTransaction();
@@ -138,11 +162,12 @@ class SuppliersController extends Controller
             $supplier->update([
                 'name' => $validatedData['supplierName'],
                 'contact_person' => $validatedData['contactPerson'],
-                'contact_no' => $validatedData['contactNo'],
                 'email_address' => $validatedData['email'],
                 'supplier_status' => $validatedData['status'],
                 'updated_by' => $cashier_id,
             ]);
+
+            $this->contactUpdate($cashier_id,$supplierId, $validatedData['contacts']);
 
             DB::commit();
             return response()->json(['message' => 'Successful! Updated supplier saved..'], 200);
@@ -154,6 +179,25 @@ class SuppliersController extends Controller
                 'message' => $e->getMessage(),
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function contactUpdate($cashierId, $supplierId, $contacts)
+    {
+        foreach ($contacts as $contact) {
+            $supplierContact = SupplierContact::find($contact['id']);
+            if($supplierContact){
+                $supplierContact->contact_no = $contact['contact_no'];
+                $supplierContact->updated_by = $cashierId;
+                $supplierContact->save();
+            }else{
+                $insert = new SupplierContact;
+                $insert->supplier_id = $supplierId;
+                $insert->contact_no = $contact['contact_no'];
+                $insert->updated_by = $cashierId;
+                $insert->created_by = $cashierId;
+                $insert->save();
+            }
         }
     }
 }

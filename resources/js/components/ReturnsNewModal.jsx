@@ -504,6 +504,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                         <div className="mt-3 w-3/5">
                             <div className="flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
                                 <span className="w-1/12 text-center">#</span>
+                                <span className="w-2/12">Image</span>
                                 <span className="w-3/12">Product</span>
                                 <span className="w-2/12 text-right">Price</span>
                                 <span className="w-1/12 text-right">Disc</span>
@@ -520,6 +521,13 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                         onClick={() => handleProductClick(product)}
                                     >
                                         <span className="w-1/12 text-center">{index + 1}</span>
+                                        <span className="w-2/12 text-center">
+                                        <img
+                                            src={product.product_info?.img}
+                                            alt={product.product_info?.name}
+                                            className="w-16 h-16 object-cover rounded cursor-pointer"
+                                        />
+                                        </span>
                                         <span className="w-3/12">{product.product_info?.name}</span>
                                         <span className="w-2/12 text-right">{product.price}</span>
                                         <span className="w-1/12 text-right">{product.discount_amount}</span>
@@ -638,14 +646,20 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                         />
                                         {/* Dropdown */}
                                         {showDropdownProducts && dropDownProducts.length > 0 && (
-                                            <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
+                                            <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto z-10">
                                                 {dropDownProducts.map((product) => (
                                                     <li 
                                                         key={product.id} 
-                                                        className="p-2 cursor-pointer hover:bg-gray-200"
+                                                        className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
                                                         onClick={() => handleSelectProduct(product)}
                                                     >
-                                                        {product.name}
+                                                        <img
+                                                        src={product.img}
+                                                        alt={product.name}
+                                                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                        onClick={() => handleImageClick(product.img)}
+                                                        />
+                                                        <span>{product.code}-{product.name_variant}</span>
                                                     </li>
                                                 ))}
                                             </ul>

@@ -71,6 +71,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
     Route::get('/fetch-suppliers', [SuppliersController::class, 'fetch']);
+    Route::get('/suppliers/removeContact', [SuppliersController::class, 'removeContact']);
+    
 
     Route::get('/services', [ServicesController::class, 'index']);
     Route::post('/services/manage', [ServicesController::class, 'manage']);

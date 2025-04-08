@@ -670,7 +670,7 @@ const Sales = () => {
                                         <td className="border border-gray-300 px-4 py-2">
                                             {/* Check sales_status_id and apply appropriate label and color */}
                                             {sale.sales_status_id === 1 && (
-                                                <span className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full">
+                                                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full">
                                                 For Payment
                                                 </span>
                                             )}
@@ -680,7 +680,7 @@ const Sales = () => {
                                                 </span>
                                             )}
                                             {sale.sales_status_id === 3 && (
-                                                <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full">
+                                                <span className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full">
                                                 Transaction On-hold
                                                 </span>
                                             )}
@@ -787,7 +787,7 @@ const Sales = () => {
                                             />
                                             {/* Dropdown */}
                                             {showDropdownProducts && productOptions.length > 0 && (
-                                                <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
+                                                <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto z-60">
                                                     {productOptions.map((product) => (
                                                     <li 
                                                         key={product.id} 
@@ -1068,8 +1068,21 @@ const Sales = () => {
                                 </>
                             ) : (
                                 <>
-                                <button onClick={confirmNewSale(1)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save for Payment</button>
-                                <button onClick={confirmNewSale(2)} className="px-4 py-2 bg-green-600 text-white rounded-lg">Confirm</button>
+                                <button onClick={() => confirmNewSale(1)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                                    Save for Payment
+                                </button>
+                                <button onClick={() => confirmNewSale(3)} className="px-4 py-2 bg-yellow-600 text-white rounded-lg">
+                                    On-hold
+                                </button>
+                                {saleId && (
+                                    <button onClick={() => confirmNewSale(4)} className="px-4 py-2 bg-red-600 text-white rounded-lg">
+                                        Cancel Transaction
+                                    </button>
+                                    )
+                                }
+                                <button onClick={() => confirmNewSale(2)} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                                    Confirm
+                                </button>
                                 </>
                             )}
                         </div>

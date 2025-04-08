@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Returns;
 use App\Models\Sale;
 use App\Models\SalesProduct;
+use App\Models\ServiceTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,7 @@ class DashboardController extends Controller
         $startDate = $request->startDate ? Carbon::parse($request->startDate) : null;
         $endDate = $request->endDate ? Carbon::parse($request->endDate) : null;
 
-        $getSales = DB::table('sales')->where('sales_status_id',1);
+        $getSales = DB::table('sales')->where('sales_status_id',2);
         $getReturns = DB::table('returns');
         $getExpenses = DB::table('expenses');
         $getServices = DB::table('service_transaction_payments');
@@ -149,7 +150,7 @@ class DashboardController extends Controller
 
         $selected = $request->selected;
 
-        $getSales = DB::table('sales')->where('sales_status_id',1);
+        $getSales = DB::table('sales')->where('sales_status_id',2);
         $getExpenses = DB::table('expenses');
         $getSellingProducts = $this->getSellingProducts();
         
@@ -239,16 +240,46 @@ class DashboardController extends Controller
 
     public function bottomSection()
     {
-        $recentSales = Sale::where('sales_status_id',1)->orderBy('date_time_of_sale', 'desc')->limit(10)->get();
-        $recentRestocks = Product::orderBy('restock_date', 'desc')->limit(10)->get();
-        $recentExpenses = Expense::orderBy('date_time_of_expense', 'desc')->limit(10)->get();
-        $recentReturns = Returns::orderBy('date_time_returned', 'desc')->limit(10)->get();
+        $today = Carbon::now();
+        $lastYear = Carbon::now()->subYear();
+
+        $recentSales = Sale::where('sales_status_id',2)
+            ->whereBetween('date_time_of_sale', [$lastYear, $today])
+            ->orderBy('date_time_of_sale', 'desc')
+            ->limit(10)
+            ->get();
+        $recentRestocks = Product::whereBetween('restock_date', [$lastYear, $today])
+            ->orderBy('restock_date', 'desc')
+            ->limit(10)
+            ->get();
+        $recentExpenses = Expense::whereBetween('date_time_of_expense', [$lastYear, $today])
+            ->orderBy('date_time_of_expense', 'desc')
+            ->limit(10)
+            ->get();
+        $recentReturns = Returns::whereBetween('date_time_returned', [$lastYear, $today])
+            ->orderBy('date_time_returned', 'desc')
+            ->limit(10)
+            ->get();
+        $recentServices = ServiceTransaction::with('serviceInfo','customerInfo')
+            ->whereBetween('created_at', [$lastYear, $today])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+        $noneSellingProducts = Product::leftJoin('sales_products', 'products.id', '=', 'sales_products.product_id')
+            ->leftJoin('sales', 'sales.id', '=', 'sales_products.sale_id')
+            ->whereNull('sales.id') 
+            ->orWhereBetween('sales.date_time_of_sale', [$lastYear, $today])
+            ->limit(50)
+            ->select('products.*')
+            ->get();
 
         return response()->json([
             'recentSales' => $recentSales,
             'recentRestocks' => $recentRestocks,
             'recentExpenses' => $recentExpenses,
-            'recentReturns' => $recentReturns
+            'recentReturns' => $recentReturns,
+            'recentServices' => $recentServices,
+            'noneSellingProducts' => $noneSellingProducts
         ], 200);
     }
 
@@ -263,7 +294,7 @@ class DashboardController extends Controller
             ')
             ->join('sales', 'sales_products.sale_id', '=', 'sales.id')
             ->join('products', 'sales_products.product_id', '=', 'products.id')
-            ->where('sales.sales_status_id',1)
+            ->where('sales.sales_status_id',2)
             ->groupBy('sales_products.product_id', 'products.name', 'sales_products.price')
             ->limit(5);
     }
@@ -277,7 +308,7 @@ class DashboardController extends Controller
             ->whereNull('sales_products.product_id')
             ->orWhere(function ($query) {
                 $query->whereNotNull('sales.id') 
-                      ->where('sales.sales_status_id', '!=', 1);
+                      ->where('sales.sales_status_id', '!=', 2);
             })
             ->limit(5)
             ->get();

@@ -9,22 +9,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Supplier extends Model
+class SupplierContact extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name', 
-        'address', 
-        'contact_person',
-        'email_address',
-        'supplier_status',
+        'supplier_id', 
+        'contact_no',
         'updated_by',
         'created_by',        
     ];
 
-    public function contacts(): HasMany
+    public function supplier(): BelongsTo
     {
-        return $this->hasMany(SupplierContact::class, 'supplier_id', 'id');
+        return $this->belongsTo(Supplier::class, 'supplier_id', 'id');
     }
 }
