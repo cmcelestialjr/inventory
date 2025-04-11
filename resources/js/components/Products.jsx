@@ -23,6 +23,8 @@ const Products = () => {
   const [filterType, setFilterType] = useState("all");
   const [modalImageOpen, setModalImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
   const didFetch = useRef(false);
   const [summary, setSummary] = useState({
     total: 0,
@@ -58,7 +60,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts(filterType);
-  }, [search, page]);
+  }, [search, page, sortColumn, sortOrder]);
 
   useEffect(() => {
     if (didFetch.current) return;
@@ -100,7 +102,14 @@ const Products = () => {
   const fetchProducts = async (filter) => {
     try {
       const authToken = localStorage.getItem("token");
-      const response = await axios.get(`/api/products?search=${search}&filter=${filter}&page=${page}`, {
+      const response = await axios.get(`/api/products`, {
+        params: {
+          search: search,
+          page: page,
+          filter: filter,
+          sort_column: sortColumn, 
+          sort_order: sortOrder,
+      },
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
@@ -110,6 +119,14 @@ const Products = () => {
       // console.error("Error fetching products:", error);
     }
   };
+
+  const handleSort = (column) => {
+    const newSortOrder = 
+        sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+
+    setSortColumn(column);
+    setSortOrder(newSortOrder);
+};
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
@@ -474,13 +491,73 @@ const Products = () => {
           <table className="w-full border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-100 text-gray-700">
-                <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Image</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Variant</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
-                <th className="border border-gray-300 px-4 py-2 text-left">Qty</th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("code")}
+                >
+                  <div className="flex items-center">
+                      <span>Code</span>
+                      <span className="ml-1">
+                          {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th className="border border-gray-300 px-4 py-2 text-center">Image</th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center">
+                      <span>Name</span>
+                      <span className="ml-1">
+                          {sortColumn === "name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("variant")}
+                >
+                  <div className="flex items-center">
+                      <span>Variant</span>
+                      <span className="ml-1">
+                          {sortColumn === "variant" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("cost")}
+                >
+                  <div className="flex items-center">
+                      <span>Cost</span>
+                      <span className="ml-1">
+                          {sortColumn === "cost" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("price")}
+                >
+                  <div className="flex items-center">
+                      <span>Price</span>
+                      <span className="ml-1">
+                          {sortColumn === "price" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("qty")}
+                >
+                  <div className="flex items-center">
+                      <span>Qty</span>
+                      <span className="ml-1">
+                          {sortColumn === "qty" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
               </tr>
             </thead>

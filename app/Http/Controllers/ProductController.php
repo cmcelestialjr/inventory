@@ -22,7 +22,7 @@ class ProductController extends Controller
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
+                $q->where('name_variant', 'LIKE', "%{$search}%")
                   ->orWhere('code', 'LIKE', "%{$search}%");
             });
         }
@@ -48,6 +48,15 @@ class ProductController extends Controller
                 case 'phaseout':
                     $query->where('product_status', 'Phaseout');
                     break;
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'name', 'variant', 'cost', 'price', 'qty'])) {
+                $query->orderBy($sortColumn, $sortOrder);
             }
         }
 

@@ -32,6 +32,15 @@ class ExpensesController extends Controller
             }
         }
 
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'date_time_of_expense', 'expense_name', 'amount', 'remarks'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
         $sales = $query->orderByDesc('date_time_of_expense')->paginate(10);
 
         return response()->json([

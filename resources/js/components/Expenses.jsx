@@ -21,6 +21,8 @@ const Expenses = () => {
     const [expenseRemarks, setExpenseRemarks] = useState("");
     const [suggestions, setSuggestions] = useState([]);
     const [allExpensesName, setAllExpensesName] = useState([]);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     const [dateRange, setDateRange] = useState([
         new Date(),
         new Date(),
@@ -29,7 +31,7 @@ const Expenses = () => {
 
     useEffect(() => {
         fetchExpenses();
-    }, [search, page, dateRange]);
+    }, [search, page, dateRange, sortColumn, sortOrder]);
 
     useEffect(() => {
         fetchExpensesNames();
@@ -65,7 +67,9 @@ const Expenses = () => {
                     search,
                     page,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
-                    end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -74,6 +78,14 @@ const Expenses = () => {
         } catch (error) {
             
         }
+    };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
     };
 
     const fetchExpensesNames = async () => {
@@ -210,11 +222,61 @@ const Expenses = () => {
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left">DateTime</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Name of Expense</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("date_time_of_expense")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>DateTime</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "date_time_of_expense" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("code")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Code</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("expense_name")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Name of Expense</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "expense_name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("amount")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Amount</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "amount" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("remarks")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Remarks</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>

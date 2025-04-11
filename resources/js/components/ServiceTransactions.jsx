@@ -71,6 +71,9 @@ const TransactionTransactions = () => {
     const [serviceDateFinished, setServiceDateFinished] = useState(null);
     const [serviceDateOut, setServiceDateOut] = useState(null);
 
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
+
     const formatDateTime = (dateString) => {
         const formattedDate = moment(dateString);
 
@@ -158,7 +161,7 @@ const TransactionTransactions = () => {
 
     useEffect(() => {
         fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
-    }, [search, page, dateRange, selectedTransactionStatus, selectedPaymentStatus]);
+    }, [search, page, dateRange, selectedTransactionStatus, selectedPaymentStatus, sortColumn, sortOrder]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
@@ -175,7 +178,9 @@ const TransactionTransactions = () => {
                     filterPayment: filterPayment,
                     filterStatus: filterStatus,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
-                    end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -202,6 +207,14 @@ const TransactionTransactions = () => {
             // console.error("Error fetching sales:", error);
         }
         
+    };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
     };
 
     const handleServiceModal = (transaction) => {
@@ -978,15 +991,105 @@ const TransactionTransactions = () => {
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Type of Service</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Customer</th>                                
-                                <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Costs</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Income</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Service Status</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Payment Status</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("code")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Code</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("service_name")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Type of Service</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "service_name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("customer_name")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Customer</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "customer_name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("amount")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Price</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "amount" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("total_cost")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Costs</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "total_cost" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("income")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Income</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "income" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("service_status_id")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Service Status</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "service_status_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("payment_status_id")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Payment Status</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "payment_status_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("remarks")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Remarks</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>
@@ -1273,10 +1376,15 @@ const TransactionTransactions = () => {
                                                                 {productsList.map((product) => (
                                                                     <li 
                                                                         key={product.id} 
-                                                                        className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                        className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
                                                                         onClick={() => handleSelectProduct(product)}
                                                                     >
-                                                                        {product.name_variant}
+                                                                        <img
+                                                                            src={product.img}
+                                                                            alt={product.name}
+                                                                            className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                                        />
+                                                                        <span>{product.code}-{product.name_variant}</span>
                                                                     </li>
                                                                 ))}
                                                             </ul>

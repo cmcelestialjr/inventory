@@ -34,6 +34,8 @@ const Services = () => {
     const [selectedStatus, setSelectedStatus] = useState("Available");
     const [totalAvailable, setTotalAvailable] = useState(0);
     const [totalUnavailable, setTotalUnavailable] = useState(0);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     const [step, setStep] = useState(1);
     const didFetch = useRef(false);
     
@@ -41,7 +43,7 @@ const Services = () => {
         // if (didFetch.current) return;
         // didFetch.current = true;
         fetchServices(selectedServiceStatus);
-    }, [search, page, selectedServiceStatus]);
+    }, [search, page, selectedServiceStatus, sortColumn, sortOrder]);
 
     useEffect(() => {
         fetchStatusTotal();
@@ -66,7 +68,9 @@ const Services = () => {
                 params: {
                     search: search,
                     page: page,
-                    filter: filter
+                    filter: filter,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -75,6 +79,14 @@ const Services = () => {
         } catch (error) {
             // console.error("Error fetching services:", error);
         }
+    };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
     };
 
     const fetchStatusTotal = async () => {
@@ -225,10 +237,10 @@ const Services = () => {
             return;
         }
 
-        if (!productsSelected.length) {
-            toastr.error("Please select product atleast 1!");
-            return;
-        }
+        // if (!productsSelected.length) {
+        //     toastr.error("Please select product atleast 1!");
+        //     return;
+        // }
 
         try {
             const formData = {
@@ -378,12 +390,52 @@ const Services = () => {
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left">Type of Service</th>                                
-                                <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("name")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Type of Service</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("price")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Price</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "price" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Costs</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Income</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Estimate Duration</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("estimate_duration")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Estimate Duration</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "estimate_duration" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("remarks")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Remarks</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>
@@ -392,7 +444,7 @@ const Services = () => {
                                 services.map((service, index) => {
                                     const totalCostProduct = service.products?.reduce((sum, product) => {
                                         return sum + product.product.cost * product.qty;
-                                      }, 0) || 0;
+                                    }, 0) || 0;
                                     const totalCost = Number(totalCostProduct) + Number(service.labor_cost) + Number(service.discount);
                                     const income = Number(service.price) - totalCost;
                                     return (
@@ -407,7 +459,7 @@ const Services = () => {
                                                     <div><span className="font-medium">Total:</span> ₱{totalCost}</div>
                                                 </div>
                                             </td>
-                                            <td className="border border-gray-300 px-4 py-2">₱ {income}</td>
+                                            <td className="border border-gray-300 px-4 py-2">₱{income}</td>
                                             <td className="border border-gray-300 px-4 py-2">{service.estimate_duration}</td>
                                             <td className="border border-gray-300 px-4 py-2">{service.remarks}</td>
                                             <td className="border border-gray-300 px-4 py-2 gap-2">
@@ -460,7 +512,7 @@ const Services = () => {
 
             {isServiceModalOpen && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
                         {/* Header */}
                         <div className="flex justify-between">
                             <h2 className="text-xl font-semibold">
@@ -594,10 +646,15 @@ const Services = () => {
                                                     {productsList.map((product) => (
                                                         <li 
                                                             key={product.id} 
-                                                            className="p-2 cursor-pointer hover:bg-gray-200"
+                                                            className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
                                                             onClick={() => handleSelectProduct(product)}
                                                         >
-                                                            {product.name_variant}
+                                                            <img
+                                                                src={product.img}
+                                                                alt={product.name}
+                                                                className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                            />
+                                                            <span>{product.code}-{product.name_variant}</span>
                                                         </li>
                                                     ))}
                                                 </ul>

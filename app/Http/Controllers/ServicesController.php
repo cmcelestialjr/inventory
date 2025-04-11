@@ -29,6 +29,15 @@ class ServicesController extends Controller
             $query->where('service_status', $filter);
         }
 
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['name', 'price', 'estimate_duration', 'remarks'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
         $supplier = $query->paginate(10);
 
         return response()->json([
@@ -107,9 +116,9 @@ class ServicesController extends Controller
             'status' => 'required|in:Available,Unavailable',
             'estimateDuration' => 'nullable|string|max:100',
             'remarks' => 'nullable|string|max:255',
-            'productsSelected' => 'required|array|min:1',
-            'productsSelected.*.id' => 'required|integer|exists:products,id',
-            'productsSelected.*.qty' => 'required|numeric|min:0',
+            'productsSelected' => 'nullable|array|min:0',
+            'productsSelected.*.id' => 'integer|exists:products,id',
+            'productsSelected.*.qty' => 'numeric|min:0',
         ]);
 
         $check = Service::where('name',$validatedData['serviceName'])->first();
@@ -164,9 +173,9 @@ class ServicesController extends Controller
             'status' => 'required|in:Available,Unavailable',
             'estimateDuration' => 'nullable|string|max:100',
             'remarks' => 'nullable|string|max:255',
-            'productsSelected' => 'required|array|min:1',
-            'productsSelected.*.id' => 'required|integer|exists:products,id',
-            'productsSelected.*.qty' => 'required|numeric|min:0',
+            'productsSelected' => 'nullable|array|min:0',
+            'productsSelected.*.id' => 'integer|exists:products,id',
+            'productsSelected.*.qty' => 'numeric|min:0',
         ]);
 
         $check = Service::where('name',$validatedData['serviceName'])
@@ -215,18 +224,20 @@ class ServicesController extends Controller
 
     private function manageServiceProducts($validatedData, $service_id, $cashier_id)
     {
-        foreach ($validatedData['productsSelected'] as $product) {
-            ServicesProduct::updateOrCreate(
-                [
-                    'service_id' => $service_id,
-                    'product_id' => $product['id'],
-                ],
-                [
-                    'qty' => $product['qty'],
-                    'updated_by' => $cashier_id,
-                    'created_by' => $cashier_id,
-                ]
-            );
+        if(isset($validatedData['productsSelected'])){
+            foreach ($validatedData['productsSelected'] as $product) {
+                ServicesProduct::updateOrCreate(
+                    [
+                        'service_id' => $service_id,
+                        'product_id' => $product['id'],
+                    ],
+                    [
+                        'qty' => $product['qty'],
+                        'updated_by' => $cashier_id,
+                        'created_by' => $cashier_id,
+                    ]
+                );
+            }
         }
     }
 }

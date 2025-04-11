@@ -7,7 +7,7 @@ const SalesViewsModal = ({ isOpen, onClose, sale }) => {
 
     return (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="flex justify-between">
                     <h2 className="text-xl font-semibold">New Sale</h2>
                     <button 
@@ -29,35 +29,43 @@ const SalesViewsModal = ({ isOpen, onClose, sale }) => {
 
                 <div className="flex gap-4 mt-3">
                     {/* Product List Headers */}
-                    <div className="mt-3 w-3/5">
+                    <div className="mt-3 w-4/6">
                         <div className="flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
-                            <span className="w-1/12 text-center">#</span>
-                            <span className="w-3/12">Product</span>
-                            <span className="w-2/12 text-right">Cost</span>
-                            <span className="w-2/12 text-right">Price</span>
-                            <span className="w-1/12 text-right">Disc</span>
-                            <span className="w-1/12 text-right">Qty</span>
-                            <span className="w-2/12 text-right">Amount</span>
+                            <span className="w-2/16">Code</span>
+                            <span className="w-3/16">Image</span>
+                            <span className="w-3/16">Product</span>
+                            <span className="w-2/16 text-right">Cost</span>
+                            <span className="w-2/16 text-right">Price</span>
+                            <span className="w-1/16 text-right">Disc</span>
+                            <span className="w-1/16 text-right">Qty</span>
+                            <span className="w-2/16 text-right">Amount</span>
                         </div>
 
                         {/* Scrollable Product List */}
                         <div className="border max-h-[15rem] overflow-y-auto p-2">
                             {sale?.products_list?.map((product, index) => (
                                 <div key={index} className="flex justify-between items-center p-2 border-b">
-                                    <span className="w-1/12 text-center">{index + 1}</span>
-                                    <span className="w-3/12">{product.product_info?.name}</span>
-                                    <span className="w-2/12 text-right">{product.cost}</span>
-                                    <span className="w-2/12 text-right">{product.price}</span>
-                                    <span className="w-1/12 text-right">{product.discount_amount}</span>
-                                    <span className="w-1/12 text-right">{product.qty}</span>
-                                    <span className="w-2/12 text-right font-semibold">{Number(product.amount).toFixed(2)}</span>
+                                    <span className="w-2/16">{product.product_info?.code}</span>
+                                    <span className="w-3/16 text-center">
+                                        <img
+                                            src={product.product_info?.img}
+                                            alt={product.product_info?.name}
+                                            className="w-1`6 h-16 object-cover rounded cursor-pointer"
+                                        />
+                                    </span>
+                                    <span className="w-3/16">{product.product_info?.name_variant}</span>
+                                    <span className="w-2/16 text-right">{product.cost}</span>
+                                    <span className="w-2/16 text-right">{product.price}</span>
+                                    <span className="w-1/16 text-right">{product.discount_amount}</span>
+                                    <span className="w-1/16 text-right">{product.qty}</span>
+                                    <span className="w-2/16 text-right font-semibold">{Number(product.amount).toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
                     {/* Right Side - Payment Summary */}
-                    <div className="mt-3 w-2/5">
+                    <div className="mt-3 w-2/6">
                         <div className="border p-4 rounded-lg shadow-md bg-gray-100">
                             <h3 className="text-lg font-semibold mb-4 text-center">Payment Option:</h3>
                             {sale?.payment_options.map((paymentOption, index) => (

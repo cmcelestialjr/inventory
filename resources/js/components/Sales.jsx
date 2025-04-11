@@ -40,6 +40,8 @@ const Sales = () => {
     const [salesStatuses, setSalesStatuses] = useState([]);
     const [selectedSaleStatus, setSelectedSaleStatus] = useState("all");
     const [totalSales, setTotalSales] = useState(0);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     const didFetch = useRef(false);
 
     const openSaleViewModal = (sale) => {
@@ -146,7 +148,7 @@ const Sales = () => {
 
     useEffect(() => {
         fetchSales(selectedSaleStatus);
-    }, [search, page, dateRange, selectedSaleStatus]);
+    }, [search, page, dateRange, selectedSaleStatus, sortColumn, sortOrder]);
 
     const fetchSales = async (filter) => {
         try {
@@ -157,7 +159,9 @@ const Sales = () => {
                     page: page,
                     filter: filter,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
-                    end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -166,6 +170,14 @@ const Sales = () => {
         } catch (error) {
             // console.error("Error fetching sales:", error);
         }
+    };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
     };
 
     const handleSearch = (e) => {
@@ -617,15 +629,65 @@ const Sales = () => {
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left">DateTime</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Code</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Cashier</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("date_time_of_sale")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>DateTime</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "date_time_of_sale" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("code")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Code</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("cashier_name")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Cashier</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "cashier_name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 {/* <th className="border border-gray-300 px-4 py-2 text-left">Customer</th> */}
                                 {/* <th className="border border-gray-300 px-4 py-2 text-left">Cost</th> */}
-                                <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
-                                {/* <th className="border border-gray-300 px-4 py-2 text-left">No. of Items</th> */}
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("total_amount")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Amount</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "total_amount" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                {/* <th className="border border-gray-300 px-4 py-2 text-left">No. of Items</th> */}                                
                                 <th className="border border-gray-300 px-4 py-2 text-left">Type of Payment</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("sales_status_id")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Status</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "sales_status_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>
@@ -739,7 +801,7 @@ const Sales = () => {
 
             {isNewSaleModalOpen && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto relative">
                         <div className="flex justify-between">
                             <h2 className="text-xl font-semibold">
                                 {saleId === null ? "New Sale" : "Update Sale"}

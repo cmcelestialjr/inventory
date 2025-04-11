@@ -27,6 +27,8 @@ const PurchaseOrders = () => {
     const [purchaseOrderStatuses, setPurchaseOrderStatuses] = useState([]);
     const [printData, setPrintData] = useState([]);
     const [poStatuses, setPoStatuses] = useState([]);
+    const [sortColumn, setSortColumn] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     const didFetch = useRef(false);
     const [poFormData, setPoFormData] = useState({        
         poId: null,
@@ -49,36 +51,34 @@ const PurchaseOrders = () => {
     }, []);
 
     useEffect(() => {
-       const fetchData = async () => {
-           try {
-               const authToken = localStorage.getItem("token");
+        const fetchData = async () => {
+            try {
+                const authToken = localStorage.getItem("token");
 
-               const purchaseOrderStatusesResponse = await axios.get("/api/purchase-orders/statuses", {
+                const purchaseOrderStatusesResponse = await axios.get("/api/purchase-orders/statuses", {
                     params: {
                         start_date: startDate ? startDate.toISOString().split("T")[0] : null,
                         end_date: endDate ? endDate.toISOString().split("T")[0] : null
                     },
-                   headers: { Authorization: `Bearer ${authToken}` },
-               });
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
 
-               if (purchaseOrderStatusesResponse.data.success) {
-                   const statuses = purchaseOrderStatusesResponse.data.data;
-                   setPurchaseOrderStatuses(statuses);
-               } else {
-                   toastr.error("Failed to load service statuses.");
-               }
-               
-           } catch (error) {
-               toastr.error("Can't fetch data. Please refresh the page.");
-           }
-       };
-   
-       fetchData();
-   }, [startDate, endDate]);
+                if (purchaseOrderStatusesResponse.data.success) {
+                    const statuses = purchaseOrderStatusesResponse.data.data;
+                    setPurchaseOrderStatuses(statuses);
+                } else {
+                    toastr.error("Failed to load service statuses.");
+                }
+            } catch (error) {
+                toastr.error("Can't fetch data. Please refresh the page.");
+            }
+        };
+        fetchData();
+    }, [startDate, endDate]);
 
     useEffect(() => {
         fetchPurchaseOrders(filterStatus);
-    }, [search, page, dateRange, filterStatus]);
+    }, [search, page, dateRange, filterStatus, sortColumn, sortOrder]);
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
@@ -94,7 +94,9 @@ const PurchaseOrders = () => {
                     page,
                     filterStatus: filterStatus,
                     start_date: startDate ? startDate.toISOString().split("T")[0] : null,
-                    end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
                 },
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -103,6 +105,14 @@ const PurchaseOrders = () => {
         } catch (error) {
             
         }
+    };
+
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
     };
 
     const handleSelectedPoStatus = (poStatus) => {
@@ -134,7 +144,7 @@ const PurchaseOrders = () => {
                 products: po.products.map(product => ({
                     poProductId: product.id, 
                     productId: product.product_id, 
-                    productName: product.product_info.name,
+                    productName: product.product_info?.name_variant,
                     productCost: product.cost,
                     productQty: product.qty,
                     productTotal: product.total
@@ -959,17 +969,81 @@ const PurchaseOrders = () => {
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Code</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Supplier</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("code")}
+                                    rowSpan="2"
+                                >
+                                    <div className="flex items-center">
+                                        <span>Code</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("supplier_name")}
+                                    rowSpan="2"
+                                >
+                                    <div className="flex items-center">
+                                        <span>Supplier</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "supplier_name" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2" style={{ minWidth: '250px' }}>Products</th>
                                 <th className="border border-gray-300 px-4 py-2 text-center" colSpan="2">DateTime</th>
-                                <th className="border border-gray-300 px-4 py-2 text-center" rowSpan="2">Status</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left" rowSpan="2">Remarks</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("status_id")}
+                                    rowSpan="2"
+                                >
+                                    <div className="flex items-center">
+                                        <span>Status</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "status_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("remarks")}
+                                    rowSpan="2"
+                                >
+                                    <div className="flex items-center">
+                                        <span>Remarks</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                                 <th className="border border-gray-300 px-4 py-2 text-center" rowSpan="2">Actions</th>
                             </tr>
                             <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-center">Ordered</th>
-                                <th className="border border-gray-300 px-4 py-2 text-center">Received</th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("date_time_ordered")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Ordered</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "date_time_ordered" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("date_time_received")}
+                                >
+                                    <div className="flex items-center">
+                                        <span>Received</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "date_time_received" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -977,7 +1051,7 @@ const PurchaseOrders = () => {
                                 purchaseOrdersList.map((po, index) => (
                                     <tr key={po.id}>
                                         <td className="border border-gray-300 px-4 py-2">{po.code}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{po.supplier_info?.name}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{po.supplier_name}</td>
                                         <td className="border border-gray-300 px-1 py-1 relative">
                                             {po.products?.length > 0 && (
                                                 <div className="max-h-80 overflow-y-auto">
@@ -1185,10 +1259,15 @@ const PurchaseOrders = () => {
                                                             {products.map((product) => (
                                                                 <li 
                                                                     key={product.id} 
-                                                                    className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                    className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
                                                                     onClick={() => handleSelectProduct(product)}
                                                                 >
-                                                                    {product.name_variant}
+                                                                    <img
+                                                                        src={product.img}
+                                                                        alt={product.name}
+                                                                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                                    />
+                                                                    <span>{product.code}-{product.name_variant}</span>
                                                                 </li>
                                                             ))}
                                                         </ul>
@@ -1385,10 +1464,15 @@ const PurchaseOrders = () => {
                                                             {products.map((product) => (
                                                                 <li 
                                                                     key={product.id} 
-                                                                    className="p-2 cursor-pointer hover:bg-gray-200"
+                                                                    className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
                                                                     onClick={() => handleSelectProduct(product)}
                                                                 >
-                                                                    {product.name_variant}
+                                                                    <img
+                                                                        src={product.img}
+                                                                        alt={product.name}
+                                                                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                                    />
+                                                                    <span>{product.code}-{product.name_variant}</span>
                                                                 </li>
                                                             ))}
                                                         </ul>
@@ -1422,7 +1506,7 @@ const PurchaseOrders = () => {
                                                 onClick={() => setShowProductSelection(!showProductSelection)}
                                                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
                                             >
-                                               Cancel
+                                                Cancel
                                             </button>
                                             <button
                                                 type="button"
@@ -1440,7 +1524,7 @@ const PurchaseOrders = () => {
                                             onClick={() => setShowProductSelection(!showProductSelection)}
                                             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
                                         >
-                                           Add New Product
+                                            Add New Product
                                         </button>
                                     </div>
                                 )}

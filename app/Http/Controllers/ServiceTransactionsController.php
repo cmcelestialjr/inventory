@@ -58,6 +58,15 @@ class ServiceTransactionsController extends Controller
             }
         }
 
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'service_name', 'customer_name', 'amount', 'total_cost', 'income', 'service_status_id', 'payment_status_id', 'remarks'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
         $transactions = $query->orderBy('created_at','DESC')->paginate(5);
 
         return response()->json([

@@ -655,10 +655,9 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                                         onClick={() => handleSelectProduct(product)}
                                                     >
                                                         <img
-                                                        src={product.img}
-                                                        alt={product.name}
-                                                        className="w-16 h-16 object-cover rounded cursor-pointer"
-                                                        onClick={() => handleImageClick(product.img)}
+                                                            src={product.img}
+                                                            alt={product.name}
+                                                            className="w-16 h-16 object-cover rounded cursor-pointer"
                                                         />
                                                         <span>{product.code}-{product.name_variant}</span>
                                                     </li>

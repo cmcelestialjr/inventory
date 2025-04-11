@@ -54,8 +54,28 @@ class SaleController extends Controller
             }
         }
 
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'date_time_of_sale', 'cashier_name', 'total_amount', 'sales_status_id'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
 
         $sales = $query->orderByDesc('date_time_of_sale')->paginate(10);
+
+        $sales->getCollection()->transform(function ($sale) {
+            $sale->productsList->each(function ($product) {
+                $product->productInfo->img = $product->productInfo && $product->productInfo->img
+                    ? asset("storage/{$product->productInfo->img}")
+                    : asset('images/no-image-icon.png');
+            });
+            
+            return $sale;
+        });
+        
 
         return response()->json([
             'data' => $sales->items(),
@@ -233,11 +253,11 @@ class SaleController extends Controller
         $sales = $query->orderBy('date_time_of_sale','DESC')->limit(10)->get();
 
         $sales->transform(function ($sale) {
-            $product = $sale->productsList->first();
-            
-            $product->productInfo->img = $product && $product->productInfo && $product->productInfo->img
-                        ? asset("storage/{$product->productInfo->img}")
-                        : asset('images/no-image-icon.png');
+            $sale->productsList->each(function ($product) {
+                $product->productInfo->img = $product->productInfo && $product->productInfo->img
+                    ? asset("storage/{$product->productInfo->img}")
+                    : asset('images/no-image-icon.png');
+            });
         
             return $sale;
         });

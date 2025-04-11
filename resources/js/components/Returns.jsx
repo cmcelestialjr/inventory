@@ -76,6 +76,14 @@ const Returns = () => {
         }
     };
 
+    const handleSort = (column) => {
+        const newSortOrder = 
+            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
+    
+        setSortColumn(column);
+        setSortOrder(newSortOrder);
+    };
+
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setPage(1);
@@ -124,15 +132,6 @@ const Returns = () => {
             }
         });
     };
-
-    const handleSort = (column) => {
-        const newSortOrder = 
-            sortColumn === column && sortOrder === "asc" ? "desc" : "asc";
-    
-        setSortColumn(column);
-        setSortOrder(newSortOrder);
-    };
-    
 
     const colors = [
         "bg-blue-800", "bg-red-500",  "bg-purple-500", 

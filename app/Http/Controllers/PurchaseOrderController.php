@@ -15,7 +15,8 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = PurchaseOrder::with('supplierInfo','statusInfo','products.productInfo','products.statusInfo');
+        $query = PurchaseOrder::join('suppliers', 'suppliers.id', '=', 'purchase_orders.supplier_id')
+            ->select('purchase_orders.*', 'suppliers.name as supplier_name');
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -46,7 +47,18 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'supplier_name', 'status_id', 'remarks', 'date_time_ordered', 'date_time_received'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
         $po = $query->orderBy('date_time_ordered','DESC')->paginate(5);
+
+        $po->load(['statusInfo', 'products.productInfo', 'products.statusInfo']);
 
         return response()->json([
             'data' => $po->items(),
