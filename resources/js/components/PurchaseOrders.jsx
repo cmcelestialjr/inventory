@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Plus, Edit, X, Clipboard, File, PrinterIcon, Package, PackageCheck, PackagePlus, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { Plus, Edit, X, Clipboard, Circle, PrinterIcon, Package, PackageCheck, PackagePlus, Wallet, XCircle, RotateCcw, PieChart, CheckCircle, Save } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -25,10 +25,18 @@ const PurchaseOrders = () => {
     const [productsSelected, setProductsSelected] = useState([]);
     const [showProductSelection, setShowProductSelection] = useState(false);
     const [purchaseOrderStatuses, setPurchaseOrderStatuses] = useState([]);
+    const [paymentStatuses, setPaymentStatuses] = useState([]);
     const [printData, setPrintData] = useState([]);
     const [poStatuses, setPoStatuses] = useState([]);
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
+    const [availablePaymentOptions, setAvailablePaymentOptions] = useState([]);
+    const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+    const [isTransactionPayModalOpen, setIsTransactionPayModalOpen] = useState(false);
+    const [isNewPayment, setIsNewPayment] = useState(false);    
+    const [transactionPayments, setTransactionPayments] = useState(false);
+    const [newPayment, setNewPayment] = useState([]);
+    const [editingRow, setEditingRow] = useState(null);
     const didFetch = useRef(false);
     const [poFormData, setPoFormData] = useState({        
         poId: null,
@@ -55,6 +63,16 @@ const PurchaseOrders = () => {
             try {
                 const authToken = localStorage.getItem("token");
 
+                const paymentOptionsResponse = await axios.get("/api/fetch-payment-options", {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+    
+                if (paymentOptionsResponse.data.success) {
+                    setAvailablePaymentOptions(paymentOptionsResponse.data.data.filter(option => option.id !== 4));
+                } else {
+                    toastr.error("Failed to load payment options.");
+                }
+
                 const purchaseOrderStatusesResponse = await axios.get("/api/purchase-orders/statuses", {
                     params: {
                         start_date: startDate ? startDate.toISOString().split("T")[0] : null,
@@ -66,6 +84,21 @@ const PurchaseOrders = () => {
                 if (purchaseOrderStatusesResponse.data.success) {
                     const statuses = purchaseOrderStatusesResponse.data.data;
                     setPurchaseOrderStatuses(statuses);
+                } else {
+                    toastr.error("Failed to load service statuses.");
+                }
+
+                const paymentStatusesResponse = await axios.get("/api/purchase-orders/payments", {
+                    params: {
+                        start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                        end_date: endDate ? endDate.toISOString().split("T")[0] : null
+                    },
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+
+                if (paymentStatusesResponse.data.success) {
+                    const statuses = paymentStatusesResponse.data.data;
+                    setPaymentStatuses(statuses);
                 } else {
                     toastr.error("Failed to load service statuses.");
                 }
@@ -867,6 +900,134 @@ const PurchaseOrders = () => {
             }
         }, 3000);
     };
+
+    const handlePaymentSubmit = async (transactionPayment, idx) => {
+        try {
+            const formData = {
+                payment: transactionPayment,
+                newPayment: newPayment,
+            };
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/purchase-orders/payment`, 
+                formData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                setEditingRow(null);
+                setIsNewPayment(false);
+                const paymentData = response.data.data;
+                setTransactionPayments(paymentData);
+                fetchPurchaseOrders(filterStatus);
+            }else{
+                toastr.error("Error! There is something wrong in saving payment transaction.");
+            }
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "An error occurred while saving the payment transaction.";
+            toastr.error(errorMessage);
+        }
+    };
+
+    const handlePayModal = (transaction) => {
+        setIsTransactionPayModalOpen(true);
+        setIsNewPayment(false);
+        setTransactionPayments(transaction);
+        setEditingRow(null);
+    };
+
+    const handleTransactionPayModalClose = () => {
+        setIsTransactionPayModalOpen(false);
+        setIsNewPayment(false);
+        setTransactionPayments([]);
+        setEditingRow(null);
+    };
+
+    const handleEditClick = (idx) => {
+        setEditingRow(editingRow === idx ? null : idx);
+    };
+
+    const handleNewPayment = () => {
+        const totalReceived = transactionPayments.products?.reduce(
+            (sum, product) => sum + (parseFloat(product.total_received) || 0),
+            0
+        );
+        const paymentsReceived = transactionPayments.payments?.reduce(
+            (sum, payment) => sum + (parseFloat(payment.amount) || 0),
+            0
+        );
+        const remainingAmount = Number(totalReceived)-Number(paymentsReceived);
+
+        setNewPayment({
+            purchase_order_id: transactionPayments.id,
+            id: null,
+            payment_option_id: 1,
+            payment_option_name: "Cash",
+            amount: remainingAmount,
+            payment_date: new Date(),
+            amount_paid: remainingAmount,
+            change: 0,
+            remarks: null,
+        });
+        setIsNewPayment(true);
+    };
+
+    
+    const handleNewPaymentChange = (field, id, value) => {
+        let updatedPayments = { ...newPayment };
+    
+        if (field === "payment_option_name") {
+            updatedPayments[field] = value;
+            updatedPayments["payment_option_id"] = id; 
+        } else if (field === "date" || field === "remarks") {
+            updatedPayments[field] = value;
+        } else {
+            updatedPayments[field] = parseFloat(value) || 0;
+
+            if (field === "amount_paid") {
+                updatedPayments["change"] = Number(value) - Number(newPayment.amount);
+            }else{
+                updatedPayments["change"] = Number(newPayment.amount_paid) - Number(value);
+            }
+        }
+        setNewPayment(updatedPayments);
+    };
+
+    const handleTransactionPaymentChange = (idx, field, id, value) => {
+        let updatedPayments = [...transactionPayments.payments];
+    
+        if (field === "payment_option_name") {
+            updatedPayments[idx][field] = value;
+            updatedPayments[idx]["payment_option_id"] = id; 
+        } else if (field === "payment_date" || field === "remarks") {
+            updatedPayments[idx][field] = value;
+        } else {
+            updatedPayments[idx][field] = parseFloat(value) || 0;
+        }
+        
+        setTransactionPayments({
+            ...transactionPayments,
+            payments: updatedPayments,
+        });
+    };
+
+    const handleCancelNewPayment = () => {
+        setIsNewPayment(false);
+    }
+
+    const formatPrice = (price) => {
+        if (Number(price) === 0) return ' -';
+        return `₱${Number(price).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+    };
+
+    const formatDateTime = (dateString) => {
+        const formattedDate = moment(dateString);
+    
+        if (!formattedDate.isValid()) {
+            return '';
+        }
+    
+        return formattedDate.format("MMM D, YYYY h:mma");
+    };
     
     const icons = [
         (props) => <PackageCheck size={20} {...props} />,
@@ -887,6 +1048,24 @@ const PurchaseOrders = () => {
         "text-green-600", 
         "text-red-600", 
         "text-yellow-600",
+    ];
+
+    const paymentIcons = [
+        (props) => <Circle size={20} {...props} />,
+        (props) => <PieChart size={20} {...props} />,
+        (props) => <CheckCircle size={20} {...props} />, 
+    ];
+        
+    const paymentColors = [
+        "bg-red-600",
+        "bg-yellow-600",
+        "bg-green-600",
+    ];
+        
+    const paymentTextColors = [
+        "text-red-600", 
+        "text-yellow-600", 
+        "text-green-600",
     ];
 
     return (
@@ -927,7 +1106,7 @@ const PurchaseOrders = () => {
                     />
                 </div>
 
-                <div className="grid grid-cols-5 gap-6 mb-8">
+                <div className="grid grid-cols-8 gap-6 mb-8">
                     <button
                         onClick={() => handleSelectedPoStatus("All")}
                         className={`flex flex-col items-center p-6 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
@@ -958,6 +1137,30 @@ const PurchaseOrders = () => {
                                 <span className="text-sm font-semibold">{poStatus.name}</span>
                                 <span className="text-xl font-bold">
                                     {poStatus.purchase_orders_count}
+                                </span>
+                            </button>
+                        );
+                    })}
+
+                    {paymentStatuses.map((paymentStatus, index) => {
+                        const buttonColor = paymentColors[index % colors.length];
+                        const textColor = paymentTextColors[index % colors.length];
+                        const Icon = paymentIcons[index % icons.length];
+
+                        return (
+                            <button
+                                key={paymentStatus.id}
+                                onClick={() => handleSelectedPoStatus(`payment_status_id_${paymentStatus.id}`)}
+                                className={`flex flex-col items-center p-5 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                                    filterStatus === `payment_status_id_${paymentStatus.id}`
+                                        ? `${buttonColor} text-white shadow-xl` 
+                                        : `bg-white border border-gray-300 hover:bg-gray-100`
+                                }`}
+                            >
+                                <Icon className={filterStatus === `payment_status_id_${paymentStatus.id}` ? "text-white" : textColor} />
+                                <span className="text-sm font-semibold">{paymentStatus.name}</span>
+                                <span className="text-xl font-bold">
+                                    {paymentStatus.puchase_orders_payments_count}
                                 </span>
                             </button>
                         );
@@ -1009,6 +1212,18 @@ const PurchaseOrders = () => {
                                 </th>
                                 <th
                                     className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                                    onClick={() => handleSort("payment_status_id")}
+                                    rowSpan="2"
+                                >
+                                    <div className="flex items-center">
+                                        <span>Payments</span>
+                                        <span className="ml-1">
+                                            {sortColumn === "payment_status_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                        </span>
+                                    </div>
+                                </th>
+                                <th
+                                    className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
                                     onClick={() => handleSort("remarks")}
                                     rowSpan="2"
                                 >
@@ -1048,83 +1263,136 @@ const PurchaseOrders = () => {
                         </thead>
                         <tbody>
                             {purchaseOrdersList.length > 0 ? (
-                                purchaseOrdersList.map((po, index) => (
-                                    <tr key={po.id}>
-                                        <td className="border border-gray-300 px-4 py-2">{po.code}</td>
-                                        <td className="border border-gray-300 px-4 py-2">{po.supplier_name}</td>
-                                        <td className="border border-gray-300 px-1 py-1 relative">
-                                            {po.products?.length > 0 && (
-                                                <div className="max-h-80 overflow-y-auto">
-                                                    {po.products.map((product, index) => (
-                                                        <div 
-                                                            key={index} 
-                                                            className="w-full bg-white border rounded-lg shadow-lg p-2 relative"
-                                                        >
-                                                            <span className="text-gray-800">
-                                                                {product.product_info?.name_variant}
-                                                            </span>
-                                                            <div className="text-sm">
-                                                                <div>
-                                                                    <span className="font-medium">Qty:</span> {product.qty}
-                                                                </div>
-                                                                <div>
-                                                                    <span className="font-medium">Total:</span> ₱{Number((product.total)).toFixed(2).toLocaleString()}
-                                                                </div>
-                                                                <div>
-                                                                    Status: 
-                                                                    <span className={`font-medium text-${product.status_info?.color}-600`}>
-                                                                        {product.status_info?.name}
-                                                                    </span>
+                                purchaseOrdersList.map((po, index) => {
+                                    const totalReceived = po.products?.reduce(
+                                        (sum, product) => sum + (parseFloat(product.total_received) || 0),
+                                        0
+                                    );
+                                    const paymentsReceived = po.payments?.reduce(
+                                        (sum, payment) => sum + (parseFloat(payment.amount) || 0),
+                                        0
+                                    );
+                                    const remainingAmount = Number(totalReceived)-Number(paymentsReceived);
+                                    const paymentRemarks = po.products
+                                    return (
+                                        <tr key={po.id}>
+                                            <td className="border border-gray-300 px-4 py-2">{po.code}</td>
+                                            <td className="border border-gray-300 px-4 py-2">{po.supplier_name}</td>
+                                            <td className="border border-gray-300 px-1 py-1 relative">
+                                                {po.products?.length > 0 && (
+                                                    <div className="max-h-80 overflow-y-auto">
+                                                        {po.products.map((product, index) => (
+                                                            <div 
+                                                                key={index} 
+                                                                className="w-full bg-white border rounded-lg shadow-lg p-2 relative"
+                                                            >
+                                                                <span className="text-gray-800">
+                                                                    {product.product_info?.name_variant}
+                                                                </span>
+                                                                <div className="text-sm">
+                                                                    <div>
+                                                                        <span className="font-medium">Qty:</span> {product.qty}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="font-medium">Total:</span> ₱{Number((product.total)).toFixed(2).toLocaleString()}
+                                                                    </div>
+                                                                    <div>
+                                                                        Status: 
+                                                                        <span className={`font-medium text-${product.status_info?.color}-600`}>
+                                                                            {product.status_info?.name}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                {moment(po.date_time_ordered).format("MMM D, YY h:mma")}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                {moment(po.date_time_received).isValid() ? moment(po.date_time_received).format("MMM D, YY h:mma") : ""}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <span className={`font-medium text-${po.status_info?.color}-600`}>
+                                                    {po.status_info?.name}
+                                                </span>
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">
+                                                <span className={`font-medium text-${po.payment_status_info?.color}-600`}>
+                                                    {po.payment_status_info?.name}
+                                                </span>
+                                                {Number(paymentsReceived) > 0 && (
+                                                    <div className="text-sm">
+                                                        <div>
+                                                            <span className="font-medium">Paid:</span> 
+                                                            <span className="text-green-800">
+                                                                {Number(paymentsReceived) === 0 ? ' -' : formatPrice(paymentsReceived)}
+                                                            </span>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            {moment(po.date_time_ordered).format("MMM D, YY h:mma")}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            {moment(po.date_time_received).isValid() ? moment(po.date_time_received).format("MMM D, YY h:mma") : ""}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            <span className={`font-medium text-${po.status_info?.color}-600`}>
-                                                {po.status_info?.name}
-                                            </span>
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">{po.remarks}</td>
-                                        <td className="border border-gray-300 px-4 py-2 gap-2">
-                                            <button 
+                                                        {remainingAmount > 0 && (
+                                                            <div>
+                                                                <span className="font-medium">Remaining:</span> 
+                                                                <span className="text-red-800">
+                                                                    {remainingAmount === 0 ? ' -' : formatPrice(remainingAmount)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {po.payments?.length > 0 ? (
+                                                            po.payments.map((payment, index) => (
+                                                            <div key={index}>
+                                                                {payment.remarks}
+                                                            </div>
+                                                            ))
+                                                        ) : (
+                                                            ""
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2">{po.remarks}</td>
+                                            <td className="border border-gray-300 px-4 py-2 gap-2">
+                                                <button 
                                                     onClick={() => handleOpenPurchaseOrderModal(po)}
-                                                    className="flex items-center gap-1 px-1 py-1 text-white bg-blue-500 border border-blue-500 
-                                                            rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-blue-500 hover:border-blue-500"
+                                                    className="flex items-center gap-2 px-1 py-1 text-blue-500
+                                                            rounded-lg shadow transition duration-200
+                                                            hover:text-white hover:border hover:border-blue-500 hover:bg-blue-500"
                                                 >
                                                     <Edit size={14} />
                                                     <span className="text-sm">Edit</span>
-                                            </button>
-                                            <button 
+                                                </button>
+                                                <button 
                                                     onClick={() => handleManagePurchaseOrderModal(po)}
-                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-700 border border-blue-700 
-                                                            rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-blue-700 hover:border-blue-700"
+                                                    className="flex items-center gap-2 px-1 py-1 text-blue-700
+                                                        rounded-lg shadow transition duration-200
+                                                        hover:text-white hover:border hover:border-blue-700 hover:bg-blue-700"
                                                 >
                                                     <Clipboard size={14} />
                                                     <span className="text-sm">Manage</span>
-                                            </button>
-                                            <button 
+                                                </button>
+                                                <button
+                                                    onClick={() => handlePayModal(po)}
+                                                    className="flex items-center gap-2 px-1 py-1 text-green-600
+                                                        rounded-lg shadow transition duration-200
+                                                        hover:text-white hover:border hover:border-green-600 hover:bg-green-600"
+                                                >
+                                                    <Wallet size={14} />
+                                                    <span className="text-sm">Payment</span>
+                                                </button>
+                                                <button
                                                     onClick={() => handlePrintPurchaseOrder(po)}
-                                                    className="flex items-center gap-2 px-1 py-1 text-white bg-blue-900 border border-blue-900 
-                                                            rounded-lg shadow transition duration-200 
-                                                            hover:bg-white hover:text-blue-900 hover:border-blue-900"
+                                                    className="flex items-center gap-2 px-1 py-1 text-blue-900
+                                                        rounded-lg shadow transition duration-200
+                                                        hover:text-white hover:border hover:border-blue-900 hover:bg-blue-900"
                                                 >
                                                     <PrinterIcon size={14} />
                                                     <span className="text-sm">Print</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr>
                                     <td colSpan="10" className="border border-gray-300 px-4 py-2 text-center">
@@ -1656,6 +1924,281 @@ const PurchaseOrders = () => {
                     </div>
                 </div>
             )}
+
+            {isTransactionPayModalOpen && (() => {
+                const totalReceived = transactionPayments.products?.reduce(
+                    (sum, product) => sum + (parseFloat(product.total_received) || 0),
+                    0
+                );
+                const paymentsReceived = transactionPayments.payments?.reduce(
+                    (sum, payment) => sum + (parseFloat(payment.amount) || 0),
+                    0
+                );
+                const remainingAmount = Number(totalReceived)-Number(paymentsReceived);
+                return (
+                    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
+                            {/* Header */}
+                            <div className="flex justify-between mt-4">
+                                <h2 className="text-xl font-semibold">
+                                    Payment Transaction
+                                </h2>
+                                <button 
+                                    onClick={handleTransactionPayModalClose} 
+                                    className="text-gray-500 hover:text-gray-700 transition"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="mt-4">
+                                <div>
+                                    <label>Status: </label>
+                                    <span className={`text-${transactionPayments.payment_status_info?.color}-800`}>
+                                        {transactionPayments.payment_status_info?.name}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label>Total Paid: </label> 
+                                    <span className="text-green-800">
+
+                                        {Number(paymentsReceived) === 0 ? ' -' : formatPrice(paymentsReceived)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label>Remaining Amount: </label> 
+                                    <span className="text-red-600">
+                                        {remainingAmount === 0 ? ' -' : formatPrice(remainingAmount)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {(remainingAmount > 0 || transactionPayments.payment_status_id != 3)  && (
+                                <div>
+                                    {isNewPayment ? (
+                                        <div className="mt-2 flex gap-2 mb-2 items-center">
+                                            <div className="space-y-4 border px-3 py-2 rounded-lg w-2/3">
+                                                <div className="w-full">
+                                                    <label>To Pay</label>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Amount to be Paid"
+                                                        value={newPayment.amount}
+                                                        onChange={(e) => handleNewPaymentChange("amount", e.target.value, e.target.value)}
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                    />
+                                                </div>
+
+                                                <div className="flex gap-2 mb-2 items-center">
+                                                    <select
+                                                        value={JSON.stringify({ payment_option_id: newPayment.payment_option_id, payment_option_name: newPayment.payment_option_name })}
+                                                        onChange={(e) => {
+                                                            const selectedValue = JSON.parse(e.target.value);
+                                                            handleNewPaymentChange("payment_option_name", selectedValue.payment_option_id, selectedValue.payment_option_name);
+                                                        }}
+                                                        className="border px-3 py-2 rounded-lg w-1/3"
+                                                    >
+                                                        {availablePaymentOptions.map((payment) => (
+                                                            <option key={payment.id} value={JSON.stringify({ payment_option_id: payment.id, payment_option_name: payment.name })}>
+                                                                {payment.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Amount Paid"
+                                                        value={newPayment.amount_paid}
+                                                        onChange={(e) => handleNewPaymentChange("amount_paid", e.target.value, e.target.value)}
+                                                        className="border px-3 py-2 rounded-lg w-1/3"
+                                                    />
+
+                                                    <DatePicker
+                                                        selected={newPayment.payment_date}
+                                                        onChange={(date) => handleNewPaymentChange("date", date, date)}
+                                                        showTimeSelect
+                                                        dateFormat="Pp"
+                                                        className="border px-3 py-2 rounded-lg w-full"
+                                                        wrapperClassName="w-full z-60"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium mt-1">Remarks:</label>
+                                                    <div className="relative">
+                                                        <textarea
+                                                            value={newPayment.remarks}
+                                                            onChange={(e) => handleNewPaymentChange("remarks", e.target.value, e.target.value)}
+                                                            className="w-full p-2 border rounded resize-none"
+                                                            placeholder=""
+                                                            rows={2}
+                                                        ></textarea>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 mb-2 items-center">
+                                                    <button
+                                                        onClick={() => {
+                                                            handlePaymentSubmit(newPayment,null);
+                                                        }}
+                                                        className="flex items-center gap-2 bg-green-600 text-sm text-white px-4 py-2 rounded-lg shadow w-1/2 hover:text-green-800 transition"
+                                                    >
+                                                        <span><Save size={16} /></span> Save
+                                                    </button>
+                                                
+                                                    <button
+                                                        onClick={handleCancelNewPayment}
+                                                        className="flex items-center gap-2 bg-red-600 text-sm text-white px-4 py-2 rounded-lg shadow w-1/2 hover:text-red-800 transition"
+                                                    >
+                                                        <span><X size={16} /></span> Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="border p-4 rounded-lg shadow-md bg-gray-100 w-1/3">
+                                                <h3 className="text-lg font-semibold mb-4 text-center">Summary</h3>
+                                                    
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-blue-600"><strong>To Pay:</strong></span>
+                                                    <span className="text-right">{formatPrice(newPayment.amount)}</span>
+                                                </div>
+
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-green-600"><strong>Paid:</strong></span>
+                                                    <span className="text-right">{formatPrice(newPayment.amount_paid)}</span>
+                                                </div>
+
+                                                <div className="flex justify-between mb-2">
+                                                    <p>
+                                                        <strong>Change:</strong>
+                                                    </p>
+                                                    <p className={`${newPayment.change < 0 ? 'text-red-600' : 'text-green-600'} text-right`}>
+                                                        {formatPrice(newPayment.change)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                onClick={handleNewPayment}
+                                                className="flex items-center gap-2 bg-blue-600 text-sm text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                                            >
+                                                <Plus size={18} /> New Payment
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="overflow-x-auto mt-4">
+                                <table className="w-full border-collapse border border-gray-300">
+                                    <thead>
+                                        <tr className="bg-gray-100 text-gray-700">
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Date</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Type of Payment</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactionPayments.payments?.length > 0 ? (
+                                            transactionPayments.payments?.map((transactionPayment, idx) => {
+
+                                                const paymentDate = new Date(transactionPayment.payment_date);
+                                                const isEditing = editingRow === idx;
+
+                                                return (
+                                                    <tr key={transactionPayment.id}>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <DatePicker
+                                                                    selected={paymentDate}
+                                                                    onChange={(date) => handleTransactionPaymentChange(idx, "payment_date", date, date)}
+                                                                    showTimeSelect
+                                                                    dateFormat="Pp"
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                    wrapperClassName="w-full z-60"
+                                                                />
+                                                            ) : (
+                                                                formatDateTime(transactionPayment.payment_date)
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <select
+                                                                    value={JSON.stringify({ payment_option_id: transactionPayment.payment_option_id, payment_option_name: transactionPayment.payment_option_name })}
+                                                                    onChange={(e) => {
+                                                                        const selectedValue = JSON.parse(e.target.value);
+                                                                        handleTransactionPaymentChange(idx, "payment_option_name", selectedValue.payment_option_id, selectedValue.payment_option_name);
+                                                                    }}
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                >
+                                                                    {availablePaymentOptions.map((payment) => (
+                                                                        <option key={payment.id} value={JSON.stringify({ payment_option_id: payment.id, payment_option_name: payment.name })}>
+                                                                            {payment.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            ) : (
+                                                                transactionPayment.payment_option_name
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Amount Paid"
+                                                                    value={transactionPayment.amount}
+                                                                    onChange={(e) => handleTransactionPaymentChange(idx, "amount", e.target.value, e.target.value)}
+                                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                                />
+                                                            ) : (
+                                                                formatPrice(transactionPayment.amount)
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2">
+                                                            {isEditing ? (
+                                                                <textarea
+                                                                    value={transactionPayment.remarks}
+                                                                    onChange={(e) => handleTransactionPaymentChange(idx, "remarks", e.target.value, e.target.value)}
+                                                                    className="w-full p-2 border rounded resize-none"
+                                                                    placeholder="..."
+                                                                    rows={2}
+                                                                ></textarea>
+                                                            ) : (
+                                                                transactionPayment.remarks
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-4 py-2 gap-2">
+                                                            <button 
+                                                                onClick={() => isEditing ? handlePaymentSubmit(transactionPayment, idx) : handleEditClick(idx)}
+                                                                className={`flex items-center gap-1 ${isEditing ? "text-green-600 hover:text-green-800 hover:underline" : "text-blue-600 hover:text-blue-800 hover:underline"}`}
+                                                            >
+                                                                {isEditing ? (
+                                                                    <span><Save size={16} /></span>
+                                                                ) : (
+                                                                    <span><Edit size={16} /></span>
+                                                                )}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="10" className="border border-gray-300 px-4 py-2 text-center">
+                                                    No Payment found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </Layout>
     );
 };

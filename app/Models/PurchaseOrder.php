@@ -14,6 +14,7 @@ class PurchaseOrder extends Model
         'date_time_ordered',
         'date_time_received',
         'status_id',
+        'payment_status_id',
         'remarks',
         'src',
         'updated_by',
@@ -28,8 +29,16 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(PurchaseOrderStatus::class, 'status_id', 'id');
     }
+    public function paymentStatusInfo(): BelongsTo
+    {
+        return $this->belongsTo(PaymentStatus::class, 'payment_status_id', 'id');
+    }
     public function products(): HasMany
     {
         return $this->hasMany(PurchaseOrderProduct::class, 'purchase_order_id', 'id');
+    }
+    public function payments(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderPayment::class, 'purchase_order_id', 'id');
     }
 }

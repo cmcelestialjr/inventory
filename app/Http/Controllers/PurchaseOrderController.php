@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentStatus;
 use App\Models\ProductsPrice;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderPayment;
 use App\Models\PurchaseOrderProduct;
 use App\Models\PurchaseOrderStatus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PurchaseOrderController extends Controller
 {
@@ -30,8 +33,14 @@ class PurchaseOrderController extends Controller
 
         if ($request->has('filterStatus')) {
             $filter = $request->filterStatus;
-            if($filter!='All'){
-                $query->where('status_id', $filter);
+        
+            if ($filter !== 'All') {
+                if (Str::startsWith($filter, 'payment_status_id_')) {
+                    $paymentStatusId = (int) str_replace('payment_status_id_', '', $filter);
+                    $query->where('payment_status_id', $paymentStatusId);
+                } else {
+                    $query->where('status_id', $filter);
+                }
             }
         }
 
@@ -51,14 +60,14 @@ class PurchaseOrderController extends Controller
             $sortColumn = $request->sort_column;
             $sortOrder = $request->sort_order;
     
-            if (in_array($sortColumn, ['code', 'supplier_name', 'status_id', 'remarks', 'date_time_ordered', 'date_time_received'])) {
+            if (in_array($sortColumn, ['code', 'supplier_name', 'status_id', 'payment_status_id', 'remarks', 'date_time_ordered', 'date_time_received'])) {
                 $query->orderBy($sortColumn, $sortOrder);
             }
         }
 
         $po = $query->orderBy('date_time_ordered','DESC')->paginate(5);
 
-        $po->load(['statusInfo', 'products.productInfo', 'products.statusInfo']);
+        $po->load(['statusInfo', 'products.productInfo', 'products.statusInfo', 'paymentStatusInfo', 'payments']);
 
         return response()->json([
             'data' => $po->items(),
@@ -104,6 +113,7 @@ class PurchaseOrderController extends Controller
             $po->supplier_id = $validatedData['supplierId'];
             $po->date_time_ordered = date('Y-m-d H:i:s',strtotime($validatedData['dateTime']));
             $po->status_id = 1;
+            $po->payment_status_id = 1;
             $po->remarks = $validatedData['remarks'];
             $po->updated_by = $cashier_id;
             $po->save();
@@ -221,6 +231,103 @@ class PurchaseOrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch purchase order statuses',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function payments(Request $request)
+    {
+        try {
+            $query = PaymentStatus::withCount(['puchaseOrdersPayments' => function ($q) use ($request) {
+                if ($request->has('start_date') && $request->has('end_date')) {
+                    $startDate = $request->start_date;
+                    $endDate = $request->end_date;                    
+                    $q->whereBetween(DB::raw('DATE(date_time_ordered)'), [$startDate, $endDate]);
+                }
+            }])->orderBy('id','ASC')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $query
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch purchase order statuses',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function payment(Request $request)
+    {  
+        $validatedData = $request->validate([
+            'payment.purchase_order_id' => 'integer|exists:purchase_orders,id',
+            'payment.id' => 'nullable|exists:purchase_order_payments,id',
+            'payment.payment_option_id' => 'integer|exists:payment_options,id',
+            'payment.payment_option_name' => 'string|max:255',
+            'payment.amount' => 'numeric|min:0',
+            'payment.payment_date' => 'date',
+            'payment.remarks' => 'nullable|string',
+        ]);
+
+        $purchase_order_id = $validatedData['payment']['purchase_order_id'];
+        
+        $purchaseOrder = PurchaseOrder::findOrFail($purchase_order_id);
+
+        DB::beginTransaction();
+        try{
+            $user = Auth::user();
+            $cashier_id = $user->id;
+
+            if(isset($validatedData['payment']['id'])){
+                $payment = PurchaseOrderPayment::findOrFail($validatedData['payment']['id']);
+            }else{
+                $payment = new PurchaseOrderPayment;
+                $payment->purchase_order_id = $purchase_order_id;
+                $payment->created_by = $cashier_id;               
+            }
+            
+            $payment->remarks = $validatedData['payment']['remarks'];
+            $payment->payment_option_id = $validatedData['payment']['payment_option_id'];
+            $payment->payment_option_name = $validatedData['payment']['payment_option_name'];
+            $payment->amount = $validatedData['payment']['amount'];
+            $payment->payment_date = date('Y-m-d H:i:s',strtotime($validatedData['payment']['payment_date']));
+            $payment->updated_by = $cashier_id;
+            $payment->save();
+
+            $productsAmount = PurchaseOrderProduct::where('purchase_order_id',$purchase_order_id)->sum('total_received');
+            $paymentAmount = PurchaseOrderPayment::where('purchase_order_id',$purchase_order_id)->sum('amount');
+            $remainingAmount = $productsAmount-$paymentAmount;
+
+            if($remainingAmount<=$productsAmount && $paymentAmount<=0){
+                $payment_status_id = 1;
+            }elseif($productsAmount>$paymentAmount){
+                $payment_status_id = 2;
+            }else{
+                $payment_status_id = 3;
+            }
+            
+            $purchaseOrder->payment_status_id = $payment_status_id;
+            $purchaseOrder->save();
+            
+            $purchaseOrder = PurchaseOrder::with(['statusInfo', 'products.productInfo', 'products.statusInfo', 'paymentStatusInfo', 'payments'])
+                ->where('id',$purchase_order_id)->first();
+
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Successful! payment transaction saved..',
+                'data' => $purchaseOrder
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
                 'error' => $e->getMessage()
             ], 500);
         }

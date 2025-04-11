@@ -16,7 +16,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with('pricingList')
+        $query = Product::with('pricingList','productCategory')
             ->where('id','>',0);
 
         if ($request->has('search')) {
@@ -51,11 +51,16 @@ class ProductController extends Controller
             }
         }
 
+        if ($request->has('filterCategory')) {
+            $filterCategory = $request->filterCategory;
+            $query->where('product_category_id', $filterCategory);
+        }
+
         if ($request->has('sort_column') && $request->has('sort_order')) {
             $sortColumn = $request->sort_column;
             $sortOrder = $request->sort_order;
     
-            if (in_array($sortColumn, ['code', 'name', 'variant', 'cost', 'price', 'qty'])) {
+            if (in_array($sortColumn, ['code', 'name', 'variant', 'cost', 'price', 'qty', 'product_category_id'])) {
                 $query->orderBy($sortColumn, $sortOrder);
             }
         }
@@ -85,9 +90,9 @@ class ProductController extends Controller
             SUM(CASE WHEN qty > 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as available,
             SUM(CASE WHEN qty = 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as out_of_stock,
             SUM(CASE WHEN qty BETWEEN 1 AND 4 AND product_status = 'Available' THEN 1 ELSE 0 END) as low_stock,
+            SUM(CASE WHEN product_status = 'Phaseout' THEN 1 ELSE 0 END) as phaseout,
             SUM(CASE WHEN product_status = 'Phaseout' THEN 1 ELSE 0 END) as phaseout
         ")->first();
-
 
         return response()->json([
             'total' => $summary->total,
@@ -98,11 +103,57 @@ class ProductController extends Controller
         ]);
     }
 
+    public function categoriesCount(Request $request)
+    {
+        $query = Product::selectRaw("
+            SUM(CASE WHEN product_category_id = 1 THEN 1 ELSE 0 END) as main,
+            SUM(CASE WHEN product_category_id = 2 THEN 1 ELSE 0 END) as accessories,
+            SUM(CASE WHEN product_category_id = 3 THEN 1 ELSE 0 END) as boltsNscrews
+        ");
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            switch ($filter) {
+                case 'available':
+                    $query->where('qty', '>', 0);
+                    $query->where('product_status', 'Available');
+                    break;
+            
+                case 'out-of-stock':
+                    $query->where('qty', '=', 0);
+                    $query->where('product_status', 'Available');
+                    break;
+            
+                case 'low-stock':
+                    $query->whereBetween('qty', [1, 4]);
+                    $query->where('product_status', 'Available');
+                    break;
+
+                case 'phaseout':
+                    $query->where('product_status', 'Phaseout');
+                    break;
+            }
+        }
+        $summary = $query->first();
+
+        return response()->json([
+            'main' => $summary->main,
+            'accessories' => $summary->accessories,
+            'boltsNscrews' => $summary->boltsNscrews,
+        ]);
+    }
+
     public function categories()
     {
         $categories = ProductsCategory::get();
 
         return response()->json($categories);
+    }
+
+    public function print(Request $request)
+    {
+        return response()->json([
+            'data' => []
+        ]);
     }
 
     public function store(Request $request)

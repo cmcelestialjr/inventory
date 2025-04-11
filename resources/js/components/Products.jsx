@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle  } from "lucide-react";
+import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle, Boxes, Puzzle, Bolt, Printer  } from "lucide-react";
 import Layout from "./Layout";
 import axios from 'axios';
 import DatePicker from "react-datepicker";
@@ -21,6 +21,7 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState(products);
   const [productCategories, setProductCategories] = useState({});
   const [filterType, setFilterType] = useState("all");
+  const [filterCategory, setFilterCategory] = useState(null);  
   const [modalImageOpen, setModalImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [sortColumn, setSortColumn] = useState(null);
@@ -32,6 +33,11 @@ const Products = () => {
     out_of_stock: 0,
     low_stock: 0,
     phaseout: 0,
+  });
+  const [categoriesCount, setCategoriesCount] = useState({
+    main: 0,
+    accessories: 0,
+    boltsNscrews: 0,
   });
   const [editFormData, setEditFormData] = useState({ 
     id: "", 
@@ -59,8 +65,12 @@ const Products = () => {
   });  
 
   useEffect(() => {
-    fetchProducts(filterType);
-  }, [search, page, sortColumn, sortOrder]);
+    fetchProducts(filterType,filterCategory);
+  }, [search, page, sortColumn, sortOrder, filterType, filterCategory]);
+
+  useEffect(() => {
+    fetchCategoriesCount(filterType);
+  }, [filterType]);
 
   useEffect(() => {
     if (didFetch.current) return;
@@ -72,7 +82,6 @@ const Products = () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         setSummary(response.data);
-        
       } catch (error) {
         // console.error("Error fetching summary:", error);
       }
@@ -96,10 +105,15 @@ const Products = () => {
 
   const handleFilter = (filterType) => {
     setFilterType(filterType);
-    fetchProducts(filterType);
+    fetchProducts(filterType,filterCategory);
   };
 
-  const fetchProducts = async (filter) => {
+  const handleFilterCategories = (filterCategory) => {
+    setFilterCategory(filterCategory);
+    fetchProducts(filterType,filterCategory);
+  };
+  
+  const fetchProducts = async (filter,filterCategory) => {
     try {
       const authToken = localStorage.getItem("token");
       const response = await axios.get(`/api/products`, {
@@ -107,6 +121,7 @@ const Products = () => {
           search: search,
           page: page,
           filter: filter,
+          filterCategory: filterCategory,
           sort_column: sortColumn, 
           sort_order: sortOrder,
       },
@@ -115,6 +130,22 @@ const Products = () => {
 
       setProducts(response.data.data);
       setMeta(response.data.meta || {});
+    } catch (error) {
+      // console.error("Error fetching products:", error);
+    }
+  };
+
+  const fetchCategoriesCount = async (filter) => {
+    try {
+      const authToken = localStorage.getItem("token");
+      const response = await axios.get(`/api/products/categoriesCount`, {
+        params: {
+          filter: filter
+      },
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      setCategoriesCount(response.data);
     } catch (error) {
       // console.error("Error fetching products:", error);
     }
@@ -248,7 +279,7 @@ const Products = () => {
         );
 
         if(response.data.message=="success"){
-          fetchProducts(filterType);
+          fetchProducts(filterType,filterCategory);
           toastr.success("Product added successfully!");
           setShowModal(false);
           setFormData({
@@ -315,7 +346,7 @@ const Products = () => {
         });
     
         toastr.success("Product updated successfully!");
-        fetchProducts(filterType);
+        fetchProducts(filterType,filterCategory);
       } catch (error) {
         toastr.error("Error updating product");
       }
@@ -377,7 +408,7 @@ const Products = () => {
             ? prevData.pricingList.map((p) => (p.id === selectedPricing.id ? formattedData : p))
             : [...prevData.pricingList, formattedData],
         }));
-        fetchProducts(filterType);
+        fetchProducts(filterType,filterCategory);
         setShowPricingModal(false);
       }
     } catch (error) {
@@ -396,6 +427,208 @@ const Products = () => {
       effective_date: null,
     });
     setShowPricingModal(true);
+  };
+
+  const handlePrint = async () => {
+    try {
+      const response = await axios.get(`/api/products/print`, {
+        params: {
+          search: search,
+          filter: filterType,
+          filterCategory: filterCategory
+        },
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const products = response.data.data;
+    } catch (error) {
+      const products = [];
+    }
+
+    const printWindow = window.open('', '', 'height=600,width=800');
+    
+    if (!printWindow) return;
+
+    const doc = printWindow.document;
+        doc.title = "Products - Rockfil Stainless Metal Works"; 
+        doc.head.innerHTML += `<title>Products</title>`;
+        const body = doc.createElement('body');
+    
+        // Create styles
+        const style = doc.createElement('style');
+        style.textContent = `
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;
+                border-bottom: 2px solid black; 
+                padding-bottom: 10px; 
+                gap: 15px;
+            }
+            .header img { width: 70px; height: auto; }
+            .header .middle-logo { margin: 0 0px; }
+            .header-text { text-align: left; line-height: 1.2; flex: 1; }
+            .header-text h4 { text-align: left; margin: 0; font-size: 18px; }
+            .header-text p { margin: 0px 0; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 5px; border: 1px solid #000; text-align: left; font-size: 12px; }
+            th { text-align: center; font-size: 14px; }
+            h2, h4 { text-align: center; }
+            .supplier-date-container { 
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 3px;
+                margin-top: 0px;
+                align-items: start;
+                font-size: 14px;
+            }
+            .supplier {
+                text-align: left;
+                margin-bottom: 0px;
+                padding-bottom: 0px;
+            }
+            .date {
+                text-align: right;
+                align-self: start;
+                margin-bottom: 0px;
+            }
+            .address {
+                grid-column: span 2;
+                text-align: left; 
+                margin-top: 0px;
+            }
+            .underline {
+                display: inline-block;
+                border-bottom: 1px solid black;
+            }
+            .font-medium {
+                font-weight: bold;
+            }
+            .no-border {
+                border: none !important;
+            }            
+            .payment-status {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                margin-top: 5px;
+            }
+            .payment-status span {
+                display: inline-block;
+                width: 150px;
+                border-bottom: 1px solid black;
+            }
+            .cheque-receipt {
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                margin-top: -15px;
+            }
+            .cheque-receipt span {
+                display: inline-block;
+                width: 200px;
+                border-bottom: 1px solid black;
+            }
+            .acknowledgment {
+                font-style: italic;
+                margin-top: -10px;
+                font-size: 12px;
+            }
+            .signatories {
+                display: flex;
+                justify-content: space-between; /* Evenly distribute signatures */
+                align-items: center;
+                margin-top: 30px;
+                font-size: 12px;
+                gap: 20px; /* Adds spacing between each signature block */
+            }
+
+            .signature-block {
+                text-align: center;
+                flex: 1;
+                position: relative;
+            }
+            .signature-line {
+                display: block;
+                width: 80%; /* Controls the length of the underline */
+                border-top: 1px solid black; /* Creates the underline */
+                margin: 0 auto 5px auto; /* Centers the line */
+                height: 0px; /* Adds spacing between the line and text */
+            }
+            .signature-block p {
+                margin: 0;
+            }
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background-color: #f8f9fa;
+                text-align: center;
+                padding: 10px 0;
+                font-size: 12px;
+                border-top: 1px solid #ccc;
+            }
+            .footer p {
+                margin: 3px 0;
+                font-size: 10px;
+            }
+        `;
+        doc.head.appendChild(style);
+    
+        const header = doc.createElement('div');
+        header.className = 'header';
+    
+        const leftLogo = doc.createElement('img');
+        leftLogo.src = '/images/clstldev2.png'; 
+        leftLogo.alt = 'Company Logo';
+
+        const middleLogo = doc.createElement('img');
+        middleLogo.src = '/images/rockfil.png';
+        middleLogo.alt = 'Company Logo';
+        middleLogo.className = 'middle-logo';
+    
+        const headerText = doc.createElement('div');
+        headerText.className = 'header-text';
+        headerText.innerHTML = `
+            <h4>ROCKFIL STAINLESS METAL WORK DOT SUPPLY CORP.</h4>
+            <p>Delgado Bldg., Brgy. 110 Utap, Diversion Rd., Tacloban City</p>
+            <p>Telephone No: (053) 888 1003 | Mobile Nos: 0918-903-5706 / 0920-959-5734</p>
+            <p>Email: rockfilstainless@gmail.com</p>
+        `;
+    
+        header.appendChild(leftLogo);
+        header.appendChild(middleLogo);
+        header.appendChild(headerText);
+    
+        const title = doc.createElement('h4');
+        title.innerText = 'Products';
+
+
+        body.appendChild(header);
+        body.appendChild(title);
+        doc.body.replaceWith(body);
+    
+        let imagesLoaded = 0;
+        const totalImages = 2; 
+
+        function checkAndPrint() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }
+
+        leftLogo.onload = checkAndPrint;
+        middleLogo.onload = checkAndPrint;
+
+        setTimeout(() => {
+            if (imagesLoaded < totalImages) {
+                printWindow.document.close();
+                printWindow.print();
+            }
+        }, 3000);
   };
 
   return (
@@ -475,15 +708,59 @@ const Products = () => {
           </button>
         </div>
 
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          <div></div>
+          <button
+            onClick={() => handleFilterCategories(1)}
+            className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
+              filterCategory === "all" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300"
+            }`}
+          >
+            <Boxes size={28} className={`${filterCategory === "all" ? "text-white" : "text-indigo-600"}`} />
+            <span className="mt-2 text-base font-semibold">Main</span>
+            <span className="text-lg font-bold">{categoriesCount.main}</span>
+          </button>
+          <button
+            onClick={() => handleFilterCategories(2)}
+            className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
+              filterCategory === "all" ? "bg-pink-600 text-white" : "bg-white border border-gray-300"
+            }`}
+          >
+            <Puzzle size={28} className={`${filterCategory === "all" ? "text-white" : "text-pink-600"}`} />
+            <span className="mt-2 text-base font-semibold">Accessories</span>
+            <span className="text-lg font-bold">{categoriesCount.accessories}</span>
+          </button>
+          <button
+            onClick={() => handleFilterCategories(3)}
+            className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
+              filterCategory === "all" ? "bg-yellow-600 text-white" : "bg-white border border-gray-300"
+            }`}
+          >
+            <Bolt size={28} className={`${filterCategory === "all" ? "text-white" : "text-yellow-600"}`} />
+            <span className="mt-2 text-base font-semibold">Bolts and Screws</span>
+            <span className="text-lg font-bold">{categoriesCount.boltsNscrews}</span>
+          </button>
+          <div></div>
+        </div>
+
         {/* Search Input */}
         <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={search}
-            onChange={handleSearch}
-            className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="flex items-center gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={search}
+              onChange={handleSearch}
+              className="flex-grow border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handlePrint}
+              className="flex flex-row items-center justify-center p-3 rounded-xl bg-blue-600 text-white shadow-md transition transform hover:scale-105"
+            >
+              <Printer size={28} />
+              <span className="ml-2 text-base font-semibold">Print</span>
+            </button>
+          </div>
         </div>
 
         {/* Products Table */}
@@ -522,6 +799,17 @@ const Products = () => {
                       <span>Variant</span>
                       <span className="ml-1">
                           {sortColumn === "variant" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("product_category_id")}
+                >
+                  <div className="flex items-center">
+                      <span>Category</span>
+                      <span className="ml-1">
+                          {sortColumn === "product_category_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
                       </span>
                   </div>
                 </th>
@@ -576,6 +864,7 @@ const Products = () => {
                     </td>
                     <td className="border border-gray-300 px-4 py-2">{product.name}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.variant}</td>
+                    <td className="border border-gray-300 px-4 py-2">{product.product_category?.name}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.cost}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.price}</td>
                     <td className="border border-gray-300 px-4 py-2">{product.qty}</td>

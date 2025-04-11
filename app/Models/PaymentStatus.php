@@ -18,7 +18,11 @@ class PaymentStatus extends Model
 
     public function servicePayments(): HasMany
     {
-        return $this->hasMany(ServiceTransaction::class, 'service_status_id', 'id');
+        return $this->hasMany(ServiceTransaction::class, 'payment_status_id', 'id');
+    }
+    public function puchaseOrdersPayments(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class, 'payment_status_id', 'id');
     }
     
 }
