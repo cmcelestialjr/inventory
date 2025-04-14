@@ -9,28 +9,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Expense extends Model
+class ExpenseCategory extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'category_id',
-        'sub_category_id',
-        'code', 
-        'expense_name', 
-        'amount', 
-        'tin',
-        'or',
-        'date_time_of_expense',
+        'name',
+        'remarks',
         'updated_by',
         'created_by'
     ];
-    public function category(): BelongsTo
+
+    public function expenseList(): HasMany
     {
-        return $this->belongsTo(ExpenseCategory::class, 'category_id', 'id');
+        return $this->hasMany(Expense::class, 'category_id', 'id');
     }
-    public function subCategory(): BelongsTo
+    public function subCategoryList(): HasMany
     {
-        return $this->belongsTo(ExpenseSubCategory::class, 'sub_category_id', 'id');
+        return $this->hasMany(ExpenseSubCategory::class, 'category_id', 'id');
     }
 }

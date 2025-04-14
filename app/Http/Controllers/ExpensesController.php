@@ -12,13 +12,13 @@ class ExpensesController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Expense::query();
+        $query = Expense::with('category','subCategory');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'LIKE', "%{$search}%")
-                ->orWhere('name', 'LIKE', "%{$search}%")
+                ->orWhere('expense_name', 'LIKE', "%{$search}%")
                 ->orWhere('amount', 'LIKE', "%{$search}%");
             });
         }
@@ -36,9 +36,19 @@ class ExpensesController extends Controller
             $sortColumn = $request->sort_column;
             $sortOrder = $request->sort_order;
     
-            if (in_array($sortColumn, ['code', 'date_time_of_expense', 'expense_name', 'amount', 'remarks'])) {
+            if (in_array($sortColumn, ['category_id', 'sub_category_id', 'code', 'date_time_of_expense', 'expense_name', 'amount', 'remarks', 'tin', 'or'])) {
                 $query->orderBy($sortColumn, $sortOrder);
             }
+        }
+        
+        if ($request->has('numericSelectedCategory')) {
+            $numericSelectedCategory = $request->numericSelectedCategory;
+            $query->whereIn('category_id', $numericSelectedCategory);
+        }
+
+        if ($request->has('numericSelectedSubCategory')) {
+            $numericSelectedSubCategory = $request->numericSelectedSubCategory;
+            $query->whereIn('sub_category_id', $numericSelectedSubCategory);
         }
 
         $sales = $query->orderByDesc('date_time_of_expense')->paginate(10);
@@ -62,10 +72,14 @@ class ExpensesController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
+            'categoryId' => 'required|numeric|min:1|exists:expense_categories,id',
+            'subCategoryId' => 'nullable|numeric|min:1|exists:expense_sub_categories,id',
             'name' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
             'dateTime' => 'required|date',
             'remarks' => 'nullable|string|max:255',
+            'tin' => 'nullable|string|max:100',
+            'or' => 'nullable|string|max:100',
         ]);
 
         try{
@@ -76,9 +90,13 @@ class ExpensesController extends Controller
             $expenseCode = $this->getCode();
 
             Expense::create([
+                'category_id' => $validatedData['categoryId'],
+                'sub_category_id' => $validatedData['subCategoryId'],
                 'code' => $expenseCode,
                 'expense_name' => $validatedData['name'],
                 'amount' => $validatedData['amount'],
+                'tin' => $validatedData['tin'],
+                'or' => $validatedData['or'],
                 'date_time_of_expense' => $validatedData['dateTime'],
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id

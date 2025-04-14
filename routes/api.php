@@ -3,7 +3,9 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpensesCategoriesController;
 use App\Http\Controllers\ExpensesController;
+use App\Http\Controllers\ExpensesSubCategoriesController;
 use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -64,6 +66,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/expenses/store', [ExpensesController::class, 'store']);
     Route::post('/expenses/delete', [ExpensesController::class, 'destroy']);
 
+    Route::get('/expenses/categories', [ExpensesCategoriesController::class, 'index']);
+    Route::get('/expenses/categories/fetch', [ExpensesCategoriesController::class, 'fetch']);
+    Route::get('/expenses/categories/fetchAll', [ExpensesCategoriesController::class, 'fetchAll']);
+    Route::post('/expenses/categories/manage', [ExpensesCategoriesController::class, 'manage']);
+
+    Route::get('/expenses/subCategories', [ExpensesSubCategoriesController::class, 'index']);
+    Route::get('/expenses/subCategories/fetch', [ExpensesSubCategoriesController::class, 'fetch']);
+    Route::post('/expenses/subCategories/fetchByCategory', [ExpensesSubCategoriesController::class, 'fetchByCategory']);
+    Route::post('/expenses/subCategories/manage', [ExpensesSubCategoriesController::class, 'manage']);
+
     Route::get('/users', [UsersController::class, 'index']);
     Route::get('/users/roles', [UsersController::class, 'roles']);
     Route::post('/users/store', [UsersController::class, 'store']);
@@ -72,8 +84,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
     Route::get('/fetch-suppliers', [SuppliersController::class, 'fetch']);
-    Route::get('/suppliers/removeContact', [SuppliersController::class, 'removeContact']);
-    
+    Route::get('/suppliers/removeContact', [SuppliersController::class, 'removeContact']);    
 
     Route::get('/services', [ServicesController::class, 'index']);
     Route::post('/services/manage', [ServicesController::class, 'manage']);
