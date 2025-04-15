@@ -32,6 +32,7 @@ const Sales = () => {
     const [productId, setProductId] = useState(null);
     const [productName, setProductName] = useState(null);
     const [totalAmount, setTotalAmount] = useState(0.00);
+    const [totalVat, setTotalVat] = useState(0.00);
     const [step, setStep] = useState(1);
     const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
     const [isSaleViewModalOpen, setIsSaleViewModalOpen] = useState(false);
@@ -367,7 +368,8 @@ const Sales = () => {
         const newCost = products.reduce((total, product) => total + Number(product.cost) * Number(product.quantity), 0).toFixed(2);
         const newPrice = products.reduce((total, product) => total + Number(product.price) * Number(product.quantity), 0).toFixed(2);
         const newDiscount = products.reduce((total, product) => total + Number(product.discount) * Number(product.quantity), 0).toFixed(2);
-        
+        const vatAmount = (newTotal / 1.12 * 0.12).toFixed(2);
+        setTotalVat(vatAmount);
         setTotalAmount(newTotal);
         setNewSaleData((prev) => ({ ...prev, total_amount: newTotal }));
         setNewSaleData((prev) => ({ ...prev, total_cost: newCost }));
@@ -462,6 +464,7 @@ const Sales = () => {
                 setSelectedPrice(null);
                 setPriceOptions([]);
                 setTotalAmount(0.00);
+                setTotalVat(0.00);
                 setStep(1);
 
                 setNewSaleData({
@@ -499,6 +502,7 @@ const Sales = () => {
         setSelectedPrice(null);
         setPriceOptions([]);
         setTotalAmount(0.00);
+        setTotalVat(0.00);
         setStep(1);
 
         setNewSaleData({
@@ -1096,6 +1100,9 @@ const Sales = () => {
                                 <div className="border p-4 rounded-lg shadow-md bg-gray-100">
                                     <h3 className="text-lg font-semibold mb-4 text-center">Summary</h3>
                                     <p className="mb-2"><strong>Total Amount:</strong> {totalAmount}</p>
+                                    <p className="mb-2 text-indigo-600">
+                                        <strong>Includes VAT (12%):</strong> {totalVat}
+                                    </p>
                                     <p className="text-blue-600 mb-2"><strong>Total Paid:</strong> {newSaleData.paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid) || 0), 0).toFixed(2)}</p>
                                     <p className={`font-semibold ${totalAmount - newSaleData.paymentOptions.reduce((sum, option) => sum + (parseFloat(option.amount_paid) || 0), 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                         <strong>Change:</strong> {(

@@ -11,12 +11,12 @@ const ReturnsToSupplier = () => {
     const [page, setPage] = useState(1);
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
-    const [categoryModal, setCategoryModal] = useState(false);
-    const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
+    const [returnSModal, setReturnSModal] = useState(false);
+    const [isSubReturnSModalOpen, setIsSubReturnSModalOpen] = useState(false);
     const [selectedSubCategories, setSelectedSubCategories] = useState([]);
     const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false);
     const [selectedExpenses, setSelectedExpenses] = useState([]);
-    const [category, setCategory] = useState({
+    const [returnS, setReturnS] = useState({
         id: null,
         name: null,
         remarks: null
@@ -58,31 +58,31 @@ const ReturnsToSupplier = () => {
         setSortOrder(newSortOrder);
     };
     
-    const handleCategoryModal = (category) => {
-        setCategory(category);
-        setCategoryModal(true);
+    const handleReturnSModal = (returnS) => {
+        setReturnS(returnS);
+        setReturnSModal(true);
     };
     
-    const handleCloseCategoryModal = () => {
-        setCategory({
+    const handleCloseReturnSModal = () => {
+        setReturnS({
             id: null,
             name: null,
             remarks: null
         });
-        setCategoryModal(false);
+        setReturnSModal(false);
     };
 
-    const handleCategoryModalSubmit = async () => {
-        if (!category.name) {
-            toastr.error("Please input Category name!");
+    const handleReturnSModalSubmit = async () => {
+        if (!returnS.name) {
+            toastr.error("Please input ReturnS name!");
             return;
         }
 
         try {            
             const formData = {
-                id: category.id,
-                name: category.name,
-                remarks: category.remarks
+                id: returnS.id,
+                name: returnS.name,
+                remarks: returnS.remarks
             };
             const token = localStorage.getItem("token");
             const response = await axios.post(`/api/expenses/categories/manage`, 
@@ -92,14 +92,14 @@ const ReturnsToSupplier = () => {
             if (response.status === 200 || response.status === 201) {
                 toastr.success(response.data.message);
                 fetchCategories();
-                setCategory({
+                setReturnS({
                     id: null,
                     name: null,
                     remarks: null
                 });
-                setCategoryModal(false);                
+                setReturnSModal(false);                
             }else{
-                toastr.error("Error! There is something wrong in saving new category.");
+                toastr.error("Error! There is something wrong in saving new returnS.");
             }
         } catch (error) {
             toastr.error("Error!", error.response?.data);
@@ -108,7 +108,7 @@ const ReturnsToSupplier = () => {
 
     const handleViewSubCategories = (subCategories) => {
         setSelectedSubCategories(subCategories || []);
-        setIsSubCategoryModalOpen(true);
+        setIsSubReturnSModalOpen(true);
     };      
 
     const handleViewExpenses = (expenses) => {
@@ -121,10 +121,10 @@ const ReturnsToSupplier = () => {
                 {/* Header Section */}
                 <div className="flex justify-end items-center mb-6">
                     <button
-                        onClick={() => handleCategoryModal(category)}
+                        onClick={() => handleReturnSModal(returnS)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
                     >
-                        <Plus size={18} /> New Category
+                        <Plus size={18} /> New Return
                     </button>
                 </div>
 
@@ -133,14 +133,14 @@ const ReturnsToSupplier = () => {
                     {/* Search Input */}
                     <input
                         type="text"
-                        placeholder="Search category..."
+                        placeholder="Search returnS..."
                         value={search}
                         onChange={handleSearch}
                         className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
                 
-                {/* Category Table */}
+                {/* ReturnS Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse border border-gray-300">
                         <thead>
@@ -154,34 +154,34 @@ const ReturnsToSupplier = () => {
                         </thead>
                         <tbody>
                             {categories?.length > 0 ? (
-                                categories.map((category, index) => (
-                                    <tr key={category.id}>
+                                categories.map((returnS, index) => (
+                                    <tr key={returnS.id}>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {category.name}
+                                            {returnS.name}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {category.sub_category_list && category.sub_category_list.length > 0 && (
+                                            {returnS.sub_returnS_list && returnS.sub_returnS_list.length > 0 && (
                                                 <button 
-                                                    onClick={() => handleViewSubCategories(category.sub_category_list)}
+                                                    onClick={() => handleViewSubCategories(returnS.sub_returnS_list)}
                                                     className="w-full p-1 flex justify-center items-center bg-indigo-500 text-white rounded hover:bg-indigo-600 transition"
                                                 >
-                                                    {category.sub_category_list.length}
+                                                    {returnS.sub_returnS_list.length}
                                                 </button>
                                             )}
                                         </td>
                                         <td className="border border-gray-300 px-4 py-2">
-                                            {category.expense_list && category.expense_list.length > 0 && (
+                                            {returnS.expense_list && returnS.expense_list.length > 0 && (
                                                 <button 
-                                                    onClick={() => handleViewExpenses(category.expense_list)}
+                                                    onClick={() => handleViewExpenses(returnS.expense_list)}
                                                     className="w-full p-1 flex justify-center items-center bg-orange-500 text-white rounded hover:bg-orange-600 transition"
                                                 >
-                                                    {category.expense_list.length}
+                                                    {returnS.expense_list.length}
                                                 </button>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">{category.remarks}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{returnS.remarks}</td>
                                         <td className="border border-gray-300 px-4 py-2 gap-2">
-                                            <button onClick={() => handleCategoryModal(category)}
+                                            <button onClick={() => handleReturnSModal(returnS)}
                                                 className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
                                                 <Edit size={16} /> Edit
                                             </button>
@@ -191,7 +191,7 @@ const ReturnsToSupplier = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="10" className="border border-gray-300 px-4 py-2 text-center">
-                                        No Category found.
+                                        No ReturnS found.
                                     </td>
                                 </tr>
                             )}
@@ -222,46 +222,46 @@ const ReturnsToSupplier = () => {
                     </div>
                 )}
 
-                {categoryModal && (
+                {returnSModal && (
                     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                         <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative">
                             {/* Header */}
                             <div className="flex justify-between">
                                 <h2 className="text-xl font-semibold">
-                                    {category.id ? "Edit Category" : "New Category"}
+                                    {returnS.id ? "Edit ReturnS" : "New ReturnS"}
                                 </h2>
                                 <button 
-                                    onClick={handleCloseCategoryModal} 
+                                    onClick={handleCloseReturnSModal} 
                                     className="text-gray-500 hover:text-gray-700 transition"
                                 >
                                     <X size={24} />
                                 </button>
                             </div>
 
-                                {/* Category Name */}
+                                {/* ReturnS Name */}
                                 <label className="block text-sm font-medium">Name</label>
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        value={category.name}
+                                        value={returnS.name}
                                         onChange={(e) =>
-                                            setCategory((prev) => ({
+                                            setReturnS((prev) => ({
                                               ...prev,
                                               name: e.target.value,
                                             }))
                                         }
                                         className="w-full p-2 border rounded"
-                                        placeholder="Category Name..."
+                                        placeholder="ReturnS Name..."
                                     />
                                 </div>
 
-                                {/* Category Remarks */}
+                                {/* ReturnS Remarks */}
                                 <label className="block text-sm font-medium mt-4">Remarks</label>
                                 <div className="relative">
                                     <textarea
-                                        value={category.remarks || ""}
+                                        value={returnS.remarks || ""}
                                         onChange={(e) =>
-                                        setCategory((prev) => ({
+                                        setReturnS((prev) => ({
                                             ...prev,
                                             remarks: e.target.value,
                                         }))
@@ -275,23 +275,23 @@ const ReturnsToSupplier = () => {
                                 {/* Submit Button */}
                                 <button
                                     type="button"
-                                    onClick={handleCategoryModalSubmit} 
+                                    onClick={handleReturnSModalSubmit} 
                                     className="mt-4 p-2 flex items-center bg-blue-500 text-white rounded hover:bg-blue-600 transition"
                                 >
-                                    <Save size={16} />  Save Category
+                                    <Save size={16} />  Save ReturnS
                                 </button>
 
                         </div>
                     </div>
                 )}
 
-                {isSubCategoryModalOpen && (
+                {isSubReturnSModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto relative">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-lg font-semibold">Subcategories</h2>
                             <button
-                            onClick={() => setIsSubCategoryModalOpen(false)}
+                            onClick={() => setIsSubReturnSModalOpen(false)}
                             className="text-gray-500 hover:text-gray-700"
                             >
                             <X size={20} />
@@ -352,8 +352,8 @@ const ReturnsToSupplier = () => {
                                 <thead>
                                     <tr className="bg-gray-100">
                                         <th className="border border-gray-300 px-3 py-2 text-left">#</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Category</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">SubCategory</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left">ReturnS</th>
+                                        <th className="border border-gray-300 px-3 py-2 text-left">SubReturnS</th>
                                         <th className="border border-gray-300 px-3 py-2 text-left">Name</th>
                                         <th className="border border-gray-300 px-3 py-2 text-left">Amount</th>
                                         <th className="border border-gray-300 px-3 py-2 text-left">TIN</th>
@@ -365,8 +365,8 @@ const ReturnsToSupplier = () => {
                                     {selectedExpenses.map((exp, index) => (
                                         <tr key={exp.id || index}>
                                             <td className="border border-gray-300 px-3 py-2">{index + 1}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.category?.name}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.sub_category?.name}</td>
+                                            <td className="border border-gray-300 px-4 py-2">{exp.returnS?.name}</td>
+                                            <td className="border border-gray-300 px-4 py-2">{exp.sub_returnS?.name}</td>
                                             <td className="border border-gray-300 px-3 py-2">{exp.expense_name}</td>
                                             <td className="border border-gray-300 px-4 py-2">{exp.amount}</td>
                                             <td className="border border-gray-300 px-4 py-2">{exp.tin}</td>

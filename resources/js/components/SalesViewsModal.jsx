@@ -30,37 +30,74 @@ const SalesViewsModal = ({ isOpen, onClose, sale }) => {
                 <div className="flex gap-4 mt-3">
                     {/* Product List Headers */}
                     <div className="mt-3 w-4/6">
-                        <div className="flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
-                            <span className="w-2/16">Code</span>
-                            <span className="w-3/16">Image</span>
-                            <span className="w-3/16">Product</span>
-                            <span className="w-2/16 text-right">Cost</span>
-                            <span className="w-2/16 text-right">Price</span>
-                            <span className="w-1/16 text-right">Disc</span>
-                            <span className="w-1/16 text-right">Qty</span>
-                            <span className="w-2/16 text-right">Amount</span>
+                        <div className="hidden md:flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
+                            <span className="w-2/12">Code</span>
+                            <span className="w-2/12">Image</span>
+                            <span className="w-2/12">Product</span>
+                            <span className="w-1/12 text-right">Cost</span>
+                            <span className="w-1/12 text-right">Price</span>
+                            <span className="w-1/12 text-right">Disc</span>
+                            <span className="w-1/12 text-right">Qty</span>
+                            <span className="w-2/12 text-right">Amount</span>
                         </div>
 
-                        {/* Scrollable Product List */}
-                        <div className="border max-h-[15rem] overflow-y-auto p-2">
-                            {sale?.products_list?.map((product, index) => (
-                                <div key={index} className="flex justify-between items-center p-2 border-b">
-                                    <span className="w-2/16">{product.product_info?.code}</span>
-                                    <span className="w-3/16 text-center">
-                                        <img
-                                            src={product.product_info?.img}
-                                            alt={product.product_info?.name}
-                                            className="w-1`6 h-16 object-cover rounded cursor-pointer"
-                                        />
-                                    </span>
-                                    <span className="w-3/16">{product.product_info?.name_variant}</span>
-                                    <span className="w-2/16 text-right">{product.cost}</span>
-                                    <span className="w-2/16 text-right">{product.price}</span>
-                                    <span className="w-1/16 text-right">{product.discount_amount}</span>
-                                    <span className="w-1/16 text-right">{product.qty}</span>
-                                    <span className="w-2/16 text-right font-semibold">{Number(product.amount).toFixed(2)}</span>
+                    <div className="border max-h-[15rem] overflow-y-auto p-2">
+                        {sale?.products_list?.map((product, index) => (
+                            <div
+                                key={index}
+                                className="flex flex-col md:flex-row justify-between items-start md:items-center p-3 border-b text-sm"
+                            >
+                                {/* Mobile View */}
+                                <div className="block md:hidden w-full mb-2">
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Code:</span>
+                                    <span>{product.product_info?.code}</span>
                                 </div>
-                            ))}
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Product:</span>
+                                    <span>{product.product_info?.name_variant}</span>
+                                </div>
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Cost:</span>
+                                    <span>{product.cost}</span>
+                                </div>
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Price:</span>
+                                    <span>{product.price}</span>
+                                </div>
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Discount:</span>
+                                    <span>{product.discount_amount}</span>
+                                </div>
+                                <div className="flex justify-between mb-1">
+                                    <span className="font-semibold text-gray-600">Quantity:</span>
+                                    <span>{product.qty}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="font-semibold text-gray-600">Amount:</span>
+                                    <span>{Number(product.amount).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                                {/* Desktop View */}
+                            <div className="hidden md:flex w-full justify-between items-center">
+                                <span className="w-2/12">{product.product_info?.code}</span>
+                                <span className="w-2/12 text-center">
+                                    <img
+                                    src={product.product_info?.img}
+                                    alt={product.product_info?.name}
+                                    className="w-16 h-16 object-cover rounded shadow"
+                                    />
+                                </span>
+                                <span className="w-2/12">{product.product_info?.name_variant}</span>
+                                <span className="w-1/12 text-right">{product.cost}</span>
+                                <span className="w-1/12 text-right">{product.price}</span>
+                                <span className="w-1/12 text-right">{product.discount_amount}</span>
+                                <span className="w-1/12 text-right">{product.qty}</span>
+                                <span className="w-2/12 text-right font-semibold">{Number(product.amount).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        ))}
                         </div>
                     </div>
 

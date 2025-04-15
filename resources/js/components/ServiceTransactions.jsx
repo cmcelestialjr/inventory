@@ -33,6 +33,7 @@ const TransactionTransactions = () => {
     const [serviceId, setServiceId] = useState(null);
     const [serviceName, setServiceName] = useState(null);
     const [servicePrice, setServicePrice] = useState(0);
+    const [serviceVat, setServiceVat] = useState(0);
     const [serviceStartDate, setServiceStartDate] = useState(new Date());
     const [laborCost, setLaborCost] = useState(0);
     const [discount, setDiscount] = useState(0);
@@ -221,11 +222,13 @@ const TransactionTransactions = () => {
         setIsTransactionModalOpen(true);
 
         if(transaction && transaction.id){
+            const vat = parseFloat((transaction.price / 1.12 * 0.12).toFixed(2));
             setServiceTransactionId(transaction.id);
             setServiceId(transaction.service_id);
             setSearchService(transaction.service_name);
             setServiceName(transaction.service_name);
             setServicePrice(transaction.price);
+            setServiceVat(vat);
             setLaborCost(transaction.labor_cost);
             setDiscount(transaction.discount);
             setRemarks(transaction.remarks);
@@ -295,6 +298,7 @@ const TransactionTransactions = () => {
         setServiceId(null);
         setServiceName(null);
         setServicePrice(null);
+        setServiceVat(null);
         setLaborCost(null);
         setDiscount(0);
         setRemarks(null);
@@ -343,10 +347,12 @@ const TransactionTransactions = () => {
     };
 
     const handleSelectService = (service) => {
+        const vat = parseFloat((service.price / 1.12 * 0.12).toFixed(2));
         setSearchService(service.name);
         setServiceId(service.id);
         setServiceName(service.name);
         setServicePrice(service.price);
+        setServiceVat(vat);
         setAmountToPaid(Number(service.price)-Number(service.discount));
         setLaborCost(service.labor_cost);
         setDiscount(service.discount);
@@ -647,6 +653,7 @@ const TransactionTransactions = () => {
                 setServiceId(null);
                 setServiceName(null);
                 setServicePrice(null);
+                setServiceVat(null);
                 setLaborCost(null);
                 setDiscount(0);
                 setRemarks(null);
@@ -1306,8 +1313,10 @@ const TransactionTransactions = () => {
                                                     type="number"
                                                     value={servicePrice}
                                                     onChange={(e) => { 
+                                                        const vat = parseFloat((servicePrice / 1.12 * 0.12).toFixed(2));
                                                         setServicePrice(e.target.value);
                                                         setAmountToPaid(Number(e.target.value)-Number(discount));
+                                                        setServiceVat(vat);
                                                     }}
                                                     className="w-full p-2 border rounded"
                                                     placeholder="Service Price..."
@@ -1619,6 +1628,11 @@ const TransactionTransactions = () => {
                                             <div className="flex justify-between mb-2">
                                                 <span className="text-blue-600"><strong>Service Price:</strong></span>
                                                 <span className="text-right">{formatPrice(servicePrice)}</span>
+                                            </div>
+
+                                            <div className="flex justify-between mb-2">
+                                                <span className="text-indigo-600"><strong>VAT (12%):</strong></span>
+                                                <span className="text-right">{formatPrice(serviceVat)}</span>
                                             </div>
 
                                             <div className="flex justify-between mb-2">

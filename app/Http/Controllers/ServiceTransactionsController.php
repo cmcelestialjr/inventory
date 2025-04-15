@@ -153,6 +153,13 @@ class ServiceTransactionsController extends Controller
                 $this->manageServiceTransactionPayments($validatedData, $service_transaction_id, $cashier_id, $amount);
             }
 
+            $totalAmount = ServiceTransactionPayment::where('service_transaction_id', $service_transaction_id)->sum('amount');
+
+            ServiceTransaction::where('id', $service_transaction_id)->update([
+                'paid' => $totalAmount,
+                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount
+            ]);
+
             DB::commit();
             return response()->json(['message' => 'Successful! New service transaction saved..'], 200);
 
@@ -233,6 +240,13 @@ class ServiceTransactionsController extends Controller
                 $this->manageServiceTransactionPayments($validatedData, $service_transaction_id, $cashier_id, $amount);
             }
 
+            $totalAmount = ServiceTransactionPayment::where('service_transaction_id', $service_transaction_id)->sum('amount');
+
+            ServiceTransaction::where('id', $service_transaction_id)->update([
+                'paid' => $totalAmount,
+                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount
+            ]);
+
             DB::commit();
             return response()->json(['message' => 'Successful! Updated service transaction saved..'], 200);
 
@@ -295,12 +309,6 @@ class ServiceTransactionsController extends Controller
                     );
                 }
             }
-            $totalAmount = ServiceTransactionPayment::where('service_transaction_id', $service_transaction_id)->sum('amount');
-
-            ServiceTransaction::where('id', $service_transaction_id)->update([
-                'paid' => $totalAmount,
-                'remaining' => $amount-$totalAmount < 0 ? 0.0 : $amount-$totalAmount
-            ]);
         }
     }
     public function payment(Request $request)

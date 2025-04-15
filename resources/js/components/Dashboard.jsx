@@ -1,7 +1,7 @@
 import Layout from "./Layout";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote, Wrench, TrendingDown, Box } from "lucide-react";
+import { Package, RotateCw, TrendingUp, ShoppingCart, RefreshCw, Wallet, Banknote, Wrench, TrendingDown, Box, Percent } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -14,10 +14,11 @@ const Dashboard = () => {
   const [summaryTopSection, setSummaryTopSection] = useState({
     totalSales: 0.00,
     totalServices: 0.00,
+    totalReceivables: 0.00,
     totalCost: 0.00,
     totalReturns: 0.00,
     totalExpenses: 0.00,
-    totalReceivables: 0.00,
+    totalVat: 0.00,
     totalIncome: 0.00,
   });
 
@@ -74,10 +75,11 @@ const Dashboard = () => {
           ...prevState,
           totalSales: data.totalSales || prevState.totalSales,
           totalServices: data.totalServices || prevState.totalServices,
+          totalReceivables: data.totalReceivables || prevState.totalReceivables,
           totalCost: data.totalCost || prevState.totalCost,
           totalReturns: data.totalReturns || prevState.totalReturns,
           totalExpenses: data.totalExpenses || prevState.totalExpenses,
-          totalReceivables: data.totalReceivables || prevState.totalReceivables,
+          totalVat: data.totalVat || prevState.totalVat,
           totalIncome: data.totalIncome || prevState.totalIncome,
         }));
       }else{
@@ -85,10 +87,11 @@ const Dashboard = () => {
           ...prevState,
           totalSales: 0.00,
           totalServices: 0.00,
+          totalReceivables: 0.00,
           totalCost: 0.00,
           totalReturns: 0.00,
           totalExpenses: 0.00,
-          totalReceivables: 0.00,
+          totalVat: 0.00,
           totalIncome: 0.00,
         }));
       }
@@ -241,10 +244,11 @@ const Dashboard = () => {
   const summaryDataTopSection = [
     { title: "Sales", value: summaryTopSection.totalSales, icon: <ShoppingCart size={20} />, bgColor: "bg-blue-100", textColor: "text-blue-600" },
     { title: "Services", value: summaryTopSection.totalServices, icon: <Wrench size={20} />, bgColor: "bg-purple-100", textColor: "text-purple-600" },
+    { title: "Receivables", value: summaryTopSection.totalReceivables, icon: <Wallet size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
     { title: "Cost", value: summaryTopSection.totalCost, icon: <Package size={20} />, bgColor: "bg-amber-100", textColor: "text-amber-600" },
     { title: "Returns", value: summaryTopSection.totalReturns, icon: <RefreshCw size={20} />, bgColor: "bg-orange-100", textColor: "text-orange-600" },
     { title: "Expenses", value: summaryTopSection.totalExpenses, icon: <TrendingDown size={20} />, bgColor: "bg-red-100", textColor: "text-red-600" },
-    { title: "Receivables", value: summaryTopSection.totalReceivables, icon: <Wallet size={20} />, bgColor: "bg-yellow-100", textColor: "text-yellow-600" },
+    { title: "VAT", value: summaryTopSection.totalVat, icon: <Percent size={20} />, bgColor: "bg-indigo-100", textColor: "text-indigo-600" },
     { title: "Income", value: summaryTopSection.totalIncome, icon: <PesoSign size={20} />, bgColor: "bg-green-100", textColor: "text-green-600" },
   ];
 

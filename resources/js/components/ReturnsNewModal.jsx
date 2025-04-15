@@ -339,8 +339,8 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
     };
 
     const handleSelectProduct = (productSelected) => {
-        setSearchProduct(productSelected.name);
-        setChangedProductName(productSelected.name);
+        setSearchProduct(productSelected.name_variant);
+        setChangedProductName(productSelected.name_variant);
         setChangedProductId(productSelected.id);
         setShowDropdownProducts(false);
 
@@ -525,11 +525,11 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                         <span className="w-2/12 text-center">
                                         <img
                                             src={product.product_info?.img}
-                                            alt={product.product_info?.name}
+                                            alt={product.product_info?.name_variant}
                                             className="w-16 h-16 object-cover rounded cursor-pointer"
                                         />
                                         </span>
-                                        <span className="w-3/12">{product.product_info?.name}</span>
+                                        <span className="w-3/12">{product.product_info?.name_variant}</span>
                                         <span className="w-2/12 text-right">{product.price}</span>
                                         <span className="w-1/12 text-right">{product.discount_amount}</span>
                                         <span className="w-1/12 text-right">{product.qty}</span>
@@ -551,7 +551,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                         {returnProducts.map((product, index) => (
                                             <div key={index} className="p-3 border rounded-lg bg-gray-50">
                                                 {/* Product Name */}
-                                                <div className="text-gray-700 font-medium">{product.product_info?.name}</div>
+                                                <div className="text-gray-700 font-medium">{product.product_info?.name_variant}</div>
 
                                                 {/* Qty & Amount Row */}
                                                 <div className="flex justify-between items-center mt-1 text-sm text-gray-600">
@@ -605,7 +605,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                         {returnProducts.map((product, index) => (
                                             <div key={index} className="p-3 border rounded-lg bg-gray-50">
                                                 {/* Product Name */}
-                                                <div className="text-gray-700 font-medium">{product.product_info?.name}</div>
+                                                <div className="text-gray-700 font-medium">{product.product_info?.name_variant}</div>
 
                                                 {/* Qty & Amount Row */}
                                                 <div className="flex justify-between items-center mt-1 text-sm text-gray-600">
@@ -993,7 +993,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
             {selectedProduct && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
                     <div className="bg-white p-5 rounded-lg shadow-lg w-96">
-                        <h2 className="text-lg font-semibold mb-4">{selectedProduct.product_info?.name}</h2>
+                        <h2 className="text-lg font-semibold mb-4">{selectedProduct.product_info?.name_variant}</h2>
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <span>Price:</span>

@@ -18,7 +18,7 @@ class ReturnController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList','returnOptionInfo');
+        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList.productInfo','returnOptionInfo');
             // ->where('sales_status_id',2);
 
         if ($request->has('search') && !empty($request->search)) {
@@ -197,7 +197,7 @@ class ReturnController extends Controller
                     }
         
                     $totalStock = ProductsPrice::where('product_id', $return['product_id'])->sum('qty');
-                    Product::where('id', $return['id'])->update(['qty' => $totalStock]);
+                    Product::where('id', $return['product_id'])->update(['qty' => $totalStock]);
                 }
             }
 
@@ -301,6 +301,7 @@ class ReturnController extends Controller
 
             $return = Returns::find($return_id);
             $sales_of_return_id = $return->sales_of_return_id;
+            $return_option_id = $return->return_option_id;
 
             if($sales_of_return_id){
 
@@ -331,6 +332,31 @@ class ReturnController extends Controller
                 SalesPayment::where('sale_id',$sales_of_return_id)->delete();
             }
 
+            if($return_option_id!=2){
+                $return_products = ReturnsSalesProduct::with('saleProductInfo')->where('return_id',$return_id)->get();
+                if($return_products->count()>0){
+                    foreach($return_products as $product){
+                        $product_id = $product->saleProductInfo->product_id;
+                        $product_price = $product->price;
+                        $product_quantity = $product->qty;
+                            
+                        $productPrice = ProductsPrice::where('product_id', $product_id)
+                                ->where('price', $product_price)
+                                ->first();
+
+                        if ($productPrice) {    
+                            $newQuantity = max(0, $productPrice->qty - $product_quantity);
+
+                            $productPrice->update(['qty' => $newQuantity]);
+                        }
+                            
+                        $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
+                            
+                        Product::where('id', $product_id)->update(['qty' => $totalStock]);
+                    }
+                }
+            }
+            
             ReturnsSalesProduct::where('return_id',$return_id)->delete();
 
             Returns::where('id',$return_id)->delete();

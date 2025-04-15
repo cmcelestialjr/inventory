@@ -364,10 +364,13 @@ const Returns = () => {
                                                         <div className="mt-1 space-y-1">
                                                             {item.return_sales_products_list.map((returnProducts) => (
                                                                 <div key={returnProducts.id} className="p-1 bg-gray-100 border border-gray-300 rounded-lg shadow-sm">
-                                                                    <p className="text-gray-900 truncate w-40">
-                                                                        {returnProducts.sale_product_info?.product_info?.name ?? "No Name"}
+                                                                    <p className="text-gray-900 truncate w-40 text-xs">
+                                                                        {returnProducts.sale_product_info?.product_info?.name_variant ?? "No Name"}
                                                                     </p>
-                                                                    <p className="text-gray-600 text-sm">
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Qty: <span className="font-semibold">{returnProducts.qty ?? "No Qty"}</span>
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
                                                                         Amount: <span className="font-semibold">{returnProducts.amount ?? "No Amount"}</span>
                                                                     </p>
                                                                 </div>
@@ -383,10 +386,13 @@ const Returns = () => {
                                                         <div className="mt-1 space-y-1">
                                                             {item.change_sale_info?.products_list.map((changeProducts) => (
                                                                 <div key={changeProducts.id} className="p-1 bg-gray-100 border border-gray-300 rounded-lg shadow-sm">
-                                                                    <p className="text-gray-900 truncate w-40">
-                                                                        {changeProducts.sale_product_info?.product_info?.name ?? "No Name"}
+                                                                    <p className="text-gray-900 truncate w-40 text-xs">
+                                                                        {changeProducts.product_info?.name_variant ?? "No Name"}
                                                                     </p>
-                                                                    <p className="text-gray-600 text-sm">
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Qty: <span className="font-semibold">{changeProducts.qty ?? "No Qty"}</span>
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
                                                                         Amount: <span className="font-semibold">{changeProducts.amount ?? "No Amount"}</span>
                                                                     </p>
                                                                 </div>

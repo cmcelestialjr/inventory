@@ -32,10 +32,10 @@ class DashboardController extends Controller
         $getReturns = DB::table('returns');
         $getExpenses = DB::table('expenses');
         $getServices = DB::table('service_transaction_payments');
-        $getReceivables = DB::table('service_transactions')->whereIn('service_status_id',[1,2,3]);
+        $getReceivables = DB::table('service_transactions')->whereIn('service_status_id',[1,2,4]);
         $getServiceProducts = DB::table('service_transaction_products')
             ->join('service_transactions', 'service_transaction_products.service_transaction_id', '=', 'service_transactions.id')
-            ->whereIn('service_transactions.service_status_id',[1,2,3]);
+            ->whereIn('service_transactions.service_status_id',[1,2,4]);
 
         switch ($selected) {
             case "last_10_days":
@@ -118,22 +118,31 @@ class DashboardController extends Controller
 
 
         $totalSales = $salesData->total_amount;
+        $totalServices = $servicesData->total_amount;
+        $totalReceivables = $receivablesData->total_amount;
         $totalCost = $salesData->total_cost;
         $totalReturns = $returnsData->total_amount;
         $totalExpenses = $expensesData->total_amount;
-        $totalServices = $servicesData->total_amount;
-        $totalReceivables = $receivablesData->total_amount;
         $totalServiceProductsCost = $serviceProductsCostData->total_amount;
         
-        $totalIncome = $totalSales + $totalServices + $totalReceivables - $totalCost - $totalServiceProductsCost - $totalReturns - $totalExpenses;
+        $xSales = $totalSales/1.12;
+        $vatSales = $xSales*0.12;
+
+        $xServices = $totalServices/1.12;
+        $vatServices = $xServices*0.12;
+
+        $totalVat = $vatSales+$vatServices;
+
+        $totalIncome = $totalSales + $totalServices + $totalReceivables - $totalCost - $totalServiceProductsCost - $totalReturns - $totalExpenses - $totalVat;
 
         return response()->json([
             'totalSales' => number_format($totalSales,2),
             'totalServices' => number_format($totalServices,2),
-            'totalCost' => number_format($totalCost,2),
+            'totalReceivables' => number_format($totalReceivables,2),
+            'totalCost' => number_format($totalCost+$totalServiceProductsCost,2),
             'totalReturns' => number_format($totalReturns,2),
             'totalExpenses' => number_format($totalExpenses,2),
-            'totalReceivables' => number_format($totalReceivables,2),
+            'totalVat' => number_format($totalVat,2),
             'totalIncome' => number_format($totalIncome,2),
         ], 200);
     }
