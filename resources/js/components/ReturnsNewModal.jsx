@@ -3,7 +3,7 @@ import axios from "axios";
 import { Plus, X } from "lucide-react";
 import toastr from 'toastr';
 
-const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
+const ReturnsNewModal = ({ isOpen, onClose, refreshReturns, activeTab }) => {
     if (!isOpen) return null;
 
     const [searchSales, setSearchSales] = useState(null);
@@ -41,6 +41,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
     const [customerSuggestions, setCustomerSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showAddPayment, setShowAddPayment] = useState(false);
+    const [returnOptionSelected, setReturnOptionSelected] = useState("Returns");
 
     const toggleAddPayment = () => {
         if (Number(changedTotalAmount) + Number(refundAmount) > Number(returnTotalAmount)) {
@@ -456,7 +457,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
             <div className="bg-white rounded-lg p-6 shadow-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="flex justify-between">
                     <h2 className="text-xl font-semibold">New Return</h2>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 transition"
                     >
@@ -474,9 +475,13 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                 {step === 1 && (
                     <>
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Sales:</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            {activeTab === "By Customer" && <span> Sales: </span> }
+                            {activeTab === "To Supplier" && returnOptionSelected === "Returns" && <span> Returns: </span> }
+                            {activeTab === "To Supplier" && returnOptionSelected === "Products" && <span> Products: </span> }
+                        </label>
                         <div className="relative">
-                            <input 
+                            <input
                                 type="text"
                                 placeholder="Search Sales"
                                 value={searchSales}
@@ -488,7 +493,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                                 <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto z-10">
                                     {salesOptions.map((sales) => (
                                         <li
-                                            key={sales.id} 
+                                            key={sales.id}
                                             className="p-2 cursor-pointer hover:bg-gray-200"
                                             onClick={() => handleSelectSales(sales)}
                                         >
@@ -502,8 +507,8 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
 
                     <div className="flex gap-4 mt-3">
                         {/* Product List Headers */}
-                        <div className="mt-3 w-3/5">
-                            <div className="flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
+                        <div className="mt-3 w-full md:w-3/5">
+                            <div className="hidden md:flex justify-between items-center p-2 border-b bg-gray-200 font-semibold">
                                 <span className="w-1/12 text-center">#</span>
                                 <span className="w-2/12">Image</span>
                                 <span className="w-3/12">Product</span>
@@ -514,29 +519,51 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns }) => {
                             </div>
 
                             {/* Scrollable Product List */}
-                            <div className="border max-h-[15rem] overflow-y-auto p-2">
+                            <div className="border max-h-[15rem] overflow-y-auto p-2 space-y-2">
                                 {salesProducts?.map((product, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex justify-between items-center p-2 border-b cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleProductClick(product)}
-                                    >
-                                        <span className="w-1/12 text-center">{index + 1}</span>
-                                        <span className="w-2/12 text-center">
+                                <div
+                                    key={index}
+                                    className="flex flex-col md:flex-row justify-between md:items-center p-2 border-b cursor-pointer hover:bg-gray-100"
+                                    onClick={() => handleProductClick(product)}
+                                >
+                                    {/* Mobile: stack details vertically */}
+                                    <div className="flex md:hidden flex-col text-sm space-y-1">
+                                    <div className="flex items-center">
+                                        <span className="w-5 font-semibold">#{index + 1}</span>
                                         <img
                                             src={product.product_info?.img}
                                             alt={product.product_info?.name_variant}
-                                            className="w-16 h-16 object-cover rounded cursor-pointer"
+                                            className="w-16 h-16 object-cover rounded ml-2"
                                         />
-                                        </span>
-                                        <span className="w-3/12">{product.product_info?.name_variant}</span>
-                                        <span className="w-2/12 text-right">{product.price}</span>
-                                        <span className="w-1/12 text-right">{product.discount_amount}</span>
-                                        <span className="w-1/12 text-right">{product.qty}</span>
-                                        <span className="w-2/12 text-right font-semibold">
-                                            {Number(product.amount).toFixed(2)}
-                                        </span>
                                     </div>
+                                    <div>
+                                        <span className="block font-medium">{product.product_info?.name_variant}</span>
+                                        <div className="flex justify-between text-xs text-gray-600">
+                                            <span>Price: {product.price}</span>
+                                            <span>Disc: {product.discount_amount}</span>
+                                            <span>Qty: {product.qty}</span>
+                                            <span className="font-semibold">₱{Number(product.amount).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    </div>
+
+                                    {/* Desktop view */}
+                                    <span className="hidden md:block w-1/12 text-center">{index + 1}</span>
+                                    <span className="hidden md:block w-2/12 text-center">
+                                    <img
+                                        src={product.product_info?.img}
+                                        alt={product.product_info?.name_variant}
+                                        className="w-16 h-16 object-cover rounded cursor-pointer"
+                                    />
+                                    </span>
+                                    <span className="hidden md:block w-3/12">{product.product_info?.name_variant}</span>
+                                    <span className="hidden md:block w-2/12 text-right">{product.price}</span>
+                                    <span className="hidden md:block w-1/12 text-right">{product.discount_amount}</span>
+                                    <span className="hidden md:block w-1/12 text-right">{product.qty}</span>
+                                    <span className="hidden md:block w-2/12 text-right font-semibold">
+                                        ₱{Number(product.amount).toFixed(2)}
+                                    </span>
+                                </div>
                                 ))}
                             </div>
                         </div>

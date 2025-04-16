@@ -48,4 +48,8 @@ class Returns extends Model
     {
         return $this->belongsTo(ReturnsOption::class, 'return_option_id', 'id');
     }
+    public function returnTypeInfo(): BelongsTo
+    {
+        return $this->belongsTo(ReturnsType::class, 'return_type_id', 'id');
+    }
 }

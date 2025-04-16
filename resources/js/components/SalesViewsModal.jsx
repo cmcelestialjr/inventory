@@ -79,7 +79,7 @@ const SalesViewsModal = ({ isOpen, onClose, sale }) => {
                                 </div>
                             </div>
 
-                                {/* Desktop View */}
+                            {/* Desktop View */}
                             <div className="hidden md:flex w-full justify-between items-center">
                                 <span className="w-2/12">{product.product_info?.code}</span>
                                 <span className="w-2/12 text-center">

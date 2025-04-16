@@ -13,15 +13,15 @@ import Swal from 'sweetalert2';
 
 const Returns = () => {
     const [activeTab, setActiveTab] = useState("By Customer");
-    const [returnsList, setReturnsList] = useState([]); 
+    const [returnsList, setReturnsList] = useState([]);
     const [meta, setMeta] = useState(null);
     const [page, setPage] = useState(1);   
-    const [search, setSearch] = useState("");    
-    const [dateRange, setDateRange] = useState([null, null]); 
+    const [search, setSearch] = useState("");
+    const [dateRange, setDateRange] = useState([null, null]);
     const [startDate, endDate] = dateRange;
     const [returnsNewModalOpen, setReturnsNewModalOpen] = useState(false);
     const [returnOptions, setReturnOptions] = useState([]);
-    const [selectedReturnOption, setSelectedReturnOption] = useState("all");     
+    const [selectedReturnOption, setSelectedReturnOption] = useState("all");
     const [totalReturns, setTotalReturns] = useState(0);
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
@@ -30,9 +30,48 @@ const Returns = () => {
     useEffect(() => {
         if (didFetch.current) return;
         didFetch.current = true;
+        
+    }, []);
+
+    useEffect(() => {
+        fetchReturnsList(selectedReturnOption);
+    }, [search, page, selectedReturnOption, startDate, endDate, sortColumn, sortOrder, activeTab]);
+
+    useEffect(() => {
+        fetchReturnsOptions();
+    }, [activeTab]);
+
+    const fetchReturnsList = async (filter) => {
+        try {
+            const authToken = localStorage.getItem("token");
+            const response = await axios.get(`/api/returns`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+                params: {
+                    search: search,
+                    page: page,
+                    filter: filter,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : "",
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : "",
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
+                    active_tab: activeTab
+                },
+            });
+
+            setReturnsList(response.data.data);
+            setMeta(response.data.meta || {});
+        } catch (error) {
+        
+        }
+    };
+
+    const fetchReturnsOptions = async () => {
         const authToken = localStorage.getItem("token");
         axios.get("/api/fetch-return-options",{
                 headers: { Authorization: `Bearer ${authToken}` },
+                params: {
+                    active_tab: activeTab
+                },
             }) 
             .then(response => {
                 if (response.data.success) {
@@ -49,33 +88,6 @@ const Returns = () => {
             .catch(error => {
 
             });
-    }, []);
-
-    useEffect(() => {
-        fetchReturnsList(selectedReturnOption);
-    }, [search, page, selectedReturnOption, startDate, endDate, sortColumn, sortOrder]);
-
-    const fetchReturnsList = async (filter) => {
-        try {
-            const authToken = localStorage.getItem("token");
-            const response = await axios.get(`/api/returns`, {
-                headers: { Authorization: `Bearer ${authToken}` },
-                params: {
-                    search: search,
-                    page: page,
-                    filter: filter,
-                    start_date: startDate ? startDate.toISOString().split("T")[0] : "",
-                    end_date: endDate ? endDate.toISOString().split("T")[0] : "",
-                    sort_column: sortColumn, 
-                    sort_order: sortOrder,
-                },
-            });
-
-            setReturnsList(response.data.data);
-            setMeta(response.data.meta || {});
-        } catch (error) {
-        
-        }
     };
 
     const handleSort = (column) => {
@@ -195,7 +207,7 @@ const Returns = () => {
                     ))}
                 </div>
                 <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-4">
-                    {activeTab === "By Customer" &&
+                    {/* {activeTab === "By Customer" && */}
                     <div>
                         <div className="flex justify-between items-center mb-6">
                             <h1 className="text-2xl font-semibold text-gray-800">Returns</h1>
@@ -459,9 +471,9 @@ const Returns = () => {
                         </div>
                         )}
                         </div>
-                    }
+                     {/* }
 
-                    {activeTab === "To Supplier" && <ReturnsToSupplier />}
+                     {activeTab === "To Supplier" && <ReturnsToSupplier />} */}
                 </div>
             </div>
 
@@ -469,6 +481,7 @@ const Returns = () => {
                 isOpen={returnsNewModalOpen} 
                 onClose={() => setReturnsNewModalOpen(false)} 
                 refreshReturns={() => fetchReturnsList(selectedReturnOption)}
+                activeTab={activeTab}
             />
 
         </Layout>

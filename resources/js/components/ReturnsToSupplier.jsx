@@ -1,52 +1,76 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Eye, Plus, Trash, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
 import axios from "axios";
-import { Edit, Plus, Save, X, } from "lucide-react";
+import moment from "moment";
+import ReturnsNewModal from "./ReturnsNewModal";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import toastr from 'toastr';
 import Swal from "sweetalert2";
 
 const ReturnsToSupplier = () => {
-    const [categories, setCategories] = useState([]);
+    const [returnsList, setReturnsList] = useState([]);
     const [meta, setMeta] = useState(null);
+    const [page, setPage] = useState(1);   
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
+    const [dateRange, setDateRange] = useState([null, null]);
+    const [startDate, endDate] = dateRange;
+    const [returnsNewModalOpen, setReturnsNewModalOpen] = useState(false);
+    const [returnOptions, setReturnOptions] = useState([]);
+    const [selectedReturnOption, setSelectedReturnOption] = useState("all");
+    const [totalReturns, setTotalReturns] = useState(0);
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
-    const [returnSModal, setReturnSModal] = useState(false);
-    const [isSubReturnSModalOpen, setIsSubReturnSModalOpen] = useState(false);
-    const [selectedSubCategories, setSelectedSubCategories] = useState([]);
-    const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false);
-    const [selectedExpenses, setSelectedExpenses] = useState([]);
-    const [returnS, setReturnS] = useState({
-        id: null,
-        name: null,
-        remarks: null
-    });
+    const didFetch = useRef(false);
 
     useEffect(() => {
-        fetchCategories();
-    }, [search, page, sortColumn, sortOrder]);
+        if (didFetch.current) return;
+        didFetch.current = true;
+        const authToken = localStorage.getItem("token");
+        axios.get("/api/fetch-return-options",{
+                headers: { Authorization: `Bearer ${authToken}` },
+            }) 
+            .then(response => {
+                if (response.data.success) {
+                    const options = response.data.data;
+                    setReturnOptions(options);
+                    
+                    const total = options.reduce((sum, option) => sum + (option.returns_count || 0), 0);
+                    setTotalReturns(total);
 
-    const handleSearch = (e) => {
-        setSearch(e.target.value);
-        setPage(1);
-    };
+                } else {
+                    toastr.error("Failed to load return options.");
+                }
+            })
+            .catch(error => {
 
-    const fetchCategories = async () => {
+            });
+    }, []);
+
+    useEffect(() => {
+        fetchReturnsList(selectedReturnOption);
+    }, [search, page, selectedReturnOption, startDate, endDate, sortColumn, sortOrder]);
+
+    const fetchReturnsList = async (filter) => {
         try {
             const authToken = localStorage.getItem("token");
-            const response = await axios.get(`/api/expenses/categories`, {
+            const response = await axios.get(`/api/returns`, {
+                headers: { Authorization: `Bearer ${authToken}` },
                 params: {
-                    search,
-                    page,
-                    sort_column: sortColumn,
+                    search: search,
+                    page: page,
+                    filter: filter,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : "",
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : "",
+                    sort_column: sortColumn, 
                     sort_order: sortOrder,
                 },
-                headers: { Authorization: `Bearer ${authToken}` },
             });
-            setCategories(response.data.data);
-            setMeta(response.data.meta);
+
+            setReturnsList(response.data.data);
+            setMeta(response.data.meta || {});
         } catch (error) {
-            
+        
         }
     };
 
@@ -57,331 +81,368 @@ const ReturnsToSupplier = () => {
         setSortColumn(column);
         setSortOrder(newSortOrder);
     };
-    
-    const handleReturnSModal = (returnS) => {
-        setReturnS(returnS);
-        setReturnSModal(true);
+
+    const handleSearch = (e) => {
+        setSearch(e.target.value);
+        setPage(1);
     };
     
-    const handleCloseReturnSModal = () => {
-        setReturnS({
-            id: null,
-            name: null,
-            remarks: null
-        });
-        setReturnSModal(false);
+
+    const handleSelectedReturnOption = (filterType) => {
+        setSelectedReturnOption(filterType);
+        setPage(1);
+        fetchReturnsList(filterType);
     };
 
-    const handleReturnSModalSubmit = async () => {
-        if (!returnS.name) {
-            toastr.error("Please input ReturnS name!");
-            return;
-        }
+    const handleReturnDelete = (returnId) => {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You won't be able to revert this!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Yes, delete it!"
+        }).then( async (result) => {
+            if (result.isConfirmed) {
+                
+                try {
+                    const authToken = localStorage.getItem("token");
+                    const response = await axios.post("/api/returns/delete",
+                        { return_id: returnId },
+                        {
+                            headers: { Authorization: `Bearer ${authToken}` }
+                        }
+                    );
+                    if (response.status === 200 || response.status === 201) {
+                        Swal.fire("Deleted!", response.data.message, "success");
 
-        try {            
-            const formData = {
-                id: returnS.id,
-                name: returnS.name,
-                remarks: returnS.remarks
-            };
-            const token = localStorage.getItem("token");
-            const response = await axios.post(`/api/expenses/categories/manage`, 
-                formData, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (response.status === 200 || response.status === 201) {
-                toastr.success(response.data.message);
-                fetchCategories();
-                setReturnS({
-                    id: null,
-                    name: null,
-                    remarks: null
-                });
-                setReturnSModal(false);                
-            }else{
-                toastr.error("Error! There is something wrong in saving new returnS.");
+                        setReturnsList((prevList) =>
+                            prevList.filter((item) => item.id !== returnId)
+                        );
+                    }else{
+                        Swal.fire("Error!", "There was a problem", "success");
+                        
+                    }
+                } catch (error) {
+                    Swal.fire("Error!", "There was a problem", "error");
+                }
             }
-        } catch (error) {
-            toastr.error("Error!", error.response?.data);
-        }
+        });
     };
 
-    const handleViewSubCategories = (subCategories) => {
-        setSelectedSubCategories(subCategories || []);
-        setIsSubReturnSModalOpen(true);
-    };      
+    const colors = [
+        "bg-blue-800", "bg-red-500",  "bg-purple-500", 
+        "bg-yellow-500", "bg-green-500", "bg-pink-500"
+    ];
+    
+    const textColors = [
+        "text-blue-800", "text-red-500",  "text-purple-500", 
+        "text-yellow-500", "text-green-500", "text-pink-500"
+    ];
 
-    const handleViewExpenses = (expenses) => {
-        setSelectedExpenses(expenses || []);
-        setIsExpensesModalOpen(true);
-    };
+    const PesoSign = (props) => (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={props.size || 20}
+            height={props.size || 20}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <path d="M4 4h12a5 5 0 0 1 0 10H4z" />
+            <path d="M14 14H4v8" />
+            <path d="M17 15h-6" />
+            <path d="M17 9H4" />
+        </svg>
+    );
+    
+
+    const icons = [
+        (props) => <Repeat size={20} {...props} />,
+        (props) => <AlertTriangle size={20} {...props} />,
+        (props) => <PesoSign size={20} {...props} />,
+        (props) => <XCircle size={20} {...props} />,
+        (props) => <RotateCcw size={20} />,
+        (props) => <ShoppingBag size={20} />
+    ];
     
     return (
             <div>
-                {/* Header Section */}
-                <div className="flex justify-end items-center mb-6">
-                    <button
-                        onClick={() => handleReturnSModal(returnS)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                    >
-                        <Plus size={18} /> New Return
-                    </button>
-                </div>
+                    <div>
+                        <div className="flex justify-between items-center mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-800">Returns</h1>
+                            <button
+                                onClick={() => setReturnsNewModalOpen(true)}
+                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                            >
+                                <Plus size={18} /> New Return
+                            </button>
+                        </div>
 
-                {/* Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {/* Search Input */}
-                    <input
-                        type="text"
-                        placeholder="Search returnS..."
-                        value={search}
-                        onChange={handleSearch}
-                        className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                </div>
-                
-                {/* ReturnS Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                            <tr className="bg-gray-100 text-gray-700">
-                                <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Sub Categories</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Expenses</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Remarks</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {categories?.length > 0 ? (
-                                categories.map((returnS, index) => (
-                                    <tr key={returnS.id}>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            {returnS.name}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            {returnS.sub_returnS_list && returnS.sub_returnS_list.length > 0 && (
-                                                <button 
-                                                    onClick={() => handleViewSubCategories(returnS.sub_returnS_list)}
-                                                    className="w-full p-1 flex justify-center items-center bg-indigo-500 text-white rounded hover:bg-indigo-600 transition"
-                                                >
-                                                    {returnS.sub_returnS_list.length}
-                                                </button>
-                                            )}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">
-                                            {returnS.expense_list && returnS.expense_list.length > 0 && (
-                                                <button 
-                                                    onClick={() => handleViewExpenses(returnS.expense_list)}
-                                                    className="w-full p-1 flex justify-center items-center bg-orange-500 text-white rounded hover:bg-orange-600 transition"
-                                                >
-                                                    {returnS.expense_list.length}
-                                                </button>
-                                            )}
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-2">{returnS.remarks}</td>
-                                        <td className="border border-gray-300 px-4 py-2 gap-2">
-                                            <button onClick={() => handleReturnSModal(returnS)}
-                                                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
-                                                <Edit size={16} /> Edit
-                                            </button>
-                                        </td>
+                        {/* Summary Section (Return Options) */}
+                        <div className="grid grid-cols-5 gap-6 mb-8">
+                            <button
+                                onClick={() => handleSelectedReturnOption("all")}
+                                className={`flex flex-col items-center p-6 rounded-xl shadow-md transition transform hover:scale-105 ${
+                                    selectedReturnOption === "all" ? "bg-blue-600 text-white" : "bg-white border border-gray-300"
+                                }`}
+                                >
+                                <Package size={24} className={`${selectedReturnOption === "all" ? "text-white" : "text-blue-600"}`} />
+                                <span className="text-sm font-semibold">All Returns</span>
+                                <span className="text-lg font-bold">{totalReturns}</span>
+                            </button>
+
+                            {returnOptions.map((option, index) => {
+                                const buttonColor = colors[index % colors.length];
+                                const textColor = textColors[index % colors.length];
+                                const Icon = icons[index % icons.length];
+
+                                return (
+                                    <button
+                                        key={option.id}
+                                        onClick={() => handleSelectedReturnOption(option.id)}
+                                        className={`flex flex-col items-center p-5 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 ${
+                                            selectedReturnOption === option.id 
+                                                ? `${buttonColor} text-white shadow-xl` 
+                                                : `bg-white border border-gray-300 hover:bg-gray-100`
+                                        }`}
+                                    >
+                                        <Icon className={selectedReturnOption === option.id ? "text-white" : textColor} />
+                                        <span className="text-sm font-semibold">{option.name}</span>
+                                        <span className="text-xl font-bold">
+                                            {option.returns_count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+
+                        {/* Search & Date Filters */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                            <input
+                                type="text"
+                                placeholder="Search by Product or Customer"
+                                value={search}
+                                onChange={handleSearch}
+                                className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <DatePicker
+                                selected={startDate}
+                                onChange={(update) => {
+                                    setDateRange(update);
+                                }}
+                                startDate={startDate}
+                                endDate={endDate}
+                                selectsRange
+                                isClearable
+                                placeholderText="Select duration"
+                                className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* Returns Table */}
+                        <div className="overflow-x-auto bg-white shadow-md rounded-lg">
+                            <table className="w-full border-collapse">
+                                <thead className="bg-gray-200">
+                                    <tr>
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("code")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>Code</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("date_time_returned")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>DateTime</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "date_time_returned" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("sales_code")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>Return</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "sales_code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th className="border p-3 text-left">Change Product to</th>
+
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("refund_amount")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>Refund Amount</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "refund_amount" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("return_option_id")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>Status</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "return_option_id" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            className="border p-3 text-left cursor-pointer"
+                                            onClick={() => handleSort("remarks")}
+                                        >
+                                            <div className="flex items-center">
+                                                <span>Remarks</span>
+                                                <span className="ml-1">
+                                                    {sortColumn === "remarks" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                                                </span>
+                                            </div>
+                                        </th>
+                                        <th className="border p-3 text-left">Actions</th>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="10" className="border border-gray-300 px-4 py-2 text-center">
-                                        No ReturnS found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {/* Pagination Controls */}
-                {meta && (
-                    <div className="flex justify-between items-center mt-4">
-                        <button
+                                </thead>
+                                <tbody>
+                                    {returnsList.length > 0 ? (
+                                        returnsList.map((item, index) => (
+                                            <tr key={item.id} className="hover:bg-gray-100">
+                                                <td className="border p-3">{item.code}</td>
+                                                <td className="border border-gray-300 px-4 py-2">
+                                                    {moment(item.date_time_returned).format("MMM D, YY h:mma")}
+                                                </td>
+                                                <td className="border p-3 align-top">
+                                                    <span className="font-medium">{item.sales_code}</span>
+                                                    {Array.isArray(item.return_sales_products_list) && item.return_sales_products_list.length > 0 ? (
+                                                        <div className="mt-1 space-y-1">
+                                                            {item.return_sales_products_list.map((returnProducts) => (
+                                                                <div key={returnProducts.id} className="p-1 bg-gray-100 border border-gray-300 rounded-lg shadow-sm">
+                                                                    <p className="text-gray-900 truncate w-40 text-xs">
+                                                                        {returnProducts.sale_product_info?.product_info?.name_variant ?? "No Name"}
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Qty: <span className="font-semibold">{returnProducts.qty ?? "No Qty"}</span>
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Amount: <span className="font-semibold">{returnProducts.amount ?? "No Amount"}</span>
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-sm">No products</span>
+                                                    )}
+                                                </td>
+                                                <td className="border p-3">
+                                                    <span className="font-medium">{item.sales_of_return_code}</span>
+                                                    {Array.isArray(item.change_sale_info?.products_list) && item.change_sale_info?.products_list.length > 0 ? (
+                                                        <div className="mt-1 space-y-1">
+                                                            {item.change_sale_info?.products_list.map((changeProducts) => (
+                                                                <div key={changeProducts.id} className="p-1 bg-gray-100 border border-gray-300 rounded-lg shadow-sm">
+                                                                    <p className="text-gray-900 truncate w-40 text-xs">
+                                                                        {changeProducts.product_info?.name_variant ?? "No Name"}
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Qty: <span className="font-semibold">{changeProducts.qty ?? "No Qty"}</span>
+                                                                    </p>
+                                                                    <p className="text-gray-600 text-xs">
+                                                                        Amount: <span className="font-semibold">{changeProducts.amount ?? "No Amount"}</span>
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-sm">No products</span>
+                                                    )}
+                                                </td>
+                                                <td className="border p-3">
+                                                    {item.refund_amount && parseFloat(item.refund_amount) > 0 
+                                                        ? item.refund_amount 
+                                                        : <span className="text-gray-500">None</span>
+                                                    }
+                                                </td>
+                                                <td className="border p-3">{item.return_option_info?.name}</td>
+                                                <td className="border p-3">{item.remarks}</td>
+                                                <td className="border p-3">
+                                                    <div className="flex justify-center">
+                                                        <button 
+                                                            onClick={() => handleReturnDelete(item.id)}
+                                                            className="flex items-center gap-2 px-3 py-1 text-white bg-red-600 border border-red-600 
+                                                                    rounded-lg shadow transition duration-200 
+                                                                    hover:bg-white hover:text-red-600 hover:border-red-600"
+                                                        >
+                                                            <Trash size={16} />
+                                                            {/* <span>Delete</span> */}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="8" className="border p-3 text-center text-gray-500">
+                                                No returns found
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {meta && (
+                        <div className="flex justify-between items-center mt-4">
+                            <button
                             disabled={!meta.prev}
                             onClick={() => setPage(page - 1)}
                             className={`px-4 py-2 rounded-lg ${meta.prev ? "text-white bg-blue-600 hover:bg-blue-500" : "bg-gray-200 cursor-not-allowed"}`}
-                        >
+                            >
                             Previous
-                        </button>
-                        <span>
+                            </button>
+                            <span>
                             Page {meta.current_page} of {meta.last_page}
-                        </span>
-                        <button
+                            </span>
+                            <button
                             disabled={!meta.next}
                             onClick={() => setPage(page + 1)}
                             className={`px-4 py-2 rounded-lg ${meta.next ? "text-white bg-blue-600 hover:bg-blue-500" : "bg-gray-200 cursor-not-allowed"}`}
-                        >
+                            >
                             Next
-                        </button>
-                    </div>
-                )}
-
-                {returnSModal && (
-                    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative">
-                            {/* Header */}
-                            <div className="flex justify-between">
-                                <h2 className="text-xl font-semibold">
-                                    {returnS.id ? "Edit ReturnS" : "New ReturnS"}
-                                </h2>
-                                <button 
-                                    onClick={handleCloseReturnSModal} 
-                                    className="text-gray-500 hover:text-gray-700 transition"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                                {/* ReturnS Name */}
-                                <label className="block text-sm font-medium">Name</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={returnS.name}
-                                        onChange={(e) =>
-                                            setReturnS((prev) => ({
-                                              ...prev,
-                                              name: e.target.value,
-                                            }))
-                                        }
-                                        className="w-full p-2 border rounded"
-                                        placeholder="ReturnS Name..."
-                                    />
-                                </div>
-
-                                {/* ReturnS Remarks */}
-                                <label className="block text-sm font-medium mt-4">Remarks</label>
-                                <div className="relative">
-                                    <textarea
-                                        value={returnS.remarks || ""}
-                                        onChange={(e) =>
-                                        setReturnS((prev) => ({
-                                            ...prev,
-                                            remarks: e.target.value,
-                                        }))
-                                        }
-                                        className="w-full p-2 border rounded"
-                                        placeholder="Remarks..."
-                                        rows={4}
-                                    />
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
-                                    type="button"
-                                    onClick={handleReturnSModalSubmit} 
-                                    className="mt-4 p-2 flex items-center bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                                >
-                                    <Save size={16} />  Save ReturnS
-                                </button>
-
-                        </div>
-                    </div>
-                )}
-
-                {isSubReturnSModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto relative">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold">Subcategories</h2>
-                            <button
-                            onClick={() => setIsSubReturnSModalOpen(false)}
-                            className="text-gray-500 hover:text-gray-700"
-                            >
-                            <X size={20} />
                             </button>
                         </div>
-
-                        {selectedSubCategories.length > 0 ? (
-                            <table className="w-full border border-gray-300 text-sm">
-                                <thead>
-                                    <tr className="bg-gray-100">
-                                        <th className="border border-gray-300 px-3 py-2 text-left">#</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Name</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Expenses</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedSubCategories.map((sub, index) => (
-                                        <tr key={sub.id || index}>
-                                            <td className="border border-gray-300 px-3 py-2">{index + 1}</td>
-                                            <td className="border border-gray-300 px-3 py-2">{sub.name}</td>
-                                            <td className="border border-gray-300 px-4 py-2">
-                                                {sub.expense_list && sub.expense_list.length > 0 && (
-                                                    <button 
-                                                        onClick={() => handleViewExpenses(sub.expense_list)}
-                                                        className="w-full p-1 flex justify-center items-center bg-orange-500 text-white rounded hover:bg-orange-600 transition"
-                                                    >
-                                                        {sub.expense_list.length}
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <p className="text-gray-500 text-sm">No subcategories available.</p>
                         )}
                         </div>
-                    </div>
-                )}
 
-
-                {isExpensesModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="bg-white p-6 rounded-lg shadow-lg max-w-xxl w-full max-h-[90vh] overflow-y-auto relative">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold">Expenses List</h2>
-                            <button
-                                onClick={() => setIsExpensesModalOpen(false)}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                            <X size={20} />
-                            </button>
-                        </div>
-
-                        {selectedExpenses.length > 0 ? (
-                            <table className="w-full border border-gray-300 text-sm">
-                                <thead>
-                                    <tr className="bg-gray-100">
-                                        <th className="border border-gray-300 px-3 py-2 text-left">#</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">ReturnS</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">SubReturnS</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Name</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Amount</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">TIN</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">OR</th>
-                                        <th className="border border-gray-300 px-3 py-2 text-left">Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedExpenses.map((exp, index) => (
-                                        <tr key={exp.id || index}>
-                                            <td className="border border-gray-300 px-3 py-2">{index + 1}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.returnS?.name}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.sub_returnS?.name}</td>
-                                            <td className="border border-gray-300 px-3 py-2">{exp.expense_name}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.amount}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.tin}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.or}</td>
-                                            <td className="border border-gray-300 px-4 py-2">{exp.remarks}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <p className="text-gray-500 text-sm">No expenses available.</p>
-                        )}
-                        </div>
-                    </div>
-                )}
+                    <ReturnsNewModal 
+                        isOpen={returnsNewModalOpen} 
+                        onClose={() => setReturnsNewModalOpen(false)} 
+                        refreshReturns={() => fetchReturnsList(selectedReturnOption)}
+                        activeTab={"To Supplier"}
+                    />
 
             </div>
     );

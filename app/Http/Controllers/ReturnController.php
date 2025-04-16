@@ -47,6 +47,15 @@ class ReturnController extends Controller
             }
         }
 
+        if ($request->has('active_tab')){
+            $active_tab = $request->active_tab;
+            if($active_tab=="To Supplier"){
+                $query->where('return_type_id', 2);
+            }else{
+                $query->where('return_type_id', 1);
+            }
+        }
+
         if ($request->has('sort_column') && $request->has('sort_order')) {
             $sortColumn = $request->sort_column;
             $sortOrder = $request->sort_order;
@@ -86,12 +95,20 @@ class ReturnController extends Controller
         ]);
     }
 
-    public function fetchOptions()
+    public function fetchOptions(Request $request)
     {
         try {
-            $paymentOptions = ReturnsOption::withCount('returns')
-                ->orderBy('id','ASC')
-                ->get();
+            $paymentOptions = ReturnsOption::withCount(['returns' => function ($query) use ($request) {
+                if ($request->has('active_tab')) {
+                    $active_tab = $request->active_tab;
+                    if ($active_tab == "To Supplier") {
+                        $query->where('return_type_id', 2);
+                    } else {
+                        $query->where('return_type_id', 1);
+                    }
+                }
+            }])->orderBy('id', 'ASC')->get();
+            
 
             return response()->json([
                 'success' => true,
