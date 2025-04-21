@@ -40,7 +40,7 @@ class SalesProduct extends Model
 
     public function returnInfo(): HasMany
     {
-        return $this->hasMany(Returns::class, 'sales_products_id', 'id');
+        return $this->hasMany(ReturnsSalesProduct::class, 'sales_products_id', 'id');
     }
 
 }

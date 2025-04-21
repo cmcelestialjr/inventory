@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle, Boxes, Puzzle, Bolt, Printer  } from "lucide-react";
+import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle, Boxes, Puzzle, Bolt, Printer, ZapOff  } from "lucide-react";
 import Layout from "./Layout";
 import axios from 'axios';
 import DatePicker from "react-datepicker";
@@ -430,7 +430,10 @@ const Products = () => {
   };
 
   const handlePrint = async () => {
+    let productsPrint = [];
+
     try {
+      const authToken = localStorage.getItem("token");
       const response = await axios.get(`/api/products/print`, {
         params: {
           search: search,
@@ -439,9 +442,9 @@ const Products = () => {
         },
         headers: { Authorization: `Bearer ${authToken}` },
       });
-      const products = response.data.data;
+      productsPrint = response.data.data;
     } catch (error) {
-      const products = [];
+      // console.log(error);
     }
 
     const printWindow = window.open('', '', 'height=600,width=800');
@@ -604,9 +607,87 @@ const Products = () => {
         const title = doc.createElement('h4');
         title.innerText = 'Products';
 
+        const table = doc.createElement('table');
+    
+        const thead = doc.createElement('thead');
+        const headerRow = doc.createElement('tr');
+        const headers = ['#', 'Code', 'Image', 'Name', 'Category', 'Cost', 'Price', 'Qty'];
+        const columnWidths = {
+            '#': '5%',
+            'Code': '10%',
+            'Image': '15%',
+            'Name': '20%',
+            'Category': '15%',
+            'Cost': '12%',
+            'Price': '12%',
+            'Qty': '11%'
+        };
+        headers.forEach(headerText => {
+            const th = doc.createElement('th');
+            th.innerText = headerText;
+            th.style.width = columnWidths[headerText];
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+    
+        const tbody = doc.createElement('tbody');
+        
+        productsPrint?.forEach((product, index) => {
+            const row = doc.createElement('tr');
+    
+            const numberCell = doc.createElement('td');
+            numberCell.style.textAlign = 'center';
+            numberCell.innerText = index + 1;
+            row.appendChild(numberCell);
+    
+            const codeCell = doc.createElement('td');
+            codeCell.innerText = product.code || 'N/A';
+            row.appendChild(codeCell);
+
+            const imageCell = doc.createElement('td');
+            const img = document.createElement('img');
+            img.src = product.img;
+            img.alt = product.name || 'Image';
+            img.style.width = '60px'; 
+            img.style.height = 'auto';
+            img.style.objectFit = 'contain';
+            imageCell.style.textAlign = 'center';
+            imageCell.appendChild(img);
+            row.appendChild(imageCell);
+    
+            const descriptionCell = doc.createElement('td');
+            descriptionCell.innerText = product.name_variant || 'No description';
+            row.appendChild(descriptionCell);
+
+            const categoryCell = doc.createElement('td');
+            categoryCell.innerText = product.product_category.name || '';
+            row.appendChild(categoryCell);
+    
+            const costCell = doc.createElement('td');
+            costCell.style.textAlign = 'right';
+            costCell.innerText = product.cost ? `${Number(product.cost).toFixed(2).toLocaleString()}` : '0.00';
+            row.appendChild(costCell);
+    
+            const totalCell = doc.createElement('td');
+            totalCell.style.textAlign = 'right';
+            totalCell.innerText = product.price ? `${Number(product.price).toFixed(2).toLocaleString()}` : '0.00';
+            row.appendChild(totalCell);
+
+            const qtyCell = doc.createElement('td');
+            qtyCell.style.textAlign = 'center';
+            const qtyValue = product.qty ? (Number(product.qty) % 1 === 0 ? Number(product.qty) : Number(product.qty).toFixed(2)) : '0';
+            qtyCell.innerText = qtyValue;
+            row.appendChild(qtyCell);
+    
+            tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
 
         body.appendChild(header);
         body.appendChild(title);
+        body.appendChild(table);
         doc.body.replaceWith(body);
     
         let imagesLoaded = 0;
@@ -646,7 +727,7 @@ const Products = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-6 gap-4 mb-6">
           {/* Total Products */}
           <button
             onClick={() => handleFilter("all")}
@@ -706,6 +787,18 @@ const Products = () => {
             <span className="mt-2 text-base font-semibold">Phaseout</span>
             <span className="text-lg font-bold">{summary.phaseout}</span>
           </button>
+
+          {/* Damage Stock */}
+          <button
+            onClick={() => handleFilter("damaged")}
+            className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
+              filterType === "damaged" ? "bg-red-800 text-white" : "bg-white border border-gray-300"
+            }`}
+          >
+            <ZapOff size={25} className={`${filterType === "damaged" ? "text-white" : "text-red-800"}`} />
+            <span className="mt-2 text-base font-semibold">Damaged</span>
+            <span className="text-lg font-bold">{summary.damaged}</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-5 gap-4 mb-6">
@@ -713,30 +806,30 @@ const Products = () => {
           <button
             onClick={() => handleFilterCategories(1)}
             className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
-              filterCategory === "all" ? "bg-indigo-600 text-white" : "bg-white border border-gray-300"
+              filterCategory === 1 ? "bg-indigo-600 text-white" : "bg-white border border-gray-300"
             }`}
           >
-            <Boxes size={28} className={`${filterCategory === "all" ? "text-white" : "text-indigo-600"}`} />
+            <Boxes size={28} className={`${filterCategory === 1 ? "text-white" : "text-indigo-600"}`} />
             <span className="mt-2 text-base font-semibold">Main</span>
             <span className="text-lg font-bold">{categoriesCount.main}</span>
           </button>
           <button
             onClick={() => handleFilterCategories(2)}
             className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
-              filterCategory === "all" ? "bg-pink-600 text-white" : "bg-white border border-gray-300"
+              filterCategory === 2 ? "bg-pink-600 text-white" : "bg-white border border-gray-300"
             }`}
           >
-            <Puzzle size={28} className={`${filterCategory === "all" ? "text-white" : "text-pink-600"}`} />
+            <Puzzle size={28} className={`${filterCategory === 2 ? "text-white" : "text-pink-600"}`} />
             <span className="mt-2 text-base font-semibold">Accessories</span>
             <span className="text-lg font-bold">{categoriesCount.accessories}</span>
           </button>
           <button
             onClick={() => handleFilterCategories(3)}
             className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
-              filterCategory === "all" ? "bg-yellow-600 text-white" : "bg-white border border-gray-300"
+              filterCategory === 3 ? "bg-amber-600 text-white" : "bg-white border border-gray-300"
             }`}
           >
-            <Bolt size={28} className={`${filterCategory === "all" ? "text-white" : "text-yellow-600"}`} />
+            <Bolt size={28} className={`${filterCategory === 3 ? "text-white" : "text-amber-600"}`} />
             <span className="mt-2 text-base font-semibold">Bolts and Screws</span>
             <span className="text-lg font-bold">{categoriesCount.boltsNscrews}</span>
           </button>

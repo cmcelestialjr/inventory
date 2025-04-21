@@ -48,6 +48,12 @@ class ProductController extends Controller
                 case 'phaseout':
                     $query->where('product_status', 'Phaseout');
                     break;
+
+                case 'damaged':
+                    $query->whereHas('sales.returnInfo.returnInfo', function ($q) {
+                        $q->where('return_option_id', 2);
+                    });
+                    break;
             }
         }
 
@@ -99,7 +105,7 @@ class ProductController extends Controller
             'available' => $summary->available,
             'out_of_stock' => $summary->out_of_stock,
             'low_stock' => $summary->low_stock,
-            'phaseout' => $summary->phaseout,
+            'phaseout' => $summary->phaseout,8
         ]);
     }
 
@@ -134,11 +140,11 @@ class ProductController extends Controller
             }
         }
         $summary = $query->first();
-
+        
         return response()->json([
-            'main' => $summary->main,
-            'accessories' => $summary->accessories,
-            'boltsNscrews' => $summary->boltsNscrews,
+            'main' => $summary->main>0 ? $summary->main : 0,
+            'accessories' => $summary->accessories>0 ? $summary->accessories : 0,
+            'boltsNscrews' => $summary->boltsNscrews>0 ? $summary->boltsNscrews : 0,
         ]);
     }
 
@@ -151,8 +157,55 @@ class ProductController extends Controller
 
     public function print(Request $request)
     {
+        $query = Product::with('pricingList','productCategory')
+            ->where('id','>',0);
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name_variant', 'LIKE', "%{$search}%")
+                  ->orWhere('code', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            switch ($filter) {
+                case 'available':
+                    $query->where('qty', '>', 0);
+                    $query->where('product_status', 'Available');
+                    break;
+            
+                case 'out-of-stock':
+                    $query->where('qty', '=', 0);
+                    $query->where('product_status', 'Available');
+                    break;
+            
+                case 'low-stock':
+                    $query->whereBetween('qty', [1, 4]);
+                    $query->where('product_status', 'Available');
+                    break;
+
+                case 'phaseout':
+                    $query->where('product_status', 'Phaseout');
+                    break;
+            }
+        }
+
+        if ($request->has('filterCategory')) {
+            $filterCategory = $request->filterCategory;
+            $query->where('product_category_id', $filterCategory);
+        }
+
+        $products = $query->get();
+
+        $products->transform(function ($product) {
+            $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
+            return $product;
+        });
+
         return response()->json([
-            'data' => []
+            'data' => $products
         ]);
     }
 
