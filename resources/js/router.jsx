@@ -9,6 +9,7 @@ import Returns from './components/Returns';
 import Expenses from './components/Expenses';
 import PurchaseOrders from './components/PurchaseOrders';
 import Products from './components/Products';
+import Damaged from './components/Damaged';
 import Services from './components/Services';
 import Suppliers from './components/Suppliers';
 import UsersList from './components/UsersList';
@@ -61,6 +62,12 @@ function RouterApp() {
           element={
             <ProtectedRoute allowedRoles={["1"]}>
               <Products />
+            </ProtectedRoute>} 
+        />
+        <Route path="/damaged" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Damaged />
             </ProtectedRoute>} 
         />
         <Route path="/services" 

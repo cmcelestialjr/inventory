@@ -215,7 +215,7 @@ const ReturnsNewModal = ({ isOpen, onClose, refreshReturns, activeTab }) => {
             changedProducts,
         };
         toastr.success("Confirming return..."); 
-        console.error(updatedSaleData);
+
         try {
             const authToken = localStorage.getItem("token");
             const response = await axios.post("/api/returns-confirm", updatedSaleData, {

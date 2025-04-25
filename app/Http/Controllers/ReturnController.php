@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Damage;
 use App\Models\Product;
 use App\Models\ProductsPrice;
 use App\Models\Returns;
@@ -123,6 +124,32 @@ class ReturnController extends Controller
         }
     }
 
+    public function fetch(Request $request)
+    {
+        $query = Returns::with('returnSalesProductsList.saleProductInfo.productInfo','returnOptionInfo')
+            ->where('return_option_id',2);
+        
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where('code', 'LIKE', "%{$search}%");
+            // $returns->orWhere('total_amount', 'LIKE', "%{$search}%");
+        }
+
+        $returns = $query->orderBy('date_time_returned','DESC')->limit(10)->get();
+
+        $returns->transform(function ($return) {
+            $return->returnSalesProductsList->each(function ($product) {
+                $product->saleProductInfo->productInfo->img = $product->saleProductInfo->productInfo && $product->saleProductInfo->productInfo->img
+                    ? asset("storage/{$product->saleProductInfo->productInfo->img}")
+                    : asset('images/no-image-icon.png');
+            });
+        
+            return $return;
+        });
+
+        return response()->json($returns);
+    }
+
     public function confirm(Request $request)
     {
         $validatedData = $request->validate([
@@ -182,6 +209,7 @@ class ReturnController extends Controller
                 'total_amount' => $validatedData['returnTotalAmount'],
                 'remarks' => $validatedData['remarks'],
                 'date_time_returned' => $validatedData['date_time_of_sale'],
+                'return_type_id' => 1,
                 'cashier_id' => $cashier_id,
                 'cashier_name' => $cashier_name,
                 'updated_by' => $cashier_id,
@@ -189,9 +217,11 @@ class ReturnController extends Controller
             ]);
 
             $return_id = $return->id;
-
+            
             foreach ($validatedData['returnProducts'] as $return) {
-                ReturnsSalesProduct::create([
+                $product_id = $return['product_id'];
+
+                $returnProduct = ReturnsSalesProduct::create([
                     'return_id' => $return_id,
                     'sales_products_id' => $return['id'],
                     'qty' => $return['qty'],
@@ -202,8 +232,27 @@ class ReturnController extends Controller
                     'created_by' => $cashier_id
                 ]);
 
-                if($return_option_id!=2){
-                    $productPrice = ProductsPrice::where('product_id', $return['product_id'])
+                $returnProductId = $returnProduct->id;
+
+                if($return_option_id==2){
+                    Damage::updateOrCreate(
+                        [
+                            'return_product_id' => $returnProductId,
+                            'product_id' => $product_id
+                        ],
+                        [
+                            'status_id' => 1,
+                            'qty' => $return['qty'],
+                            'cost' => $return['cost'],
+                            'price' => $return['price'],
+                            'amount' => $return['amount'],
+                            'remarks' => $validatedData['remarks'],
+                            'updated_by' => $cashier_id,
+                            'created_by' => $cashier_id
+                        ]
+                    );
+                }else{
+                    $productPrice = ProductsPrice::where('product_id', $product_id)
                             ->where('price', $return['price'])
                             ->first();
         
@@ -213,8 +262,10 @@ class ReturnController extends Controller
                         $productPrice->update(['qty' => $newQuantity]);
                     }
         
-                    $totalStock = ProductsPrice::where('product_id', $return['product_id'])->sum('qty');
-                    Product::where('id', $return['product_id'])->update(['qty' => $totalStock]);
+                    $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
+                    Product::where('id', $product_id)->update(['qty' => $totalStock]);
+
+                    Damage::where('return_product_id',$returnProductId)->delete();
                 }
             }
 
@@ -370,6 +421,8 @@ class ReturnController extends Controller
                         $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
                             
                         Product::where('id', $product_id)->update(['qty' => $totalStock]);
+
+                        Damage::where('return_product_id',$product->id)->delete();
                     }
                 }
             }

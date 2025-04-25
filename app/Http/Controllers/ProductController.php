@@ -96,16 +96,20 @@ class ProductController extends Controller
             SUM(CASE WHEN qty > 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as available,
             SUM(CASE WHEN qty = 0 AND product_status = 'Available' THEN 1 ELSE 0 END) as out_of_stock,
             SUM(CASE WHEN qty BETWEEN 1 AND 4 AND product_status = 'Available' THEN 1 ELSE 0 END) as low_stock,
-            SUM(CASE WHEN product_status = 'Phaseout' THEN 1 ELSE 0 END) as phaseout,
             SUM(CASE WHEN product_status = 'Phaseout' THEN 1 ELSE 0 END) as phaseout
         ")->first();
+
+        // $damaged = Product::whereHas('sales.returnInfo.returnInfo', function ($q) {
+        //         $q->where('return_option_id', 2);
+        //     })->count();
 
         return response()->json([
             'total' => $summary->total,
             'available' => $summary->available,
             'out_of_stock' => $summary->out_of_stock,
             'low_stock' => $summary->low_stock,
-            'phaseout' => $summary->phaseout,8
+            'phaseout' => $summary->phaseout,
+            'damaged' => 0
         ]);
     }
 
@@ -136,6 +140,12 @@ class ProductController extends Controller
 
                 case 'phaseout':
                     $query->where('product_status', 'Phaseout');
+                    break;
+
+                case 'damaged':
+                    $query->whereHas('sales.returnInfo.returnInfo', function ($q) {
+                        $q->where('return_option_id', 2);
+                    });
                     break;
             }
         }
@@ -188,6 +198,12 @@ class ProductController extends Controller
 
                 case 'phaseout':
                     $query->where('product_status', 'Phaseout');
+                    break;
+                
+                case 'damaged':
+                    $query->whereHas('sales.returnInfo.returnInfo', function ($q) {
+                        $q->where('return_option_id', 2);
+                    });
                     break;
             }
         }
@@ -387,6 +403,7 @@ class ProductController extends Controller
             $search = $request->search;
             $query->where('name', 'LIKE', "%{$search}%");
             $query->orWhere('code', 'LIKE', "%{$search}%");
+            $query->orWhere('name_variant', 'LIKE', "%{$search}%");
         }
 
         $products = $query->limit(10)->get();

@@ -244,11 +244,11 @@ class SaleController extends Controller
     {
         $query = Sale::with('productsList.productInfo');
 
-        // if ($request->has('search') && !empty($request->search)) {
-        //     $search = $request->search;
-        //     $query->where('code', 'LIKE', "%{$search}%");
-        //     $query->orWhere('total_amount', 'LIKE', "%{$search}%");
-        // }
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where('code', 'LIKE', "%{$search}%");
+            $query->orWhere('total_amount', 'LIKE', "%{$search}%");
+        }
 
         $sales = $query->orderBy('date_time_of_sale','DESC')->limit(10)->get();
 

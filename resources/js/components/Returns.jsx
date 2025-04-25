@@ -191,7 +191,7 @@ const Returns = () => {
         <Layout>
             <div className="w-full mt-10 mx-auto">
                 {/* Tabs */}
-                <div className="mt-15 flex gap-4 mb-4">
+                {/* <div className="mt-15 flex gap-4 mb-4">
                     {["By Customer", "To Supplier"].map((tab) => (
                         <button
                             key={tab}
@@ -205,7 +205,7 @@ const Returns = () => {
                             {tab}
                         </button>
                     ))}
-                </div>
+                </div> */}
                 <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-4">
                     {/* {activeTab === "By Customer" && */}
                     <div>

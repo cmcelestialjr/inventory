@@ -33,6 +33,7 @@ const Products = () => {
     out_of_stock: 0,
     low_stock: 0,
     phaseout: 0,
+    damaged: 0
   });
   const [categoriesCount, setCategoriesCount] = useState({
     main: 0,
@@ -789,7 +790,7 @@ const Products = () => {
           </button>
 
           {/* Damage Stock */}
-          <button
+          {/* <button
             onClick={() => handleFilter("damaged")}
             className={`flex flex-col items-center p-3 rounded-xl shadow-md transition transform hover:scale-105 ${
               filterType === "damaged" ? "bg-red-800 text-white" : "bg-white border border-gray-300"
@@ -798,7 +799,7 @@ const Products = () => {
             <ZapOff size={25} className={`${filterType === "damaged" ? "text-white" : "text-red-800"}`} />
             <span className="mt-2 text-base font-semibold">Damaged</span>
             <span className="text-lg font-bold">{summary.damaged}</span>
-          </button>
+          </button> */}
         </div>
 
         <div className="grid grid-cols-5 gap-4 mb-6">

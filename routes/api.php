@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DamagedController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpensesCategoriesController;
 use App\Http\Controllers\ExpensesController;
@@ -60,6 +61,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/returns-confirm', [ReturnController::class, 'confirm']);
     Route::get('/returns/summary', [ReturnController::class, 'summary']);
     Route::post('/returns/delete', [ReturnController::class, 'destroy']);
+    Route::get('/fetch-returns', [ReturnController::class, 'fetch']);
     
     Route::get('/expenses', [ExpensesController::class, 'index']);
     Route::get('/expenses/names', [ExpensesController::class, 'names']);
@@ -108,4 +110,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchase-orders/payments', [PurchaseOrderController::class, 'payments']);
     Route::post('/purchase-orders/payment', [PurchaseOrderController::class, 'payment']);
     Route::post('/purchase-orders/manageStatus', [PurchaseOrderController::class, 'manageStatus']);
+
+    Route::get('/damaged', [DamagedController::class, 'index']);
+    Route::get('/damaged/fetch/statuses', [DamagedController::class, 'fetchStatuses']);
+    Route::post('/damaged/manage', [DamagedController::class, 'manage']);
 });

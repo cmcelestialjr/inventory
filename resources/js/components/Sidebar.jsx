@@ -12,6 +12,7 @@ import { Menu,
         Banknote,
         Package,
         Settings,
+        ZapOff,
         LogOut } 
         from "lucide-react";
 
@@ -119,6 +120,17 @@ const Sidebar = () => {
                 >
                   <Boxes size={20} className="mr-2" />
                   Products
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/damaged" 
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/damaged") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <ZapOff size={20} className="mr-2" />
+                  Damaged
                 </Link>
               </li>
               <li>

@@ -25,6 +25,7 @@ class Returns extends Model
         'refund_amount',
         'total_amount',
         'remarks',
+        'return_type_id',
         'date_time_returned',
         'cashier_id',
         'cashier_name',
