@@ -197,6 +197,11 @@ class ProductImport implements ToModel, WithHeadingRow
             $insert->created_by = 1;
             $insert->save();
         }
+
+        $totalQty = ProductsPrice::where('product_id',$productId)->sum('qty');
+        $update = Product::find($productId);
+        $update->qty = $totalQty;
+        $update->save();
         $this->currentRow++;
     }
 
