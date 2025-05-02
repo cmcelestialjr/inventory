@@ -46,6 +46,7 @@ const Products = () => {
     name: "",
     variant: "",
     productCategoryId: "",
+    product_status: "Available"
   });
   const [formData, setFormData] = useState({
     code: "",
@@ -312,6 +313,7 @@ const Products = () => {
       name: product.name,
       variant: product.variant,
       productCategoryId: product.product_category_id,
+      product_status: product.product_status,
       pricingList: product.pricing_list || [],
     });
     setShowEditModal(true);
@@ -1228,6 +1230,25 @@ const Products = () => {
                       ))}
                     </select>
                   </div>
+                  
+                  <div>
+                    <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        name="phaseOut"
+                        checked={editFormData.product_status === "Phaseout"}
+                        onChange={(e) => {
+                          setEditFormData({
+                            ...editFormData,
+                            product_status: e.target.checked ? "Phaseout" : "Available",
+                          });
+                        }}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                      />
+                      <span>PhaseOut?</span>
+                    </label>
+                  </div>
+
                 </div>
 
                 <div className="flex justify-end gap-2 mt-4">

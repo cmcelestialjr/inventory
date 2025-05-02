@@ -300,6 +300,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'variant' => 'required|string|max:255',
             'productCategoryId' => 'required|integer|exists:products_categories,id',
+            'product_status' => 'required|in:Available,Phaseout',
         ]);
 
         $name_variant = "$request->name-$request->variant";
@@ -322,6 +323,7 @@ class ProductController extends Controller
             'variant' => $request->variant,
             'name_variant' => $name_variant,
             'product_category_id' => $request->productCategoryId,
+            'product_status' => $request->product_status,
         ]);
 
         // $this->productPrice($user_id,$id,$request);
