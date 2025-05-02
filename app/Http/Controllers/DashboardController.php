@@ -237,7 +237,10 @@ class DashboardController extends Controller
         }
 
         $topSellingProducts = (clone $sellingProducts)->orderBy('value', 'desc')->get();
-        $leastSellingProducts = (clone $sellingProducts)->orderBy('value', 'asc')->get();
+
+        $topSellingProductsIds = (clone $sellingProducts)->orderBy('value', 'desc')->pluck('id');
+        
+        $leastSellingProducts = (clone $sellingProducts)->whereNotIn('id',$topSellingProductsIds)->orderBy('value', 'asc')->get();
 
         return response()->json([
             'salesTrends' => $salesTrends,
