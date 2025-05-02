@@ -40,9 +40,11 @@ const Sidebar = () => {
         } md:translate-x-0`}
       >
         <div className="overflow-y-auto max-h-screen">
-          <div className="text-center mb-5 mt-3">
-            <img src="/images/clstldev2.png" alt="Logo" className="mx-auto w-20 h-20" />
+          <div className="flex justify-center items-center gap-4 mb-5 mt-3">
+            <img src="/images/clstldev2.png" alt="Logo 1" className="w-20 h-20" />
+            <img src="/images/rockfil.png" alt="Logo 2" className="w-20 h-20" />
           </div>
+
           <nav>
             <ul className="space-y-4 px-5">
               <li>

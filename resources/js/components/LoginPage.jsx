@@ -98,9 +98,13 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
         <div className="text-center mb-8">
-          <img src="/images/clstldev2.png" alt="Logo" className="mx-auto w-32" />
+          <div className="flex justify-center items-center gap-4">
+            <img src="/images/clstldev2.png" alt="Logo 1" className="w-32" />
+            <img src="/images/rockfil.png" alt="Logo 2" className="w-32" />
+          </div>
           <h1 className="text-2xl font-bold mt-4">Inventory System</h1>
         </div>
+
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="relative">
             <input
