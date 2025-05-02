@@ -888,7 +888,7 @@ const Sales = () => {
                                                             value={priceOption.id} 
                                                             data-c={priceOption.cost}
                                                             data-d={priceOption.discount}>
-                                                            {priceOption.price} (Qty: {priceOption.qty})
+                                                            {priceOption.supplier?.name}-{priceOption.cost} (Qty: {priceOption.qty})
                                                         </option>
                                                 ))}
                                             </select>

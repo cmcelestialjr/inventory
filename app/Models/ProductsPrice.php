@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductsPrice extends Model
 {
@@ -18,4 +19,8 @@ class ProductsPrice extends Model
         'updated_by',
         'created_by',
     ];
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id', 'id');
+    }
 }

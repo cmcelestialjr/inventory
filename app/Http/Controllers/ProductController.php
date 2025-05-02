@@ -399,7 +399,7 @@ class ProductController extends Controller
 
     public function fetch(Request $request)
     {
-        $query = Product::with('pricingListAvailable');
+        $query = Product::with('pricingListAvailable.supplier');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
