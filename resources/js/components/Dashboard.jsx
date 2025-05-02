@@ -292,7 +292,7 @@ const Dashboard = () => {
           Filter
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-3 mt-6">
         {summaryDataTopSection.map((item, index) => (
           <div
             key={index}

@@ -21,7 +21,7 @@ class ServiceTransactionsController extends Controller
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $query->where(function ($q) use ($search) {s
                 $q->where('code', 'LIKE', "%{$search}%")
                 ->where('service_name', 'LIKE', "%{$search}%")
                 ->orWhere('customer_name', 'LIKE', "%{$search}%")
