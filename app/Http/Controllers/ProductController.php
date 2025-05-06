@@ -16,7 +16,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with('pricingList','productCategory')
+        $query = Product::with('pricingList','pricingListAvailable.supplier','productCategory')
             ->where('id','>',0);
 
         if ($request->has('search')) {
@@ -60,6 +60,13 @@ class ProductController extends Controller
         if ($request->has('filterCategory')) {
             $filterCategory = $request->filterCategory;
             $query->where('product_category_id', $filterCategory);
+        }
+
+        if ($request->has('suppliers')) {
+            $suppliers = $request->suppliers;
+            $query->whereHas('pricingList', function ($q) use ($suppliers) {
+                $q->whereIn('supplier_id', $suppliers);
+            });
         }
 
         if ($request->has('sort_column') && $request->has('sort_order')) {
@@ -228,7 +235,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'code' => 'required|string|unique:products',
+            'code' => 'required|regex:/^[\w\d]+$/|unique:products',
             'name' => 'required|string',
             'variant' => 'required|string',
             'cost' => 'required|numeric',
@@ -431,6 +438,7 @@ class ProductController extends Controller
             $insert = new ProductsPrice;
             $insert->product_id = $product_id;
         }
+        $insert->supplier_id = $request->supplierId;
         $insert->cost = $request->cost;
         $insert->price = $request->price;
         $insert->qty = $request->qty;

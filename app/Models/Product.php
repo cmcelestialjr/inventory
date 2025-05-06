@@ -44,7 +44,6 @@ class Product extends Model
     {
         return $this->hasMany(ProductsPrice::class, 'product_id', 'id')->orderBy('effective_date','DESC')->orderBy('id','DESC');
     }
-
     public function pricingListAvailable(): HasMany
     {
         return $this->hasMany(ProductsPrice::class, 'product_id', 'id')->where('qty','>',0)->orderBy('effective_date','ASC')->orderBy('id','ASC');

@@ -6,6 +6,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toastr from 'toastr';
 import 'toastr/build/toastr.min.css';
+import AsyncSelect from "react-select/async";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -25,7 +26,9 @@ const Products = () => {
   const [modalImageOpen, setModalImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [sortColumn, setSortColumn] = useState(null);
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortOrder, setSortOrder] = useState("asc"); 
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [selectedSupplierModal, setSelectedSupplierModal] = useState(null);
   const didFetch = useRef(false);
   const [summary, setSummary] = useState({
     total: 0,
@@ -57,6 +60,7 @@ const Products = () => {
     qty: "",
     productCategoryId: "",
     effective_date: null,
+    supplierId: null
   });
   const [selectedPricing, setSelectedPricing] = useState({
     id: "",
@@ -68,11 +72,15 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts(filterType,filterCategory);
-  }, [search, page, sortColumn, sortOrder, filterType, filterCategory]);
+  }, [search, page, sortColumn, sortOrder, filterType, filterCategory, selectedSupplier]);
 
   useEffect(() => {
     fetchCategoriesCount(filterType);
   }, [filterType]);
+
+  // useEffect(() => {
+  //   fetchSuppliers();
+  // }, [supplierSearch]);
 
   useEffect(() => {
     if (didFetch.current) return;
@@ -102,8 +110,10 @@ const Products = () => {
     };
   
     fetchSummary();
-    fetchProductCategories();
+    fetchProductCategories();    
   }, []);
+
+  
 
   const handleFilter = (filterType) => {
     setFilterType(filterType);
@@ -116,7 +126,9 @@ const Products = () => {
   };
   
   const fetchProducts = async (filter,filterCategory) => {
+    
     try {
+      const numericSelectedCategory = (selectedSupplier || []).map((item) => Number(item.value));
       const authToken = localStorage.getItem("token");
       const response = await axios.get(`/api/products`, {
         params: {
@@ -124,6 +136,7 @@ const Products = () => {
           page: page,
           filter: filter,
           filterCategory: filterCategory,
+          suppliers: numericSelectedCategory,
           sort_column: sortColumn, 
           sort_order: sortOrder,
       },
@@ -268,9 +281,14 @@ const Products = () => {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
         const authToken = localStorage.getItem("token");
 
+        const cleanFormData = {
+          ...formData,
+          supplierId: formData.supplierId?.value ?? null,
+        };
+
         const response = await axios.post(
           "/api/products/store",
-          formData,
+          cleanFormData,
           {
             headers: {
               "Content-Type": "application/json",
@@ -292,6 +310,7 @@ const Products = () => {
             price: "",
             qty: "",
             productCategoryId: "",
+            supplierId: null,
             effective_date: null,
           });
           setErrors({});
@@ -715,6 +734,36 @@ const Products = () => {
         }, 3000);
   };
 
+  const fetchSuppliers = async (inputValue) => {
+    const authToken = localStorage.getItem("token");
+    const response = await axios.get(`/api/fetch-suppliers`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      params: {
+        search: inputValue,
+      },
+    });
+    const data = response.data;
+    return data.map((supplier) => ({
+      label: supplier.name,
+      value: supplier.id,
+    }));
+  };
+
+  const fetchSuppliersModal = async (inputValue) => {
+    const authToken = localStorage.getItem("token");
+    const response = await axios.get(`/api/fetch-suppliers`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      params: {
+        search: inputValue,
+      },
+    });
+    const data = response.data;
+    return data.map((supplier) => ({
+      label: supplier.name,
+      value: supplier.id,
+    }));
+  };
+
   return (
     <Layout>
       <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
@@ -730,7 +779,7 @@ const Products = () => {
         </div>
 
         {/* Summary Statistics */}
-        <div className="grid grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           {/* Total Products */}
           <button
             onClick={() => handleFilter("all")}
@@ -849,6 +898,24 @@ const Products = () => {
               onChange={handleSearch}
               className="flex-grow border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {/* <Select
+              options={supplierOptions}
+              isMulti
+              value={selectedSupplier}
+              onChange={(selected) => setSelectedSupplier(selected)}
+              className="w-full"
+              placeholder="Suppliers..."
+            /> */}
+            <AsyncSelect
+              isMulti
+              cacheOptions
+              defaultOptions
+              loadOptions={fetchSuppliers}
+              onChange={(selected) => setSelectedSupplier(selected || [])}
+              value={selectedSupplier}
+              className="w-full"
+              placeholder="Search Suppliers..."
+            />
             <button
               onClick={handlePrint}
               className="flex flex-row items-center justify-center p-3 rounded-xl bg-blue-600 text-white shadow-md transition transform hover:scale-105"
@@ -872,6 +939,17 @@ const Products = () => {
                       <span>Code</span>
                       <span className="ml-1">
                           {sortColumn === "code" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
+                      </span>
+                  </div>
+                </th>
+                <th
+                  className="border border-gray-300 px-4 py-2 text-center cursor-pointer"
+                  onClick={() => handleSort("supplier")}
+                >
+                  <div className="flex items-center">
+                      <span>Supplier</span>
+                      <span className="ml-1">
+                          {sortColumn === "supplier" ? (sortOrder === "asc" ? "🔼" : "🔽") : "↕️"}
                       </span>
                   </div>
                 </th>
@@ -950,6 +1028,28 @@ const Products = () => {
                 products.map((product, index) => (
                   <tr key={product.id}>
                     <td className="border border-gray-300 px-4 py-2">{product.code}</td>
+                    <td className="border border-gray-300 px-4 py-2 text-center">
+                      {product.pricing_list_available?.length > 0 ? (
+                        <div className="space-y-3">
+                          {product.pricing_list_available
+                            ?.filter((value, index, self) => 
+                              index === self.findIndex((t) => (
+                                t.supplier?.id === value.supplier?.id
+                              ))
+                            )
+                            .map((price, index) => (
+                              <div
+                                key={index}
+                                className="p-2 border-b border-gray-200 rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow"
+                              >
+                                <p className="text-sm font-semibold text-gray-800">{price.supplier?.name}</p>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400">No supplier available</p>
+                      )}
+                    </td>
                     <td className="border border-gray-300 px-4 py-2 flex justify-center">
                       <img
                         src={product.img}
@@ -1084,6 +1184,18 @@ const Products = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">Supplier</label>
+                    <AsyncSelect
+                      cacheOptions
+                      defaultOptions
+                      loadOptions={fetchSuppliersModal}
+                      onChange={(selected) => setFormData({ ...formData, supplierId: selected })}
+                      value={formData.supplierId}
+                      className="w-full"
+                      placeholder="Search Suppliers..."
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Cost</label>
                     <input
                       type="number"
@@ -1094,7 +1206,10 @@ const Products = () => {
                         errors.cost ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
                       }`}                      
                     />
-                  </div>
+                  </div>                  
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price</label>
                     <input
@@ -1106,10 +1221,7 @@ const Products = () => {
                         errors.price ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
                       }`}                      
                     />
-                  </div>                  
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Quantity</label>
                     <input
