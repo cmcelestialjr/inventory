@@ -359,10 +359,10 @@ const TransactionTransactions = () => {
         const productsData = service.products?.map(product => ({
             pid: null,
             id: product.id,
-            name: product.product.name_variant,
-            cost: product.product.cost,
+            name: product.product?.name_variant,
+            cost: product.product?.cost,
             qty: product.qty,
-            total: product.product.cost * product.qty
+            total: product.product?.cost * product.qty
         }));
         if (productsData && productsData.length > 0) {
             setProductsSelected(productsData);
