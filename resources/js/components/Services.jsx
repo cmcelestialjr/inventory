@@ -309,10 +309,10 @@ const Services = () => {
         setStep(1);
         const products = service.products.map(product => ({
             id: product.id,
-            name: product.product.name_variant,
-            cost: product.product.cost,
+            name: product.product?.name_variant,
+            cost: product.product?.cost,
             qty: product.qty,
-            total: product.product.cost * product.qty
+            total: product.product?.cost * product.qty
         }));
     
         setProductsSelected(prevProducts => [...prevProducts, ...products]);
@@ -443,7 +443,7 @@ const Services = () => {
                             {services?.length > 0 ? (
                                 services.map((service, index) => {
                                     const totalCostProduct = service.products?.reduce((sum, product) => {
-                                        return sum + product.product.cost * product.qty;
+                                        return sum + product.product?.cost * product.qty;
                                     }, 0) || 0;
                                     const totalCost = Number(totalCostProduct) + Number(service.labor_cost) + Number(service.discount);
                                     const income = Number(service.price) - totalCost;
