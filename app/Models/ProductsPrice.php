@@ -16,6 +16,7 @@ class ProductsPrice extends Model
         'discount_percentage',
         'effective_date',
         'restock_date',
+        'supplier_id',
         'updated_by',
         'created_by',
     ];

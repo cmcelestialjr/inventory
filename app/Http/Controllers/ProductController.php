@@ -10,20 +10,21 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with('pricingList','pricingListAvailable.supplier','productCategory')
+        $query = Product::with('pricingList.supplier','pricingListAvailable.supplier','productCategory')
             ->where('id','>',0);
 
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name_variant', 'LIKE', "%{$search}%")
-                  ->orWhere('code', 'LIKE', "%{$search}%");
+                ->orWhere('code', 'LIKE', "%{$search}%");
             });
         }
 
@@ -174,7 +175,7 @@ class ProductController extends Controller
 
     public function print(Request $request)
     {
-        $query = Product::with('pricingList','productCategory')
+        $query = Product::with('pricingList','pricingListAvailable.supplier','productCategory')
             ->where('id','>',0);
 
         if ($request->has('search')) {
@@ -345,6 +346,7 @@ class ProductController extends Controller
             'price' => 'required|numeric',
             'qty' => 'required|numeric',
             'effective_date' => 'required|date',
+            'supplierId' => 'required|integer|exists:suppliers,id',
         ]);
 
         $user = Auth::user();
@@ -366,7 +368,10 @@ class ProductController extends Controller
         $this->productPrice($user_id,$request->product_id,$request);
         $this->updateLatestPrice($request->product_id);
 
-        return response()->json(['message' => 'success']);
+        $productPrices = $this->fetchProductPrices($request->product_id);
+
+        return response()->json(['message' => 'success',
+            'product' => $productPrices]);
     }
 
     public function updatePricing(Request $request, $id)
@@ -378,7 +383,7 @@ class ProductController extends Controller
 
         $user_id = $user->id;
 
-        $productPrice = ProductsPrice::where('id', $id)->first();
+        $productPrice = ProductsPrice::find($id);
 
         if (!$productPrice) {
             return response()->json(['message' => 'Product Pricing not found'], 404);
@@ -389,19 +394,28 @@ class ProductController extends Controller
             'price' => 'required|numeric',
             'qty' => 'required|numeric',
             'effective_date' => 'required|date',
+            'supplierId' => 'required|integer|exists:suppliers,id',
         ]);
+
+        
 
         $productPrice->update([
             'cost' => $request->cost,
             'price' => $request->price,
             'qty' => $request->qty,
+            'supplier_id' => $request->supplierId,
             'effective_date' => Carbon::parse($request->effective_date)->format('Y/m/d'),
             'updated_by' => $user_id
         ]);
 
+        $productPrice->refresh();
+
         $this->updateLatestPrice($productPrice->product_id);
 
-        return response()->json(['message' => 'success']);
+        $productPrices = $this->fetchProductPrices($productPrice->product_id);
+
+        return response()->json(['message' => 'success',
+            'product' => $productPrices]);
     }
 
     public function fetch(Request $request)
@@ -501,7 +515,37 @@ class ProductController extends Controller
 
         Excel::import(new ProductImport($filePath), $file);
         $count = Product::count(); // Or count records inserted by the import
-        return response()->json(['message' => "Products imported successfully! Total records: $count"]);
-       
+        return response()->json(['message' => "Products imported successfully! Total records: $count"]);       
+    }
+
+    public function updateImage(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'image' => 'required|image|max:2048',
+        ]);
+
+        $product = Product::find($request->product_id);
+
+        if ($product->img) {
+            Storage::delete($product->img);
+        }
+
+        $path = $request->file('image')->store('product_images','public');
+        $product->img = $path;
+        $product->save();
+        
+        return response()->json([
+            'success' => true,
+            'image_url' => asset("storage/$product->img"),
+        ]);
+    }
+    private function fetchProductPrices($productId)
+    {
+        return ProductsPrice::with('supplier')
+            ->where('product_id',$productId)
+            ->orderBy('effective_date','DESC')
+            ->orderBy('id','DESC')
+            ->get();
     }
 }

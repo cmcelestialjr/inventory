@@ -45,7 +45,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/products/upload', [ProductController::class, 'upload']);
     Route::get('/products/categoriesCount', [ProductController::class, 'categoriesCount']);
     Route::get('/products/print', [ProductController::class, 'print']);
-    
+    Route::post('/product/update-image', [ProductController::class, 'updateImage']);
+
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
     Route::post('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);

@@ -25,10 +25,15 @@ const Products = () => {
   const [filterCategory, setFilterCategory] = useState(null);  
   const [modalImageOpen, setModalImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageProductId, setSelectedImageProductId] = useState(null);
   const [sortColumn, setSortColumn] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc"); 
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [selectedSupplierModal, setSelectedSupplierModal] = useState(null);
+  const [isImageEditing, setIsImageEditing] = useState(false);
+  const [newImageFile, setNewImageFile] = useState(null);
+  const [previewImage, setPreviewImage] = useState(selectedImage);
+  const fileInputRef = useRef(null);
   const didFetch = useRef(false);
   const [summary, setSummary] = useState({
     total: 0,
@@ -67,6 +72,7 @@ const Products = () => {
     cost: "",
     price: "",
     qty: "",
+    supplierId: null,
     effective_date: null,
   });  
 
@@ -179,14 +185,31 @@ const Products = () => {
     setPage(1);
   };
 
-  const handleImageClick = (imgSrc) => {
+  const handleImageEditClick = () => {
+    setIsImageEditing(true);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setNewImageFile(file);
+    if (file) {
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  };
+
+  const handleImageClick = (imgSrc,productId) => {
+    setSelectedImageProductId(productId);
     setSelectedImage(imgSrc);
+    setPreviewImage(imgSrc);
     setModalImageOpen(true);
   };
 
-  const closeImageModal = () => {
+  const handleImageClose = () => {
     setModalImageOpen(false);
+    setSelectedImageProductId(null);
     setSelectedImage(null);
+    setIsImageEditing(false);
+    setNewImageFile(null);
   };
 
   const handleChange = async (e) => {
@@ -376,7 +399,14 @@ const Products = () => {
   };
 
   const openEditPricingModal = (pricing) => {
-    setSelectedPricing(pricing);
+    setSelectedPricing({
+      ...pricing,
+      supplierId: {
+        value: pricing.supplier_id,
+        label: pricing.supplier?.name || 'Unknown Supplier',
+      },
+    });
+
     setShowPricingModal(true);
   };
 
@@ -395,15 +425,18 @@ const Products = () => {
   
     try {
       const token = localStorage.getItem("token");
+      
       const formattedData = {
         ...selectedPricing,
         effective_date: selectedPricing.effective_date
           ? new Date(selectedPricing.effective_date).toISOString().split("T")[0]
           : null,
+        supplierId: selectedPricing.supplierId?.value ?? null,
       };
+      let response;
       var check = 0;
       if (selectedPricing.id) {
-        const response = await axios.put(`/api/product-pricing/${selectedPricing.id}`, formattedData, {
+        response = await axios.put(`/api/product-pricing/${selectedPricing.id}`, formattedData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if(response.data.message=="success"){
@@ -413,11 +446,11 @@ const Products = () => {
           toastr.error(response.data.message);
         }  
       } else {
-        const response = await axios.post(`/api/product-pricing`, formattedData, {
+        response = await axios.post(`/api/product-pricing`, formattedData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if(response.data.message=="success"){
-          toastr.success("Successfuly add the New Pricing of the product!");
+          toastr.success("Success!");
           check = 1;
         }else{
           toastr.error(response.data.message);
@@ -426,9 +459,7 @@ const Products = () => {
       if(check==1){
         setEditFormData((prevData) => ({
           ...prevData,
-          pricingList: selectedPricing.id
-            ? prevData.pricingList.map((p) => (p.id === selectedPricing.id ? formattedData : p))
-            : [...prevData.pricingList, formattedData],
+          pricingList: response.data.product,
         }));
         fetchProducts(filterType,filterCategory);
         setShowPricingModal(false);
@@ -446,9 +477,41 @@ const Products = () => {
       cost: "",
       price: "",
       qty: "",
+      supplierId: null,
       effective_date: null,
     });
     setShowPricingModal(true);
+  };
+
+  const handleImageSave = async () => {
+    if (!newImageFile || !selectedImageProductId) return;
+
+    const formData = new FormData();
+    formData.append('image', newImageFile);
+    formData.append('product_id', selectedImageProductId);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`/api/product/update-image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.success) {
+        setSelectedImage(response.data.image_url);
+        setPreviewImage(response.data.image_url);
+        setIsImageEditing(false);
+        setNewImageFile(null);
+        fetchProducts(filterType,filterCategory);
+        toastr.success("Success!");
+      } else {
+        // console.error(response.data.message);
+      }
+    } catch (error) {
+      // console.error('Image update failed:', error);
+    }
   };
 
   const handlePrint = async () => {
@@ -633,16 +696,17 @@ const Products = () => {
     
         const thead = doc.createElement('thead');
         const headerRow = doc.createElement('tr');
-        const headers = ['#', 'Code', 'Image', 'Name', 'Category', 'Cost', 'Price', 'Qty'];
+        const headers = ['#', 'Code', 'Supplier', 'Image', 'Name', 'Category', 'Cost', 'Price', 'Qty'];
         const columnWidths = {
             '#': '5%',
             'Code': '10%',
+            'Supplier': '10%',
             'Image': '15%',
-            'Name': '20%',
+            'Name': '15%',
             'Category': '15%',
-            'Cost': '12%',
-            'Price': '12%',
-            'Qty': '11%'
+            'Cost': '10%',
+            'Price': '10%',
+            'Qty': '10%'
         };
         headers.forEach(headerText => {
             const th = doc.createElement('th');
@@ -666,6 +730,20 @@ const Products = () => {
             const codeCell = doc.createElement('td');
             codeCell.innerText = product.code || 'N/A';
             row.appendChild(codeCell);
+
+            const uniqueSuppliers = product.pricing_list_available?.filter(
+              (value, idx, self) =>
+                idx === self.findIndex((t) => t.supplier?.id === value.supplier?.id)
+            );
+          
+            const suppliersName = uniqueSuppliers
+              ?.map((p) => p.supplier?.name || '')
+              .join('\n') || '';
+
+            const supplierCell = doc.createElement('td');
+            supplierCell.innerText = suppliersName;
+            supplierCell.style.whiteSpace = 'pre-line';
+            row.appendChild(supplierCell);
 
             const imageCell = doc.createElement('td');
             const img = document.createElement('img');
@@ -1055,7 +1133,7 @@ const Products = () => {
                         src={product.img}
                         alt={product.name}
                         className="w-16 h-16 object-cover rounded cursor-pointer"
-                        onClick={() => handleImageClick(product.img)}
+                        onClick={() => handleImageClick(product.img,product.id)}
                       />
                     </td>
                     <td className="border border-gray-300 px-4 py-2">{product.name}</td>
@@ -1393,6 +1471,7 @@ const Products = () => {
                             <p className="text-xl font-semibold text-blue-600">{pricing.price}</p>
                             <p className="text-sm text-gray-500">Cost: {pricing.cost}</p>
                             <p className="text-sm text-gray-500">Qty: {pricing.qty}</p>
+                            <p className="text-sm text-gray-500">Supplier: {pricing.supplier?.name}</p>
                             <p className="text-xs text-gray-400">
                               Effective Date: {new Date(pricing.effective_date).toLocaleDateString("en-US", {
                                 year: "numeric",
@@ -1469,6 +1548,18 @@ const Products = () => {
                 }`}
               />
 
+              {/* Supplier */}
+              <label className="block mb-2 mt-3">Supplier:</label>
+              <AsyncSelect
+                cacheOptions
+                defaultOptions
+                loadOptions={fetchSuppliersModal}
+                onChange={(selected) => setSelectedPricing({ ...selectedPricing, supplierId: selected })}
+                value={selectedPricing.supplierId}
+                className="w-full"
+                placeholder="Search Suppliers..."
+              />
+
               {/* Effective Date Picker */}
               <label className="block mb-2 mt-3">Effective Date:</label>
               <DatePicker
@@ -1495,20 +1586,51 @@ const Products = () => {
 
         {modalImageOpen && (
           <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-4 rounded-lg w-full max-w-2xl max-h-[90vh]">
-              <img
-                src={selectedImage}
-                alt="Preview"
-                className="w-full max-h-[80vh] object-cover"
-              />
+          <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Product Image</h2>
+  
+            <img
+              src={previewImage}
+              alt="Product Preview"
+              className="w-full max-h-[70vh] object-contain border rounded mb-4"
+            />
+  
+            {isImageEditing && (
+              <div className="mb-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="block w-full border p-2 rounded"
+                />
+              </div>
+            )}
+  
+            <div className="flex justify-end space-x-2">
+              {!isImageEditing ? (
+                <button
+                  onClick={handleImageEditClick}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Edit Image
+                </button>
+              ) : (
+                <button
+                  onClick={handleImageSave}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Save
+                </button>
+              )}
               <button
-                onClick={closeImageModal}
-                className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
+                onClick={handleImageClose}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
               >
                 Close
               </button>
             </div>
           </div>
+        </div>
         
         )}
 
