@@ -320,7 +320,7 @@ class DashboardController extends Controller
             ->whereNull('sales_products.product_id')
             ->orWhere(function ($query) {
                 $query->whereNotNull('sales.id') 
-                      ->where('sales.sales_status_id', '!=', 2);
+                    ->where('sales.sales_status_id', '!=', 2);
             })
             ->limit(5)
             ->get();
