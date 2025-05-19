@@ -306,16 +306,19 @@ class ServiceTransactionsController extends Controller
             $qtyOld = 0;
         }
         
-        if($qty<$qtyOld || $qty>$qtyOld || $type=='remove'){
+        if($qty<$qtyOld || $qty>$qtyOld || $type=='remove' || $type=='add'){
             
             $productPrice = ProductsPrice::where('product_id', $product_id)
-                ->where('cost', $cost)
+                ->orderBy('restock_date', 'DESC')
                 ->first();
             
             if ($productPrice) {
                 if($type=='remove'){
                     $qtyDiff = $qty;
                     $newQuantity = max(0, $productPrice->qty + $qtyDiff);
+                }elseif($type=='add'){
+                    $qtyDiff = $qty;
+                    $newQuantity = max(0, $productPrice->qty - $qtyDiff);
                 }else{
                     if($qty<$qtyOld){
                         $qtyDiff = $qtyOld-$qty;
@@ -492,13 +495,16 @@ class ServiceTransactionsController extends Controller
         $user = Auth::user();
         $cashier_id = $user->id;
 
+        $service_transaction_id = $validatedData['serviceTransactionId'];
+
         $day_out = strtotime($validatedData['serviceDateOut']) ? date('Y-m-d', strtotime($validatedData['serviceDateOut'])) : null;
         $date_finished = strtotime($validatedData['serviceDateFinished']) ? date('Y-m-d', strtotime($validatedData['serviceDateFinished'])) : null;
         $service_status_id = $validatedData['serviceStatus'];
         if($day_out){
             $service_status_id = 2;
         }
-        $query = ServiceTransaction::findOrFail($validatedData['serviceTransactionId']);
+        $query = ServiceTransaction::findOrFail($service_transaction_id);
+        $service_status_id_old = $query->service_status_id;
         $query->service_status_id = $service_status_id;
         $query->date_started = date('Y-m-d', strtotime($validatedData['serviceStartDate']));
         $query->date_finished = $date_finished;
@@ -506,9 +512,29 @@ class ServiceTransactionsController extends Controller
         $query->updated_by = $cashier_id;
         $query->save();
 
+        $products = ServiceTransactionProduct::where('service_transaction_id',$service_transaction_id)->get();
+        $this->manageServiceTransactionProductsCancelReturn($products, $service_transaction_id, $service_status_id, $service_status_id_old);
+
         return response()->json([
             'message' => 'Successful! Updated service status saved..',
         ], 200);
+    }
+    private function manageServiceTransactionProductsCancelReturn($products, $service_transaction_id, $service_status_id, $service_status_id_old)
+    {
+        if($products->count()>0){
+            foreach ($products as $product) {
+                $product_id = $product->product_id;
+                $cost = $product->cost;
+                $qty = $product->qty;
+
+                if(($service_status_id==3 || $service_status_id==5) && ($service_status_id_old!=3 && $service_status_id_old!=5)){
+                    $this->updateProduct($service_transaction_id, $product_id, $qty, $cost, 'remove');
+                }elseif(($service_status_id!=3 && $service_status_id!=5) && ($service_status_id_old==3 || $service_status_id_old==5)){
+                    $this->updateProduct($service_transaction_id, $product_id, $qty, $cost, 'add');
+                }
+                
+            }
+        }
     }
     public function serviceStatusCount(Request $request)
     {
@@ -518,6 +544,7 @@ class ServiceTransactionsController extends Controller
                 COALESCE(SUM(CASE WHEN service_status_id = 1 THEN 1 ELSE 0 END), 0) as ongoing,
                 COALESCE(SUM(CASE WHEN service_status_id = 2 THEN 1 ELSE 0 END), 0) as done,
                 COALESCE(SUM(CASE WHEN service_status_id = 3 THEN 1 ELSE 0 END), 0) as cancelled,
+                COALESCE(SUM(CASE WHEN service_status_id = 5 THEN 1 ELSE 0 END), 0) as returned,
                 COALESCE(SUM(CASE WHEN service_status_id = 4 THEN 1 ELSE 0 END), 0) as onhold,
                 COALESCE(SUM(CASE WHEN payment_status_id = 1 THEN 1 ELSE 0 END), 0) as none,
                 COALESCE(SUM(CASE WHEN payment_status_id = 2 THEN 1 ELSE 0 END), 0) as partial,

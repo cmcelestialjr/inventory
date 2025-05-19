@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare } from "lucide-react";
+import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare, Reply } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -102,6 +102,7 @@ const TransactionTransactions = () => {
         done: 0,
         cancelled: 0,
         onhold: 0,
+        returned: 0,
     });
 
     const [paymentStatuses, setPaymentStatuses] = useState({ 
@@ -250,6 +251,7 @@ const TransactionTransactions = () => {
                 cost: productList.cost,
                 qty: productList.qty,
                 total: productList.total,
+                returned: productList.qty_returned,
             }));
             setProductsSelected(updatedProducts);
 
@@ -362,7 +364,8 @@ const TransactionTransactions = () => {
             name: product.product?.name_variant,
             cost: product.product?.cost,
             qty: product.qty,
-            total: product.product?.cost * product.qty
+            total: product.product?.cost * product.qty,
+            returned: 0,
         }));
         if (productsData && productsData.length > 0) {
             setProductsSelected(productsData);
@@ -436,7 +439,8 @@ const TransactionTransactions = () => {
             name: productName,
             cost: productCost,
             qty: productQty,
-            total: productTotalCost
+            total: productTotalCost,
+            returned: 0
         };
     
         setProductsSelected((prevProducts) => [...prevProducts, newProduct]);
@@ -882,7 +886,7 @@ const TransactionTransactions = () => {
                 </div>
 
                 {/* Summary Section */}
-                <div className="grid grid-cols-8 gap-3 mb-4">
+                <div className="grid grid-cols-9 gap-3 mb-4">
                     <button
                         onClick={() => handleSelectedServiceStatus("All")}
                         className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
@@ -932,6 +936,16 @@ const TransactionTransactions = () => {
                         <XCircle size={24} className={`${selectedTransactionStatus === 3 ? "text-white" : "text-red-600"}`} />
                         <span className="text-sm font-semibold">Cancelled Services</span>
                         <span className="text-lg font-bold">{serviceStatuses.cancelled}</span>
+                    </button>
+                    <button
+                        onClick={() => handleSelectedServiceStatus(5)}
+                        className={`flex flex-col items-center p-3 rounded-xl shadow-md transition-all duration-300 transform hover:scale-105 ${
+                            selectedTransactionStatus === 5 ? "bg-red-600 text-white" : "bg-white border border-gray-300"
+                        }`}
+                    >
+                        <XCircle size={24} className={`${selectedTransactionStatus === 3 ? "text-white" : "text-orange-600"}`} />
+                        <span className="text-sm font-semibold">Returned Services</span>
+                        <span className="text-lg font-bold">{serviceStatuses.returned}</span>
                     </button>
                 {/* </div>
 
@@ -1428,9 +1442,10 @@ const TransactionTransactions = () => {
                                                     <th className="border px-4 py-2 text-left">Unit Cost</th>
                                                     <th className="border px-4 py-2 text-left">Quantity</th>
                                                     <th className="border px-4 py-2 text-left">Total</th>
+                                                    <th className="border px-4 py-2 text-left">Returned</th>
                                                     <th className="border px-4 py-2 text-left">Actions</th>
                                                     </tr>
-                                                </thead>  
+                                                </thead>
                                                 <tbody>
                                                     {productsSelected?.map((product, index) => (
                                                     <tr key={index}>
@@ -1438,13 +1453,20 @@ const TransactionTransactions = () => {
                                                         <td className="border px-4 py-2">₱{Number((product.cost)).toFixed(2).toLocaleString()}</td>
                                                         <td className="border px-4 py-2">{product.qty}</td>
                                                         <td className="border px-4 py-2">₱{Number((product.total)).toFixed(2).toLocaleString()}</td>
+                                                        <td className="border px-4 py-2">{product.returned}</td>
                                                         <td className="border px-4 py-2">
-                                                        <button
-                                                            onClick={() => handleRemoveProduct(product, index)}
-                                                            className="text-red-500 hover:underline text-sm"
-                                                        >
-                                                            <X size={24} />
-                                                        </button>
+                                                            <button
+                                                                onClick={() => handleRemoveProduct(product, index)}
+                                                                className="text-red-500 hover:underline text-sm"
+                                                            >
+                                                                <X size={24} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleReturnProduct(product, index)}
+                                                                className="text-red-500 hover:underline text-sm"
+                                                            >
+                                                                <Reply size={24} />
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                     ))}
