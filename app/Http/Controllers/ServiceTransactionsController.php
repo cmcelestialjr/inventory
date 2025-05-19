@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Product;
+use App\Models\ProductsPrice;
 use App\Models\Service;
 use App\Models\ServicesStatus;
 use App\Models\ServiceTransaction;
@@ -85,6 +87,7 @@ class ServiceTransactionsController extends Controller
     }
     private function store($request)
     {
+        // dd($request);
         $validatedData = $request->validate([
             'serviceTransactionId' => 'nullable|integer|exists:service_transactions,id',
             'serviceId' => 'required|integer|exists:services,id',
@@ -262,19 +265,27 @@ class ServiceTransactionsController extends Controller
     private function manageServiceTransactionProducts($validatedData, $service_transaction_id, $cashier_id, $laborCost, $amount)
     {
         foreach ($validatedData['productsSelected'] as $product) {
+            $product_id = $product['id'];
+            $cost = $product['cost'];
+            $qty = $product['qty'];
+
+            $this->updateProduct($service_transaction_id, $product_id, $qty, $cost, 'update');            
+
             ServiceTransactionProduct::updateOrCreate(
                 [
                     'service_transaction_id' => $service_transaction_id,
-                    'product_id' => $product['id'],
+                    'product_id' => $product_id
                 ],
                 [
-                    'qty' => $product['qty'],
-                    'cost' => $product['cost'],
-                    'total' => $product['qty'] * $product['cost'],
+                    'qty' => $qty,
+                    'cost' => $cost,
+                    'total' => $qty * $cost,
                     'updated_by' => $cashier_id,
                     'created_by' => $cashier_id,
                 ]
             );
+
+            
         }
         $totalAmount = ServiceTransactionProduct::where('service_transaction_id', $service_transaction_id)->sum('total');
         ServiceTransaction::where('id', $service_transaction_id)->update([
@@ -282,6 +293,44 @@ class ServiceTransactionsController extends Controller
             'total_cost' => $laborCost+$totalAmount,
             'income' => $amount-$laborCost+$totalAmount
         ]);
+    }
+    private function updateProduct($service_transaction_id, $product_id, $qty, $cost, $type)
+    {
+        $checkProduct = ServiceTransactionProduct::where('service_transaction_id',$service_transaction_id)
+                ->where('product_id',$product_id)
+                ->first();
+        
+        if($checkProduct){            
+            $qtyOld = $checkProduct->qty;            
+        }else{
+            $qtyOld = 0;
+        }
+        
+        if($qty<$qtyOld || $qty>$qtyOld || $type=='remove'){
+            
+            $productPrice = ProductsPrice::where('product_id', $product_id)
+                ->where('cost', $cost)
+                ->first();
+            
+            if ($productPrice) {
+                if($type=='remove'){
+                    $qtyDiff = $qty;
+                    $newQuantity = max(0, $productPrice->qty + $qtyDiff);
+                }else{
+                    if($qty<$qtyOld){
+                        $qtyDiff = $qtyOld-$qty;
+                        $newQuantity = max(0, $productPrice->qty + $qtyDiff);
+                    }else{
+                        $qtyDiff = $qty-$qtyOld;
+                        $newQuantity = max(0, $productPrice->qty - $qtyDiff);
+                    }
+                }
+                $productPrice->update(['qty' => $newQuantity]);
+            }
+                
+            $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
+            Product::where('id', $product_id)->update(['qty' => $totalStock]);
+        }
     }
     private function manageServiceTransactionPayments($validatedData, $service_transaction_id, $cashier_id, $amount)
     {
@@ -384,6 +433,12 @@ class ServiceTransactionsController extends Controller
         $validatedData = $request->validate([
             'id' => 'required|integer|exists:service_transaction_products,id',
         ]);
+
+        $service_transaction_id = $validatedData['id'];
+
+        $query = ServiceTransactionProduct::where('id', $service_transaction_id)->first();
+
+        $this->updateProduct($service_transaction_id, $query->product_id, $query->qty, $query->cost, 'remove');   
         
         $deleted = ServiceTransactionProduct::where('id', $validatedData['id'])->delete();
 
@@ -486,8 +541,8 @@ class ServiceTransactionsController extends Controller
                 if ($startDate && $endDate) {
                     $query->where(function ($q) use ($startDate, $endDate) {
                         $q->whereBetween('date_started', [$startDate, $endDate])
-                          ->orWhereBetween('date_finished', [$startDate, $endDate])
-                          ->orWhereBetween('day_out', [$startDate, $endDate]);
+                            ->orWhereBetween('date_finished', [$startDate, $endDate])
+                            ->orWhereBetween('day_out', [$startDate, $endDate]);
                     });
                 }
             });

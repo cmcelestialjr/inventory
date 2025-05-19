@@ -246,7 +246,7 @@ const TransactionTransactions = () => {
             const updatedProducts = transaction.products?.map((productList) => ({
                 pid: productList.id,
                 id: productList.product_id,
-                name: productList.product_info.name,
+                name: productList.product_info.name_variant,
                 cost: productList.cost,
                 qty: productList.qty,
                 total: productList.total,
@@ -358,7 +358,7 @@ const TransactionTransactions = () => {
         setDiscount(service.discount);
         const productsData = service.products?.map(product => ({
             pid: null,
-            id: product.id,
+            id: product.product?.id,
             name: product.product?.name_variant,
             cost: product.product?.cost,
             qty: product.qty,

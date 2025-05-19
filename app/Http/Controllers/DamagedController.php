@@ -22,7 +22,7 @@ class DamagedController extends Controller
             $query->where(function ($query) use ($search) {
                 $query->whereHas('productInfo', function ($q) use ($search) {
                     $q->where('name', 'LIKE', "%{$search}%")
-                      ->orWhere('code', 'LIKE', "%{$search}%");
+                    ->orWhere('code', 'LIKE', "%{$search}%");
                 });
                 
                 $query->orWhereHas('statusInfo', function ($q) use ($search) {

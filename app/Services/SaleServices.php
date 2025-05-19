@@ -7,7 +7,8 @@ use App\Models\ProductsPrice;
 use App\Models\Sale;
 use App\Models\SalesPayment;
 use App\Models\SalesProduct;
-use Auth;
+use Illuminate\Support\Facades\Auth;
+
 class SaleServices
 {
     public function insertSale($validatedData, $saleStatus)
