@@ -588,6 +588,62 @@ class ServiceTransactionsController extends Controller
             ], 500);
         }
     }
+    public function returned(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|integer|exists:service_transaction_products,id',
+            'returned' => 'required|numeric|min:0.00',
+        ]);
+
+        try{
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            $cashier_id = $user->id;
+
+            $query = ServiceTransactionProduct::findOrFail($validatedData['id']);
+
+            $returned_old = $query->qty_returned;
+            $returned = $validatedData['returned'];
+
+            if($returned>$returned_old){
+                $qty = $query->qty - $validatedData['returned'];                
+            }else{
+                $qty_add = $returned_old-$returned;
+                $qty = $query->qty + $qty_add;
+            }
+            
+            $total = $query->cost * $qty;
+            
+            $query->qty = $qty;
+            $query->total = $total;
+            $query->qty_returned = $returned;
+            $query->updated_by = $cashier_id;
+            $query->save();
+
+            if($returned>$returned_old){
+                $qty_add = $returned-$returned_old;
+                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_add, $query->cost, 'add'); 
+            }elseif($returned<$returned_old){
+                $qty_remove = $returned_old-$returned;
+                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_remove, $query->cost, 'remove'); 
+            }
+
+            DB::commit();
+            return response()->json([
+                'qty' => $qty,
+                'total' => $total,
+                'message' => 'Successful! Updated returned product..',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     private function getCustomer($name,$contactNo,$email,$address,$cashier_id)
     {
         $customer = Customer::where('name',$name)->first();

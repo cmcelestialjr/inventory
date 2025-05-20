@@ -871,6 +871,57 @@ const TransactionTransactions = () => {
         }
     };
 
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editedReturned, setEditedReturned] = useState("");
+
+    const handleReplyClick = (product, index) => {
+        setEditingIndex(index);
+        setEditedReturned(product.returned);
+    };
+
+    const handleReturnedChange = (e) => {
+        setEditedReturned(e.target.value);
+    };
+
+    const handleSaveReturned = async (index) => {
+        
+        if(editedReturned > productsSelected[index].qty){
+            toastr.error(`The return should not be larger than the quantity.`);
+            return;
+        }
+
+        try {
+
+            const formData = {
+                id: productsSelected[index].pid,
+                returned: editedReturned,
+            };
+            
+            const token = localStorage.getItem("token");
+            const response = await axios.post(`/api/service-transaction/returned`, 
+                formData, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.status === 200 || response.status === 201) {
+                toastr.success(response.data.message);
+                productsSelected[index].qty = response.data.qty;
+                productsSelected[index].total = response.data.total;
+                productsSelected[index].returned = editedReturned;
+                setEditingIndex(null);
+            }else{
+                toastr.error("Error! There is something wrong in saving return product.");
+            }           
+            
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || "An error occurred while saving the return product.";
+            toastr.error(errorMessage);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingIndex(null);
+    };
+
     return (
         <Layout>
             <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
@@ -1453,20 +1504,51 @@ const TransactionTransactions = () => {
                                                         <td className="border px-4 py-2">₱{Number((product.cost)).toFixed(2).toLocaleString()}</td>
                                                         <td className="border px-4 py-2">{product.qty}</td>
                                                         <td className="border px-4 py-2">₱{Number((product.total)).toFixed(2).toLocaleString()}</td>
-                                                        <td className="border px-4 py-2">{product.returned}</td>
                                                         <td className="border px-4 py-2">
-                                                            <button
-                                                                onClick={() => handleRemoveProduct(product, index)}
-                                                                className="text-red-500 hover:underline text-sm"
-                                                            >
-                                                                <X size={24} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReturnProduct(product, index)}
-                                                                className="text-red-500 hover:underline text-sm"
-                                                            >
-                                                                <Reply size={24} />
-                                                            </button>
+                                                            {editingIndex === index ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={editedReturned}
+                                                                    onChange={handleReturnedChange}
+                                                                    className="border px-2 py-1 rounded w-full"
+                                                                    autoFocus
+                                                                />
+                                                            ) : (
+                                                                product.returned
+                                                            )}
+                                                        </td>
+                                                        <td className="border px-4 py-2">
+                                                            {editingIndex === index ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleSaveReturned(index)}
+                                                                        className="text-green-600 hover:underline text-sm mr-2"
+                                                                    >
+                                                                        Save
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={handleCancelEdit}
+                                                                        className="text-gray-500 hover:underline text-sm"
+                                                                    >
+                                                                        Close
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleRemoveProduct(product, index)}
+                                                                        className="text-red-500 hover:underline text-sm mr-2"
+                                                                    >
+                                                                        <X size={24} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleReplyClick(product, index)}
+                                                                        className="text-blue-500 hover:underline text-sm"
+                                                                    >
+                                                                        <Reply size={24} />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                     ))}

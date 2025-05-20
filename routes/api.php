@@ -103,6 +103,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-service-statuses-count', [ServiceTransactionsController::class, 'serviceStatusCount']);
     Route::post('/service-transaction-payment/payment', [ServiceTransactionsController::class, 'payment']);
     Route::get('/fetch-service-statuses', [ServiceTransactionsController::class, 'serviceStatuses']);
+    Route::post('/service-transaction/returned', [ServiceTransactionsController::class, 'returned']);
 
     Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
     Route::post('/purchase-orders/manage', [PurchaseOrderController::class, 'manage']);
