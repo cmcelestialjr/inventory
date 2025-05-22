@@ -451,6 +451,26 @@ class ServiceTransactionsController extends Controller
             return response()->json(['message' => 'Product not found.'], 404);
         }
     }
+    public function removeProduct1(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|integer|exists:service_transaction_products,id',
+        ]);
+
+        $service_transaction_id = $validatedData['id'];
+
+        $query = ServiceTransactionProduct::where('id', $service_transaction_id)->first();
+
+        // $this->updateProduct($service_transaction_id, $query->product_id, $query->qty, $query->cost, 'remove');   
+        
+        $deleted = ServiceTransactionProduct::where('id', $validatedData['id'])->delete();
+
+        if ($deleted) {
+            return response()->json(['message' => 'Product deleted successfully.'], 200);
+        } else {
+            return response()->json(['message' => 'Product not found.'], 404);
+        }
+    }
     public function removePayment(Request $request)
     {
         $validatedData = $request->validate([

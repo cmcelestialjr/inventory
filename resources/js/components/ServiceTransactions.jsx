@@ -456,7 +456,7 @@ const TransactionTransactions = () => {
     const handleRemoveProduct = async (product, index) => {
         Swal.fire({
             title: `Remove ${product.name}?`,
-            text: `Are you sure you want to remove "${product.name}" costed at ${product.cost}? This action cannot be undone!`,
+            text: `Are you sure you want to remove "${product.name}" costed at ${product.cost}? The Quantity will add to product!`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#d33",
@@ -468,6 +468,43 @@ const TransactionTransactions = () => {
                     try {
                         const authToken = localStorage.getItem("token");
                         const response = await axios.get("/api/service-transactions/removeProduct", {
+                            params: { id: product.pid },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                        });
+                        if (response.data.message === 'Product deleted successfully.') {
+                            setProductsSelected((prevProducts) => prevProducts.filter((_, i) => i !== index));
+                            fetchTransactions(selectedTransactionStatus, selectedPaymentStatus);
+                            Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                        } else {
+                            Swal.fire("Error", response.data.message, "error");
+                        }
+                    } catch (error) {
+                        // console.error("Error fetching products:", error);
+                        Swal.fire("Error", "An error occurred while removing the product.", "error");
+                    }
+                }else{
+                    setProductsSelected(productsList.filter((_, i) => i !== index));
+                    Swal.fire("Removed!", `"${product.name}" has been removed.`, "success");
+                }
+            }
+        });
+    };
+
+    const handleRemoveProduct1 = async (product, index) => {
+        Swal.fire({
+            title: `Remove ${product.name}?`,
+            text: `Are you sure you want to remove "${product.name}" costed at ${product.cost}? The Quantity will not add to product quantity!`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, remove it!",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                if(product.pid!=null){
+                    try {
+                        const authToken = localStorage.getItem("token");
+                        const response = await axios.get("/api/service-transactions/removeProduct1", {
                             params: { id: product.pid },
                             headers: { Authorization: `Bearer ${authToken}` },
                         });
@@ -1546,6 +1583,12 @@ const TransactionTransactions = () => {
                                                                         className="text-blue-500 hover:underline text-sm"
                                                                     >
                                                                         <Reply size={24} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleRemoveProduct1(product, index)}
+                                                                        className="text-red-500 hover:underline text-sm mr-2"
+                                                                    >
+                                                                        Remove
                                                                     </button>
                                                                 </>
                                                             )}
