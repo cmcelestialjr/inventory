@@ -15,12 +15,13 @@ class Supplier extends Model
 
     protected $fillable = [
         'name', 
+        'company_name',
         'address', 
         'contact_person',
         'email_address',
         'supplier_status',
         'updated_by',
-        'created_by',        
+        'created_by',
     ];
 
     public function contacts(): HasMany

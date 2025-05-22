@@ -16,6 +16,8 @@ const Suppliers = () => {
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
     const [supplierId, setSupplierId] = useState(null);
     const [supplierName, setSupplierName] = useState(null);
+    const [company, setCompany] = useState(null);
+    const [address, setAddress] = useState(null);
     const [contactPerson, setContactPerson] = useState(null);
     const [contactNo, setContactNo] = useState(null);
     const [contacts, setContacts] = useState([]);
@@ -71,6 +73,8 @@ const Suppliers = () => {
             const formData = {
                 supplierId: supplierId,
                 supplierName: supplierName,
+                company: company,
+                address: address,
                 contactPerson: contactPerson,
                 contacts: contacts,
                 email: email,
@@ -86,6 +90,8 @@ const Suppliers = () => {
                 if(supplierId==null){
                     setSupplierId(null);
                     setSupplierName(null);
+                    setCompany(null);
+                    setAddress(null);
                     setContactPerson(null);
                     setContactNo(null);
                     setContacts([]);
@@ -157,6 +163,8 @@ const Suppliers = () => {
     const handleSupplierNew = () => {
         setSupplierId(null);
         setSupplierName(null);
+        setCompany(null);
+        setAddress(null);
         setContactPerson(null);
         setContactNo(null);
         setContacts([]);
@@ -168,6 +176,8 @@ const Suppliers = () => {
     const handleSupplierEdit = (supplier) => {
         setSupplierId(supplier.id);
         setSupplierName(supplier.name);
+        setCompany(supplier.company_name);
+        setAddress(supplier.address);
         setContactPerson(supplier.contact_person);
         setContactNo(null);
         setContacts(supplier.contacts);
@@ -179,6 +189,8 @@ const Suppliers = () => {
     const handleSupplierClose = () => {
         setSupplierId(null);
         setSupplierName(null);
+        setCompany(null);
+        setAddress(null);
         setContactPerson(null);
         setContactNo(null);
         setContacts([]);
@@ -230,8 +242,10 @@ const Suppliers = () => {
                         <thead>
                             <tr className="bg-gray-100 text-gray-700">
                                 <th className="border border-gray-300 px-4 py-2 text-left">Supplier</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left">Company Name</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left">Address</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Contact Person</th>
-                                <th className="border border-gray-300 px-4 py-2 text-left">Contact</th>
+                                <th className="border border-gray-300 px-4 py-2 text-left w-40">Contact</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Email</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
                                 <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
@@ -244,19 +258,27 @@ const Suppliers = () => {
                                         <td className="border border-gray-300 px-4 py-2">
                                             {supplier.name}
                                         </td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {supplier.company_name}
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {supplier.address}
+                                        </td>
                                         <td className="border border-gray-300 px-4 py-2">{supplier.contact_person}</td>
                                         <td className="border border-gray-300 px-4 py-2">
                                             {supplier.contacts && supplier.contacts.length > 0 ? (
-                                                <ul>
-                                                    {supplier.contacts.map((contact, index) => (
+                                                // <div className="max-h-40 overflow-y-auto">
+                                                    <ul>
+                                                        {supplier.contacts.map((contact, index) => (
                                                         <li key={index}>{contact.contact_no}</li>
-                                                    ))}
-                                                </ul>
+                                                        ))}
+                                                    </ul>
+                                                // </div>
                                             ) : (
                                                 <span>None</span>
                                             )}
                                         </td>
-                                        <td className="border border-gray-300 px-4 py-2">{supplier.email}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{supplier.email_address}</td>
                                             <td className="border border-gray-300 px-4 py-2">
                                                 {supplier.supplier_status === "Active" && (
                                                     <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full">
@@ -341,6 +363,28 @@ const Suppliers = () => {
                                     type="text"
                                     value={supplierName}
                                     onChange={(e) => setSupplierName(e.target.value)}
+                                    className="w-full p-2 border rounded"
+                                    placeholder="Supplier Name..."
+                                />
+                            </div>
+                            {/* Company Name */}
+                            <label className="block text-sm font-medium">Company Name</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={company}
+                                    onChange={(e) => setCompany(e.target.value)}
+                                    className="w-full p-2 border rounded"
+                                    placeholder="Supplier Name..."
+                                />
+                            </div>
+                            {/* Address Name */}
+                            <label className="block text-sm font-medium">Address</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
                                     className="w-full p-2 border rounded"
                                     placeholder="Supplier Name..."
                                 />

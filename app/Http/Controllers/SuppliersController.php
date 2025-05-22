@@ -85,6 +85,8 @@ class SuppliersController extends Controller
     {
         $validatedData = $request->validate([
             'supplierName' => 'required|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
             'contactPerson' => 'nullable|string|max:255',
             'contacts' => 'required|array|min:1',
             'contacts.*' => 'required',
@@ -106,6 +108,8 @@ class SuppliersController extends Controller
 
             $supplier = Supplier::create([
                 'name' => $validatedData['supplierName'],
+                'company_name' => $validatedData['company'],
+                'address' => $validatedData['address'],
                 'contact_person' => $validatedData['contactPerson'],
                 'email_address' => $validatedData['email'],
                 'supplier_status' => $validatedData['status'],
@@ -134,13 +138,15 @@ class SuppliersController extends Controller
         $validatedData = $request->validate([
             'supplierId' => 'required|integer|exists:suppliers,id',
             'supplierName' => 'required|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
             'contactPerson' => 'nullable|string|max:255',
             'contacts' => 'required|array|min:1',
             'contacts.*' => 'required',
             'email' => 'nullable|email|max:255',
             'status' => 'required|in:Active,Inactive',
         ]);
-
+        
         $supplierId = $validatedData['supplierId'];
 
         $check = Supplier::where('name',$validatedData['supplierName'])
@@ -161,6 +167,8 @@ class SuppliersController extends Controller
 
             $supplier->update([
                 'name' => $validatedData['supplierName'],
+                'company_name' => $validatedData['company'],
+                'address' => $validatedData['address'],
                 'contact_person' => $validatedData['contactPerson'],
                 'email_address' => $validatedData['email'],
                 'supplier_status' => $validatedData['status'],
