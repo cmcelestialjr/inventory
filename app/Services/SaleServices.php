@@ -190,7 +190,11 @@ class SaleServices
     }
     private function getCustomerId($customer_name)
     {
-        $customer = Customer::firstOrCreate(['name' => $customer_name]);
+        $customer = Customer::firstOrCreate(
+            ['name' => $customer_name],
+            ['customer_type_id' => 1] 
+        );
+
         return $customer->id;
     }
 }
