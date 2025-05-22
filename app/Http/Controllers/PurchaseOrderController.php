@@ -392,8 +392,10 @@ class PurchaseOrderController extends Controller
 
     private function productsUpdate($cashier_id, $supplier_id, $product_id, $status_id, $status_id_old, $cost, $cost_product, $cost_old, $qty, $qty_old)
     {
+        
         $cost_check = $cost>0 ? $cost : $cost_product;
         $cost_check = $cost_old>0 && $cost!=$cost_old ? $cost_old : $cost_check;
+        
         $query = ProductsPrice::where('product_id', $product_id)
             ->where('cost', $cost_check)
             ->first();
@@ -404,9 +406,9 @@ class PurchaseOrderController extends Controller
             $update->save();
         }else{
             $productInfo = ProductsPrice::where('product_id', $product_id)
-                ->where('cost', $cost_product)
+                ->orderBy('qty','DESC')
                 ->first();
-            $product_price = $productInfo->price;
+            $product_price = $productInfo->price;              
             $insert = new ProductsPrice;
             $insert->supplier_id = $supplier_id;
             $insert->product_id = $product_id;
