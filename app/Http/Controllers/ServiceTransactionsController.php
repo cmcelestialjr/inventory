@@ -291,7 +291,7 @@ class ServiceTransactionsController extends Controller
         ServiceTransaction::where('id', $service_transaction_id)->update([
             'product_cost' => $totalAmount,
             'total_cost' => $laborCost+$totalAmount,
-            'income' => $amount-$laborCost+$totalAmount
+            'income' => $amount-$laborCost-$totalAmount
         ]);
     }
     private function updateProduct($service_transaction_id, $product_id, $qty, $cost, $type)
