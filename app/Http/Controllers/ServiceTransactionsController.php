@@ -623,10 +623,10 @@ class ServiceTransactionsController extends Controller
 
             if($returned>$returned_old){
                 $qty_add = $returned-$returned_old;
-                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_add, $query->cost, 'add'); 
+                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_add, $query->cost, 'remove'); 
             }elseif($returned<$returned_old){
                 $qty_remove = $returned_old-$returned;
-                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_remove, $query->cost, 'remove'); 
+                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_remove, $query->cost, 'add'); 
             }
 
             DB::commit();
