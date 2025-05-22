@@ -19,7 +19,7 @@ class PurchaseOrderController extends Controller
     public function index(Request $request)
     {
         $query = PurchaseOrder::join('suppliers', 'suppliers.id', '=', 'purchase_orders.supplier_id')
-            ->select('purchase_orders.*', 'suppliers.name as supplier_name');
+            ->select('purchase_orders.*', 'suppliers.name as supplier_name', 'suppliers.address as supplier_address');
 
         if ($request->has('search')) {
             $search = $request->search;
@@ -408,7 +408,7 @@ class PurchaseOrderController extends Controller
             $productInfo = ProductsPrice::where('product_id', $product_id)
                 ->orderBy('qty','DESC')
                 ->first();
-            $product_price = $productInfo->price;              
+            $product_price = $productInfo->price;
             $insert = new ProductsPrice;
             $insert->supplier_id = $supplier_id;
             $insert->product_id = $product_id;

@@ -166,7 +166,7 @@ const PurchaseOrders = () => {
             setPoFormData({
                 poId: po.id,
                 supplierId: po.supplier_id,
-                supplierName: po.supplier_info?.name,
+                supplierName: po.supplier_name,
                 dateTime: parsedDate,
                 remarks: po.remarks,
                 productId: null,
@@ -442,7 +442,7 @@ const PurchaseOrders = () => {
             statusName: po.status_info?.name,
             statusColor: po.status_info?.color,
             supplierId: po.supplier_id,
-            supplierName: po.supplier_info?.name,
+            supplierName: po.supplier_name,
             dateTime: parsedDate,
             dateTimeReceived: parsedDateReceived,
             remarks: po.remarks,
@@ -696,7 +696,7 @@ const PurchaseOrders = () => {
         // Supplier Section
         const supplierDiv = doc.createElement('div');
         supplierDiv.className = 'supplier';
-        supplierDiv.innerHTML = `<span class="font-medium">Supplier: </span> <span class="underline">${po.supplier_info?.name}</span>`;
+        supplierDiv.innerHTML = `<span class="font-medium">Supplier: </span> <span class="underline">${po.supplier_name}</span>`;
 
         // Date Section
         const dateDiv = doc.createElement('div');
@@ -707,7 +707,7 @@ const PurchaseOrders = () => {
         // Address Section (below supplier & date)
         const addressDiv = doc.createElement('div');
         addressDiv.className = 'address';
-        addressDiv.innerHTML = `<span class="font-medium">Address: </span> <span class="underline">${po.supplier_info?.address || ""}</span>`;
+        addressDiv.innerHTML = `<span class="font-medium">Address: </span> <span class="underline">${po.supplier_address || ""}</span>`;
 
         // Append elements
         supplierDateContainer.appendChild(supplierDiv);
