@@ -19,7 +19,7 @@ class SaleServices
 
         $code = $this->getCode();
         $customer_id = $this->getCustomerId($validatedData['customer_name']);
-
+        $saleStatusOld = null;
         $sale = Sale::create([
             'date_time_of_sale' => $validatedData['date_time_of_sale'],
             'customer_id' => $customer_id,
@@ -42,7 +42,7 @@ class SaleServices
         $sale_id = $sale->id;
 
         $this->paymentOptions($sale_id,$validatedData,$cashier_id);
-        $this->products($sale,$validatedData,$cashier_id);
+        $this->products($sale,$saleStatusOld,$validatedData,$cashier_id);
 
         return $sale;
     }
@@ -53,7 +53,7 @@ class SaleServices
         $cashier_name = $user->name;
         $cashier_id = $user->id;
         $customer_id = $this->getCustomerId($validatedData['customer_name']);
-
+        $saleStatusOld = $sale->sales_status_id;
         $sale->update([
             'date_time_of_sale' => $validatedData['date_time_of_sale'],
             'customer_id' => $customer_id,
@@ -70,31 +70,40 @@ class SaleServices
             'cashier_name' => $cashier_name,
             'updated_by' => $cashier_id,
         ]);
-
+        
         $sale_id = $sale->id;
 
         $this->paymentOptions($sale_id,$validatedData,$cashier_id);
 
-        $salesProducts = SalesProduct::where('sale_id',$sale->id)->get();
-        if($salesProducts->count()>0){
-            foreach($salesProducts as $salesProduct){
-                $productPrice = ProductsPrice::where('product_id', $salesProduct->product_id)
-                    ->where('price', $salesProduct->price)
-                    ->where('cost', $salesProduct->cost)
-                    ->first();
+        // $salesProducts = SalesProduct::where('sale_id',$sale->id)->get();
+        // if($salesProducts->count()>0){
+            
+        //     foreach($salesProducts as $salesProduct){
+        //         $productPrice = ProductsPrice::where('product_id', $salesProduct->product_id)
+        //             ->where('price', $salesProduct->price)
+        //             ->where('cost', $salesProduct->cost)
+        //             ->first();
 
-                if ($productPrice) {
-                    $newQuantity = max(0, $productPrice->qty + $salesProduct->qty);
+        //         if(!$productPrice){
+        //             $productPrice = ProductsPrice::where('product_id', $salesProduct->product_id)
+        //                 ->orderBy('qty','DESC')
+        //                 ->orderBy('effective_date','DESC')
+        //                 ->first();
+        //         }
+                
+        //         if ($productPrice) {
+        //             $newQuantity = max(0, $productPrice->qty + $salesProduct->qty);
 
-                    $productPrice->update(['qty' => $newQuantity]);
-                }
+        //             $productPrice->update(['qty' => $newQuantity]);
+                    
+        //         }
 
-                $totalStock = ProductsPrice::where('product_id', $salesProduct->product_id)->sum('qty');
-                Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);
-            }
-        }
+        //         $totalStock = ProductsPrice::where('product_id', $salesProduct->product_id)->sum('qty');
+        //         Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);                
+        //     }
+        // }
 
-        $this->products($sale,$validatedData,$cashier_id);
+        $this->products($sale,$saleStatusOld,$validatedData,$cashier_id);
     }
 
     private function paymentOptions($sale_id,$validatedData,$cashier_id)
@@ -126,7 +135,7 @@ class SaleServices
         }
     }
 
-    private function products($sale,$validatedData,$cashier_id)
+    private function products($sale,$saleStatusOld,$validatedData,$cashier_id)
     {
         foreach ($validatedData['products'] as $product) {
             if($product['discount']>0){
@@ -161,10 +170,28 @@ class SaleServices
                 ->where('cost', $product['cost'])
                 ->first();
 
-            if ($productPrice) {
-                $newQuantity = max(0, $productPrice->qty - $product['quantity']);
+            if(!$productPrice){
+                $productPrice = ProductsPrice::where('product_id', $product['id'])
+                    ->orderBy('qty','DESC')
+                    ->orderBy('effective_date','DESC')
+                    ->first();
+            }
 
-                $productPrice->update(['qty' => $newQuantity]);
+            if ($productPrice) {
+                if($saleStatusOld!=$validatedData['saleStatus']){
+                    if($validatedData['saleStatus']==3 || $validatedData['saleStatus']==4){
+                        if((($validatedData['saleStatus']==3 || $validatedData['saleStatus']==4) && $saleStatusOld!=3 && $saleStatusOld!=4)){
+                            $newQuantity = max(0, $productPrice->qty + $product['quantity']);
+                            $productPrice->update(['qty' => $newQuantity]);
+                        }                        
+                    }else{
+                        if((($validatedData['saleStatus']!=3 && $validatedData['saleStatus']!=4) && ($saleStatusOld==3 || $saleStatusOld==4))){
+                            $newQuantity = max(0, $productPrice->qty - $product['quantity']);
+                            $productPrice->update(['qty' => $newQuantity]);
+                        }
+                    }
+                    
+                }
             }
 
             $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');

@@ -264,4 +264,63 @@ class SaleController extends Controller
 
         return response()->json($sales);
     }    
+
+    public function removeProduct(Request $request)
+    {
+        $validatedData = $request->validate([
+            'saleId' => 'required|integer|exists:sales,id',
+            'id' => 'required|integer|exists:products,id'
+        ]);
+        
+        try{
+            DB::beginTransaction();
+
+            $product_id = $validatedData['id'];
+
+            $salesProduct = SalesProduct::where('sale_id', $validatedData['saleId'])
+                ->where('product_id', $product_id)
+                ->first();
+
+            $qty = $salesProduct->qty;
+
+            $productPrice = ProductsPrice::where('product_id', $product_id)
+                ->where('price', $salesProduct->price)
+                ->where('cost', $salesProduct->cost)
+                ->first();
+
+            if(!$productPrice){
+                $productPrice = ProductsPrice::where('product_id', $product_id)
+                    ->orderBy('qty','DESC')
+                    ->orderBy('effective_date','DESC')
+                    ->first();
+            }
+
+            if ($productPrice) {
+                $newQuantity = max(0, $productPrice->qty + $qty);
+
+                $productPrice->update(['qty' => $newQuantity]);
+            }
+            
+            $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
+            Product::where('id', $product_id)->update(['qty' => $totalStock]);
+            
+            $deleted = SalesProduct::where('sale_id', $validatedData['saleId'])
+                ->where('product_id', $product_id)
+                ->delete();
+
+            DB::commit();
+            if ($deleted) {
+                return response()->json(['message' => 'Product deleted successfully.'], 200);
+            } else {
+                return response()->json(['message' => 'Product not found.'], 404);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

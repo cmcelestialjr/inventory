@@ -339,20 +339,29 @@ const Sales = () => {
         setDiscount(0);
     };
 
-    const handleVoidProduct = (product, index) => {
+    const handleVoidProduct = async (product, index) => {
         Swal.fire({
-          title: `Delete ${product.name}?`,
-          text: `Are you sure you want to void "${product.name}" priced at ${product.price}? This action cannot be undone!`,
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d33",
-          cancelButtonColor: "#6c757d",
-          confirmButtonText: "Yes, void it!",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            setProducts(products.filter((_, i) => i !== index));
-            Swal.fire("Voided!", `"${product.name}" has been voided.`, "success");
-          }
+            title: `Delete ${product.name}?`,
+            text: `Are you sure you want to void "${product.name}" priced at ${product.price}? This action cannot be undone!`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, void it!",
+        }).then( async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const authToken = localStorage.getItem("token");
+                    const response = await axios.get("/api/sales/remove-product", {
+                        params: { id: product.id, saleId: saleId },
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    });
+                    setProducts(products.filter((_, i) => i !== index));
+                    Swal.fire("Voided!", `"${product.name}" has been voided.`, "success");
+                } catch (error) {
+                    Swal.fire("Error", "An error occurred while deleting the product.", "error");
+                }            
+            }
         });
     };
 

@@ -52,6 +52,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);
     Route::get('/fetch-sales', [SaleController::class, 'fetch']);
     Route::get('/fetch-sales-statuses', [SaleController::class, 'salesStatuses']);
+    Route::get('/sales/remove-product', [SaleController::class, 'removeProduct']);
     
     Route::get('/fetch-customers', [CustomerController::class, 'fetch']);
     Route::get('/fetch-payment-options', [PaymentOptionController::class, 'fetch']);
