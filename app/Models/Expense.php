@@ -18,9 +18,12 @@ class Expense extends Model
         'sub_category_id',
         'code', 
         'expense_name', 
-        'amount', 
+        'product_id',
         'tin',
         'or',
+        'amount', 
+        'qty',
+        'cost',        
         'date_time_of_expense',
         'updated_by',
         'created_by'
@@ -32,5 +35,9 @@ class Expense extends Model
     public function subCategory(): BelongsTo
     {
         return $this->belongsTo(ExpenseSubCategory::class, 'sub_category_id', 'id');
+    }
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id', 'id');
     }
 }

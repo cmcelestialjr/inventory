@@ -8,6 +8,7 @@ use App\Http\Controllers\ExpensesCategoriesController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\ExpensesSubCategoriesController;
 use App\Http\Controllers\PaymentOptionController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReturnController;
@@ -29,6 +30,8 @@ Route::get('/user', function (Request $request) {
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/pos/transactions', [PosController::class, 'transactions']);
+
     Route::get('/dashboard/top-section', [DashboardController::class, 'topSection']);
     Route::get('/dashboard/middle-section', [DashboardController::class, 'middleSection']);
     Route::get('/dashboard/bottom-section', [DashboardController::class, 'bottomSection']);

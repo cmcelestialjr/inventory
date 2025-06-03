@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Models\Product;
+use App\Models\ProductsPrice;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +14,7 @@ class ExpensesController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Expense::with('category','subCategory');
+        $query = Expense::with('category','subCategory','product');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -74,12 +76,16 @@ class ExpensesController extends Controller
         $validatedData = $request->validate([
             'categoryId' => 'required|numeric|min:1|exists:expense_categories,id',
             'subCategoryId' => 'nullable|numeric|min:1|exists:expense_sub_categories,id',
-            'name' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0',
+            'name' => 'nullable|string|max:255',
+            'amount' => 'nullable|numeric|min:0',
             'dateTime' => 'required|date',
             'remarks' => 'nullable|string|max:255',
             'tin' => 'nullable|string|max:100',
             'or' => 'nullable|string|max:100',
+            'product' => 'required|numeric|min:1|exists:products,id',
+            'productQty' => 'nullable|numeric|min:0',
+            'productCost' => 'nullable|numeric|min:0',
+            'entryType' => 'required|string|max:100',
         ]);
 
         try{
@@ -89,6 +95,10 @@ class ExpensesController extends Controller
             $cashier_id = $user->id;
             $expenseCode = $this->getCode();
 
+            $product_id = $validatedData['product'];
+            $qty = $validatedData['productQty'];
+            $cost = $validatedData['productCost'];
+
             Expense::create([
                 'category_id' => $validatedData['categoryId'],
                 'sub_category_id' => $validatedData['subCategoryId'],
@@ -97,10 +107,17 @@ class ExpensesController extends Controller
                 'amount' => $validatedData['amount'],
                 'tin' => $validatedData['tin'],
                 'or' => $validatedData['or'],
+                'product_id' => $product_id,
+                'qty' => $qty,
+                'cost' => $cost,
                 'date_time_of_expense' => $validatedData['dateTime'],
                 'updated_by' => $cashier_id,
                 'created_by' => $cashier_id
             ]);
+
+            if($validatedData['entryType']=='product'){
+                $this->manageProductQty($product_id,$cost,$qty,'less');
+            }
 
             DB::commit();
             return response()->json(['message' => 'Successful! New expense saved..'], 200);
@@ -123,7 +140,18 @@ class ExpensesController extends Controller
         try{
             DB::beginTransaction();
 
-            Expense::where('id',$validatedData['expenseId'])->delete();
+            $expense = Expense::find($validatedData['expenseId']);
+
+            $product_id = $expense->product_id;
+
+            if($product_id){
+                $cost = $expense->cost;
+                $qty = $expense->qty;
+
+                $this->manageProductQty($product_id,$cost,$qty,'add');
+            }
+
+            $expense->delete();
 
             DB::commit();
             return response()->json(['message' => 'The expense has been deleted.'], 200);
@@ -135,6 +163,33 @@ class ExpensesController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function manageProductQty($product_id,$cost,$qty,$type)
+    {
+        $productPrice = ProductsPrice::where('product_id', $product_id)
+            ->where('cost', $cost)
+            ->first();
+
+        if(!$productPrice){
+            $productPrice = ProductsPrice::where('product_id', $product_id)
+                ->orderBy('qty','DESC')
+                ->orderBy('effective_date','DESC')
+                ->first();
+        }
+
+        if ($productPrice) {
+            if($type=='add'){
+                $newQuantity = max(0, $productPrice->qty + $qty);
+            }else{
+                $newQuantity = max(0, $productPrice->qty - $qty);
+            }
+            
+            $productPrice->update(['qty' => $newQuantity]);
+        }
+                
+        $totalStock = ProductsPrice::where('product_id', $product_id)->sum('qty');
+        Product::where('id', $product_id)->update(['qty' => $totalStock]);
     }
 
     private function getCode()

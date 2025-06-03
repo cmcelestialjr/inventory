@@ -28,7 +28,7 @@ const Expenses = () => {
     const [selectedSubCategoryModal, setSelectedSubCategoryModal] = useState(null);
     const [isNewExpenseModalOpen, setIsNewExpenseModalOpen] = useState(false);
     const [expenseName, setExpenseName] = useState("");
-    const [expenseAmount, setExpenseAmount] = useState("");
+    const [expenseAmount, setExpenseAmount] = useState(0.00);
     const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 16));
     const [expenseRemarks, setExpenseRemarks] = useState("");
     const [expenseTin, setExpenseTin] = useState("");
@@ -37,6 +37,12 @@ const Expenses = () => {
     const [allExpensesName, setAllExpensesName] = useState([]);
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
+    const [entryType, setEntryType] = useState('expense');
+    const [product, setProduct] = useState("");
+    const [productQty, setProductQty] = useState(0.00); 
+    const [productCost, setProductCost] = useState(0.00);    
+    const [suggestionProducts, setSuggestionProducts] = useState([]);
+    const [searchProduct, setSearchProduct] = useState(null);
     const [dateRange, setDateRange] = useState([
         new Date(),
         new Date(),
@@ -196,8 +202,13 @@ const Expenses = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!expenseName || !expenseAmount || expenseAmount <= 0 || !expenseDate) {
+        if ((!expenseName || !expenseAmount || expenseAmount <= 0 || !expenseDate) && entryType=='expense') {
             toastr.error("Please input Expense name and amount!");
+            return;
+        }
+
+        if ((!product || !productQty || !expenseDate) && entryType!=='expense') {
+            toastr.error("Please input Product name and quantity!");
             return;
         }
 
@@ -210,7 +221,11 @@ const Expenses = () => {
                 dateTime: expenseDate,
                 remarks: expenseRemarks,
                 tin: expenseTin,
-                or: expenseOr
+                or: expenseOr,
+                product: product,
+                productQty: productQty,
+                productCost: productCost,
+                entryType: entryType,
             };
             const token = localStorage.getItem("token");
             const response = await axios.post(`/api/expenses/store`, 
@@ -225,6 +240,10 @@ const Expenses = () => {
                 setExpenseRemarks("");
                 setExpenseTin("");
                 setExpenseOr("");
+                setProduct("");
+                setProductQty(0.00);
+                setProductCost(0.00);
+                setEntryType("expense");
                 setIsNewExpenseModalOpen(false);
             }else{
                 toastr.error("Error! There is something wrong in saving new expense.");
@@ -233,6 +252,40 @@ const Expenses = () => {
             toastr.error("Error!", error.response?.data);
         }
 
+    };
+
+    const handleProductSearch = async (e) => {
+        const search = e.target.value;
+        setSearchProduct(search);
+        if (search.length > 1) {
+            try {
+                const authToken = localStorage.getItem("token");
+                const response = await axios.get("/api/fetch-products", {
+                    params: { search: search },
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+                setSuggestionProducts(response.data);
+            } catch (error) {
+                // console.error("Error fetching products:", error);
+            }
+        } else {
+            setSuggestionProducts([]);
+        }
+    };
+
+    const handleSelectProduct = (productSelected) => {
+        setSearchProduct(productSelected.code+ '-' +productSelected.name_variant);
+        setProduct(productSelected.id);
+        setSuggestionProducts([]);
+        if (productSelected.pricing_list_available && productSelected.pricing_list_available.length > 0) {
+            const firstOption = productSelected.pricing_list_available[0];
+            setProductCost(firstOption?.cost || 0.00);
+        } else if (productSelected.pricing_list && productSelected.pricing_list.length > 0 && productSelected.track == "N") {
+            const firstOption = productSelected.pricing_list[0];
+            setProductCost(firstOption?.cost || 0.00);
+        } else {
+            setProductCost(0.00);
+        }
     };
 
     const handleDelete = (expenseId) => {
@@ -487,8 +540,15 @@ const Expenses = () => {
                                                     <td className="border border-gray-300 px-4 py-2">{expense.category?.name}</td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.sub_category?.name}</td>
                                                     {/* <td className="border border-gray-300 px-4 py-2">{expense.code}</td> */}
-                                                    <td className="border border-gray-300 px-4 py-2">{expense.expense_name}</td>
-                                                    <td className="border border-gray-300 px-4 py-2">{expense.amount}</td>
+                                                    <td className="border border-gray-300 px-4 py-2">
+                                                        {expense.product
+                                                            ? `${expense.product.code || ''}-${expense.product.name_variant || ''}`
+                                                            : expense.expense_name}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2">
+                                                        {expense.product
+                                                            ? expense.qty : expense.amount}
+                                                    </td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.tin}</td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.or}</td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.remarks}</td>
@@ -544,12 +604,13 @@ const Expenses = () => {
                     {activeTab === "subcategories" && <ExpenseSubCategories />}
                 </div>
             </div>
+            
             {isNewExpenseModalOpen && (
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                     <div className="bg-white p-6 rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative">
                         {/* Header */}
                         <div className="flex justify-between">
-                            <h2 className="text-xl font-semibold">New Sale</h2>
+                            <h2 className="text-xl font-semibold">New Expense</h2>
                             <button 
                                 onClick={() => setIsNewExpenseModalOpen(false)} 
                                 className="text-gray-500 hover:text-gray-700 transition"
@@ -584,40 +645,101 @@ const Expenses = () => {
                                 />
                             </div>
 
-                            {/* Expense Name with Suggestions */}
-                            <label className="block mt-3 text-sm font-medium">Expense Name</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={expenseName}
-                                    onChange={(e) => setExpenseName(e.target.value)}
+                            <div className="mt-3">
+                                <label className="block text-sm font-medium mb-1">Entry Type:</label>
+                                <select
+                                    value={entryType}
+                                    onChange={(e) => setEntryType(e.target.value)}
                                     className="w-full p-2 border rounded"
-                                    placeholder="Type to search..."
-                                />
-                                {suggestions.length > 0 && (
-                                    <ul className="absolute bg-white border rounded w-full mt-1 shadow-lg max-h-40 overflow-auto z-50">
-                                        {suggestions.map((name) => (
-                                            <li
-                                                key={name}
-                                                onClick={() => handleSelectExpense(name)}
-                                                className="p-2 hover:bg-gray-100 cursor-pointer"
-                                            >
-                                                {name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                >
+                                    <option value="expense">Expense</option>
+                                    <option value="product">Product</option>
+                                </select>
                             </div>
 
-                            {/* Amount */}
-                            <label className="block mt-3 text-sm font-medium">Amount</label>
-                            <input
-                                type="number"
-                                value={expenseAmount}
-                                onChange={(e) => setExpenseAmount(e.target.value)}
-                                className="w-full p-2 border rounded"
-                                placeholder="Enter amount"
-                            />
+                            {/* Expense Name with Suggestions */}
+                            {entryType === 'expense' && (
+                            <>
+                                <label className="block mt-3 text-sm font-medium">Expense Name</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={expenseName}
+                                        onChange={(e) => setExpenseName(e.target.value)}
+                                        className="w-full p-2 border rounded"
+                                        placeholder="Type to search..."
+                                    />
+                                    {suggestions.length > 0 && (
+                                        <ul className="absolute bg-white border rounded w-full mt-1 shadow-lg max-h-40 overflow-auto z-50">
+                                            {suggestions.map((name) => (
+                                                <li
+                                                    key={name}
+                                                    onClick={() => handleSelectExpense(name)}
+                                                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                                                >
+                                                    {name}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                {/* Amount */}
+                                <label className="block mt-3 text-sm font-medium">Amount</label>
+                                <input
+                                    type="number"
+                                    value={expenseAmount}
+                                    onChange={(e) => setExpenseAmount(e.target.value)}
+                                    className="w-full p-2 border rounded"
+                                    placeholder="Enter amount"
+                                />
+                            </>
+                            )}
+
+                            {/* Product with Suggestions */}
+                            {entryType === 'product' && (
+                            <>
+                                <label className="block mt-3 text-sm font-medium">Product</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Search Product"
+                                        value={searchProduct}
+                                        onChange={handleProductSearch}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                    {suggestionProducts.length > 0 && (
+                                        <ul className="absolute left-0 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto z-60">
+                                            {suggestionProducts.map((product) => (
+                                                <li 
+                                                    key={product.id} 
+                                                    className="p-2 cursor-pointer hover:bg-gray-200 flex items-center space-x-2"
+                                                    onClick={() => handleSelectProduct(product)}
+                                                >
+                                                    <img
+                                                    src={product.img}
+                                                    alt={product.name}
+                                                    className="w-16 h-16 object-cover rounded cursor-pointer"
+                                                    onClick={() => handleImageClick(product.img)}
+                                                    />
+                                                    <span>{product.code}-{product.name_variant}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                {/* Amount */}
+                                <label className="block mt-3 text-sm font-medium">Qty</label>
+                                <input
+                                    type="number"
+                                    value={productQty}
+                                    onChange={(e) => setProductQty(e.target.value)}
+                                    className="w-full p-2 border rounded"
+                                    placeholder="Enter amount"
+                                />
+                            </>
+                            )}                            
 
                             {/* TIN */}
                             <label className="block mt-3 text-sm font-medium">TIN</label>

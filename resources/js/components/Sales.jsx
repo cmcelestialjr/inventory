@@ -38,6 +38,7 @@ const Sales = () => {
     const [isSaleViewModalOpen, setIsSaleViewModalOpen] = useState(false);
     const [selectedSaleView, setSelectedSaleView] = useState(null);
     const [saleId, setSaleId] = useState(null);
+    const [track, setTrack] = useState("Y");
     const [salesStatuses, setSalesStatuses] = useState([]);
     const [selectedSaleStatus, setSelectedSaleStatus] = useState("all");
     const [totalSales, setTotalSales] = useState(0);
@@ -277,6 +278,7 @@ const Sales = () => {
         setProductName(productSelected.name);
         setProductId(productSelected.id);
         setShowDropdownProducts(false);
+        setTrack(productSelected.track);
 
         if (productSelected.pricing_list_available && productSelected.pricing_list_available.length > 0) {
             setPriceOptions(productSelected.pricing_list_available);
@@ -286,8 +288,16 @@ const Sales = () => {
             setTotalCostProduct(firstOption?.cost || 0.00);
             setPrice(firstOption?.price || 0.00);
             setDiscount(firstOption?.discount || 0);
+        } else if (productSelected.pricing_list && productSelected.pricing_list.length > 0 && productSelected.track == "N") {
+            setPriceOptions(productSelected.pricing_list);
+            const firstOption = productSelected.pricing_list[0];
+            setSelectedPrice(firstOption?.id || null);
+            setCost(firstOption?.cost || 0.00);
+            setTotalCostProduct(firstOption?.cost || 0.00);
+            setPrice(firstOption?.price || 0.00);
+            setDiscount(firstOption?.discount || 0);
         } else {
-            setSelectedPrice(null);
+            setSelectedPrice(0.00);
             setPriceOptions([]);
             setCost(0.00);
             setTotalCostProduct(0.00);
@@ -887,6 +897,16 @@ const Sales = () => {
                                     <div className="grid grid-cols-4 gap-2">
                                         <div className="col-span-2">
                                             <label className="block text-sm font-medium text-gray-700">Price:</label>
+                                            {track == "N" && (
+                                                <input 
+                                                    type="number"
+                                                    value={price}
+                                                    onChange={(e) => setPrice(e.target.value)}
+                                                    className="border px-3 py-2 rounded-lg w-full"
+                                                />
+                                            )}
+
+                                            {track !== "N" && (
                                             <select 
                                                 value={selectedPrice}
                                                 onChange={handlePriceChange}
@@ -897,10 +917,11 @@ const Sales = () => {
                                                             value={priceOption.id} 
                                                             data-c={priceOption.cost}
                                                             data-d={priceOption.discount}>
-                                                            {priceOption.supplier?.name}-{priceOption.cost} (Qty: {priceOption.qty})
+                                                            {priceOption.supplier?.name}-{priceOption.cost} (Qty: {priceOption.qty} Price: {priceOption.price})
                                                         </option>
                                                 ))}
                                             </select>
+                                            )}
                                         </div>
                                         <div className="col-span-2">
                                             <label className="block text-sm font-medium text-gray-700">Qty:</label>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import Layout from "./Layout";
-import { Eye, Plus, X, LogOut } from "lucide-react";
+import { Eye, Plus, X, FileText, LogOut } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -31,6 +31,12 @@ const PointOfSale = () => {
   const [subTotal, setSubTotal] = useState(0.00);
   const [totalAmount, setTotalAmount] = useState(0.00);
   const [proceedToPayment, setProceedToPayment] = useState(false);
+  const [viewTransactionModal, setViewTransactionModal] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [transactionDate, setTransactionDate] = useState('');
+  const [track, setTrack] = useState("Y");
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
   const didFetch = useRef(false);
   const getLocalDateTime = () => {
     const now = new Date();
@@ -82,11 +88,20 @@ const PointOfSale = () => {
     setSearchProduct(productSelected.name);
     setProductName(productSelected.name);
     setProductId(productSelected.id);
+    setTrack(productSelected.track);
     setShowDropdownProducts(false);
-
+    
     if (productSelected.pricing_list_available && productSelected.pricing_list_available.length > 0) {
         setPriceOptions(productSelected.pricing_list_available);
         const firstOption = productSelected.pricing_list_available[0];
+        setSelectedPrice(firstOption?.id || null);
+        setCost(firstOption?.cost || 0.00);
+        setTotalCostProduct(firstOption?.cost || 0.00);
+        setPrice(firstOption?.price || 0.00);
+        setDiscount(firstOption?.discount || 0);
+    } else if (productSelected.pricing_list && productSelected.pricing_list.length > 0 && productSelected.track == "N") {
+        setPriceOptions(productSelected.pricing_list);
+        const firstOption = productSelected.pricing_list[0];
         setSelectedPrice(firstOption?.id || null);
         setCost(firstOption?.cost || 0.00);
         setTotalCostProduct(firstOption?.cost || 0.00);
@@ -398,6 +413,49 @@ const PointOfSale = () => {
     }
   };
 
+  const handleTransactions = async () => {
+    
+    try {
+        const authToken = localStorage.getItem("token");
+        const response = await axios.get("/api/pos/transactions", {
+            headers: { Authorization: `Bearer ${authToken}` },
+        });
+        setViewTransactionModal(true);
+        setTransactions(response.data.data);
+        setTransactionDate(response.data.date);
+    } catch (error) {
+        toastr.error("Failed to view transactions. Please refresh the page.");
+    }
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',  // e.g., "Jun"
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getStatusColor = (statusId) => {
+    switch (statusId) {
+      case 1:
+        return 'text-blue-600';
+      case 2:
+        return 'text-green-600';
+      case 3:
+        return 'text-orange-500';
+      case 4:
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+
   return (
     <div className="w-full">      
       <div className="w-full max-w-7xl mx-auto p-4 md:flex md:gap-6 mt-8 mb-10 px-10">
@@ -433,20 +491,30 @@ const PointOfSale = () => {
           <div className="grid grid-cols-4 gap-2">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">Price:</label>
-              <select 
-                value={selectedPrice}
-                onChange={handlePriceChange}
-                className="border px-3 py-2 rounded-lg w-full"
-              >
-                {priceOptions.length > 0 && priceOptions.map((priceOption) => (
-                  <option key={priceOption.id} 
-                    value={priceOption.id} 
-                    data-c={priceOption.cost}
-                    data-d={priceOption.discount}>
-                    {priceOption.price} (Qty: {priceOption.qty})
-                  </option>
-                ))}
-              </select>
+              {track == "N" && (
+                  <input 
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="border px-3 py-2 rounded-lg w-full"
+                  />
+              )}
+              {track !== "N" && (
+                <select 
+                  value={selectedPrice}
+                  onChange={handlePriceChange}
+                  className="border px-3 py-2 rounded-lg w-full"
+                >
+                  {priceOptions.length > 0 && priceOptions.map((priceOption) => (
+                    <option key={priceOption.id} 
+                      value={priceOption.id} 
+                      data-c={priceOption.cost}
+                      data-d={priceOption.discount}>
+                      {priceOption.price} (Qty: {priceOption.qty})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">Qty:</label>
@@ -502,23 +570,39 @@ const PointOfSale = () => {
 
         {/* Middle Section - Products */}
         <div className="md:w-2/3 bg-white p-4 shadow-lg rounded-lg mt-4 md:mt-0 flex flex-col">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex-1 flex gap-2">
-              <img src="/images/clstldev2.png" alt="POS Logo" className="w-11 h-11" />
-              <h1 className="text-2xl font-bold text-gray-800">POS</h1>
+          <div className="flex justify-between items-center mb-4">
+            {/* Centered Logo and Title */}
+            <div className="flex-1 flex justify-center items-center gap-3">
+              <img src="/images/clstldev2.png" alt="Logo 1" className="w-14 h-14 object-contain" />
+              <img src="/images/rockfil.png" alt="Logo 2" className="w-14 h-14 object-contain" />
+              <div className="text-center">
+                <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
+                  Point of Sale <span className="text-gray-500 text-xl">(POS)</span>
+                </h1>
+              </div>
             </div>
+
+            {/* Logout Button */}
             <Link 
               to="/logout"
-              className="flex items-center p-2 rounded text-sm text-red-500 hover:bg-gray-100"
+              className="flex items-center px-3 py-2 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-gray-100 rounded-md transition"
             >
-              <LogOut size={20} className="mr-2" />
+              <LogOut size={18} className="mr-1" />
               Logout
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            
+            <div>
+              <button
+                onClick={handleTransactions}
+                className="inline-flex items-center px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+              >
+                <FileText size={16} />
+                Transactions
+              </button>
+            </div>
           </div>
-          <div className="space-y-2 flex-1 border p-2 rounded-md">
+          <div className="space-y-2 flex-1 mt-2 border p-2 rounded-md">
             {products.length > 0 ? (
               <div className="space-y-2">
                 {/* Table Header - Visible only on larger screens */}
@@ -533,7 +617,7 @@ const PointOfSale = () => {
                 </div>
 
                 {/* Products List */}
-                <div className="max-h-[23rem] overflow-y-auto p-2">
+                <div className="max-h-[20rem] overflow-y-auto p-2">
                   {products.map((product, index) => (
                     <div
                       key={index}
@@ -580,7 +664,7 @@ const PointOfSale = () => {
       </div>
       {proceedToPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl max-h-[88vh] overflow-y-auto relative">
             
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-4">
@@ -722,6 +806,77 @@ const PointOfSale = () => {
           </div>
         </div>
       )}
+
+      {viewTransactionModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg max-h-[90vh] overflow-y-auto relative">
+            <h2 className="text-xl font-semibold mb-6 text-center">Transactions - {transactionDate}</h2>
+            <div className="max-h-[20rem] overflow-y-auto p-2">
+              {transactions.map((transaction, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col md:flex-row justify-between items-center p-2 border-b bg-white rounded-lg shadow-sm"
+                >
+                  <div className="w-full text-left">
+                    <p className="text-sm font-semibold">{index + 1}. {transaction.code}</p>
+                    <p className="text-xs font-semibold text-blue-800">Total Amount: {Number(transaction.total_amount).toFixed(2)}</p>
+                    <p className="text-xs text-gray-500">
+                      Date Time: {formatDateTime(transaction.date_time_of_sale)}
+                    </p>
+                    <p className={`text-xs font-semibold ${getStatusColor(transaction.status.id)}`}>
+                      Status: {transaction.status.name}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSelectedTransaction(transaction);
+                        setShowProductModal(true);
+                      }}
+                      className="mt-2 px-3 py-1 text-xs font-semibold bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View Products
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setViewTransactionModal(false)}
+              className="mt-2 w-full px-4 py-2 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showProductModal && selectedTransaction && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full shadow-lg max-h-[90vh] overflow-y-auto relative">
+            <h3 className="text-lg font-bold mb-4 text-center">
+              Products in {selectedTransaction.code}
+            </h3>
+            <ul className="space-y-2 text-sm">
+              {selectedTransaction.products_list?.map((product, idx) => (
+                <li key={idx} className="border-b pb-2">
+                  <p><span className="font-semibold">Code:</span> {product.product_info?.code}</p>
+                  <p><span className="font-semibold">Product:</span> {product.product_info?.name_variant}</p>
+                  <p><span className="font-semibold">Quantity:</span> {product.qty}</p>
+                  <p><span className="font-semibold">Price:</span> {Number(product.price).toFixed(2)}</p>
+                  <p><span className="font-semibold">Discount:</span> {Number(product.discount_amount).toFixed(2)}</p>
+                  <p><span className="font-semibold">Amount:</span> {Number(product.amount).toFixed(2)}</p>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => setShowProductModal(false)}
+              className="mt-4 w-full px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

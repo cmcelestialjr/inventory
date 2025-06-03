@@ -244,6 +244,7 @@ class ProductController extends Controller
             'price' => 'required|numeric',
             'qty' => 'required|numeric',
             'effective_date' => 'required|date',
+            'track' => 'required|in:Y,N'
         ]);
 
         $name_variant = "$request->name-$request->variant";
@@ -274,8 +275,9 @@ class ProductController extends Controller
         $insert->price = $request->price;
         $insert->qty = $request->qty;
         $insert->restock_date = date('Y-m-d');
-        $insert->product_status = 'Available';        
-        $insert->product_category_id = $request->productCategoryId;        
+        $insert->product_status = 'Available';
+        $insert->product_category_id = $request->productCategoryId;     
+        $insert->track = $request->track;   
         $insert->updated_by = $user_id;
         $insert->created_by = $user_id;
         $insert->save();
@@ -309,6 +311,7 @@ class ProductController extends Controller
             'variant' => 'required|string|max:255',
             'productCategoryId' => 'required|integer|exists:products_categories,id',
             'product_status' => 'required|in:Available,Phaseout',
+            'track' => 'required|in:Y,N',
         ]);
 
         $name_variant = "$request->name-$request->variant";
@@ -332,6 +335,7 @@ class ProductController extends Controller
             'name_variant' => $name_variant,
             'product_category_id' => $request->productCategoryId,
             'product_status' => $request->product_status,
+            'track' => $request->track
         ]);
 
         // $this->productPrice($user_id,$id,$request);
@@ -352,11 +356,12 @@ class ProductController extends Controller
         $user = Auth::user();
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        }        
 
         $checkProductPrice = ProductsPrice::where('product_id',$request->product_id)
             ->where('price',$request->price)
             ->where('cost',$request->cost)
+            ->where('supplier_id',$request->supplierId)
             ->first();
         if ($checkProductPrice) {
             return response()->json([
@@ -389,6 +394,8 @@ class ProductController extends Controller
             return response()->json(['message' => 'Product Pricing not found'], 404);
         }
 
+        $product = Product::find($productPrice->product_id);
+
         $request->validate([
             'cost' => 'required|numeric',
             'price' => 'required|numeric',
@@ -397,12 +404,18 @@ class ProductController extends Controller
             'supplierId' => 'required|integer|exists:suppliers,id',
         ]);
 
-        
+        if($product->track=='N'){
+            $cost = 0;
+            $qty = 0;
+        }else{
+            $cost = $request->cost;
+            $qty = $request->qty;
+        }
 
         $productPrice->update([
-            'cost' => $request->cost,
+            'cost' => $cost,
             'price' => $request->price,
-            'qty' => $request->qty,
+            'qty' => $qty,
             'supplier_id' => $request->supplierId,
             'effective_date' => Carbon::parse($request->effective_date)->format('Y/m/d'),
             'updated_by' => $user_id
@@ -420,7 +433,7 @@ class ProductController extends Controller
 
     public function fetch(Request $request)
     {
-        $query = Product::with('pricingListAvailable.supplier');
+        $query = Product::with('pricingListAvailable.supplier', 'pricingList');
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -441,10 +454,19 @@ class ProductController extends Controller
 
     private function productPrice($user_id,$product_id,$request)
     {
-        $checkProductPrice = ProductsPrice::where('product_id',$product_id)
-            ->where('price',$request->price)
-            ->where('cost',$request->cost)
-            ->first();
+        $product = Product::find($product_id);
+
+        $track = $product->track;
+        
+        $checkProductPrice = ProductsPrice::where('product_id',$product_id);
+        if($track=='N'){
+
+        }else{
+            $checkProductPrice->where('price',$request->price)
+                ->where('cost',$request->cost)
+                ->where('supplier_id',$request->supplierId);
+        }
+        $checkProductPrice = $checkProductPrice->first();
 
         if($checkProductPrice){                                                                                                                  
             $insert = ProductsPrice::find($checkProductPrice->id);
@@ -453,9 +475,14 @@ class ProductController extends Controller
             $insert->product_id = $product_id;
         }
         $insert->supplier_id = $request->supplierId;
-        $insert->cost = $request->cost;
+        if($track=='N'){
+            $insert->cost = 0;
+            $insert->qty = 0;
+        }else{
+            $insert->cost = $request->cost;        
+            $insert->qty = $request->qty;
+        }
         $insert->price = $request->price;
-        $insert->qty = $request->qty;
         $insert->effective_date = Carbon::parse($request->effective_date)->format('Y/m/d');
         $insert->updated_by = $user_id;
         $insert->created_by = $user_id;

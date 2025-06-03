@@ -54,7 +54,8 @@ const Products = () => {
     name: "",
     variant: "",
     productCategoryId: "",
-    product_status: "Available"
+    product_status: "Available",
+    track: 'Y'
   });
   const [formData, setFormData] = useState({
     code: "",
@@ -65,7 +66,8 @@ const Products = () => {
     qty: "",
     productCategoryId: "",
     effective_date: null,
-    supplierId: null
+    supplierId: null,
+    track: 'Y'
   });
   const [selectedPricing, setSelectedPricing] = useState({
     id: "",
@@ -306,7 +308,7 @@ const Products = () => {
 
         const cleanFormData = {
           ...formData,
-          supplierId: formData.supplierId?.value ?? null,
+          supplierId: formData.track === 'N' ? 1 : formData.supplierId?.value ?? null,
         };
 
         const response = await axios.post(
@@ -335,6 +337,7 @@ const Products = () => {
             productCategoryId: "",
             supplierId: null,
             effective_date: null,
+            track: 'Y'
           });
           setErrors({});
         }else{
@@ -356,6 +359,7 @@ const Products = () => {
       variant: product.variant,
       productCategoryId: product.product_category_id,
       product_status: product.product_status,
+      track: product.track,
       pricingList: product.pricing_list || [],
     });
     setShowEditModal(true);
@@ -486,13 +490,13 @@ const Products = () => {
   const handleImageSave = async () => {
     if (!newImageFile || !selectedImageProductId) return;
 
-    const formData = new FormData();
-    formData.append('image', newImageFile);
-    formData.append('product_id', selectedImageProductId);
+    const formDataImage = new FormData();
+    formDataImage.append('image', newImageFile);
+    formDataImage.append('product_id', selectedImageProductId);
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/product/update-image`, formData, {
+      const response = await axios.post(`/api/product/update-image`, formDataImage, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
@@ -1198,6 +1202,23 @@ const Products = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">Track Product:</label>
+                    <select
+                      name="track"
+                      value={formData.track}
+                      onChange={(e) => setFormData({ ...formData, track: e.target.value })}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none ${
+                        errors.track ? "border-red-500" : "border-gray-300"
+                      }`}
+                      wrapperClassName={`w-full ${
+                        errors.track ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="Y">Yes</option>
+                      <option value="N">No</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Product Category:</label>
                     <select
                       name="productCategoryId"
@@ -1259,8 +1280,8 @@ const Products = () => {
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {formData.track !== 'N' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Supplier</label>
                     <AsyncSelect
@@ -1273,6 +1294,7 @@ const Products = () => {
                       placeholder="Search Suppliers..."
                     />
                   </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Cost</label>
                     <input
@@ -1420,23 +1442,41 @@ const Products = () => {
                       ))}
                     </select>
                   </div>
-                  
+                  {editFormData.track !== 'N' && (
+                    <div>
+                      <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          name="phaseOut"
+                          checked={editFormData.product_status === "Phaseout"}
+                          onChange={(e) => {
+                            setEditFormData({
+                              ...editFormData,
+                              product_status: e.target.checked ? "Phaseout" : "Available",
+                            });
+                          }}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                        />
+                        <span>PhaseOut?</span>
+                      </label>
+                    </div>
+                  )}
                   <div>
-                    <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                      <input
-                        type="checkbox"
-                        name="phaseOut"
-                        checked={editFormData.product_status === "Phaseout"}
-                        onChange={(e) => {
-                          setEditFormData({
-                            ...editFormData,
-                            product_status: e.target.checked ? "Phaseout" : "Available",
-                          });
-                        }}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      />
-                      <span>PhaseOut?</span>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Track Product:</label>
+                    <select
+                      name="track"
+                      value={editFormData.track}
+                      onChange={handleChange}
+                      className={`w-full border px-3 py-2 rounded-lg focus:outline-none ${
+                        editErrors.track ? "border-red-500" : "border-gray-300"
+                      }`}
+                      wrapperClassName={`w-full ${
+                        editErrors.track ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <option value="Y">Yes</option>
+                      <option value="N">No</option>
+                    </select>
                   </div>
 
                 </div>
@@ -1453,13 +1493,15 @@ const Products = () => {
                   <div className="mt-4">
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="text-lg font-semibold">Pricing List</h3>
-                      <button
-                        type="button"
-                        onClick={() => openNewPricingModal(editFormData.id)}
-                        className="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-700 transition"
-                      >
-                        New Pricing
-                      </button>
+                      {editFormData.track !== 'N' && (
+                        <button
+                          type="button"
+                          onClick={() => openNewPricingModal(editFormData.id)}
+                          className="bg-green-600 text-white text-sm px-3 py-1 rounded-md hover:bg-green-700 transition"
+                        >
+                          New Pricing
+                        </button>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-4 max-h-48 overflow-y-auto p-2 border rounded-lg shadow-md">
                       {editFormData.pricingList.map((pricing, index) => (
@@ -1480,13 +1522,13 @@ const Products = () => {
                               })}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => openEditPricingModal(pricing)}
-                            className="mt-2 bg-blue-500 text-white text-sm py-1 px-2 rounded-md hover:bg-blue-600 transition"
-                          >
-                            Edit
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditPricingModal(pricing)}
+                              className="mt-2 bg-blue-500 text-white text-sm py-1 px-2 rounded-md hover:bg-blue-600 transition"
+                            >
+                              Edit
+                            </button>
                         </div>
                       ))}
                     </div>
@@ -1547,19 +1589,20 @@ const Products = () => {
                   pricingErrors.qty ? "border-red-500" : "border-gray-300"
                 }`}
               />
-
+  
               {/* Supplier */}
-              <label className="block mb-2 mt-3">Supplier:</label>
-              <AsyncSelect
-                cacheOptions
-                defaultOptions
-                loadOptions={fetchSuppliersModal}
-                onChange={(selected) => setSelectedPricing({ ...selectedPricing, supplierId: selected })}
-                value={selectedPricing.supplierId}
-                className="w-full"
-                placeholder="Search Suppliers..."
-              />
-
+              {editFormData.track !== "N" && ( <>
+                <label className="block mb-2 mt-3">Supplier:</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={fetchSuppliersModal}
+                  onChange={(selected) => setSelectedPricing({ ...selectedPricing, supplierId: selected })}
+                  value={selectedPricing.supplierId}
+                  className="w-full"
+                  placeholder="Search Suppliers..."
+                /> </>
+              )}
               {/* Effective Date Picker */}
               <label className="block mb-2 mt-3">Effective Date:</label>
               <DatePicker

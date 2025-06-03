@@ -25,6 +25,7 @@ class Product extends Model
         'restock_date',
         'product_status',
         'product_category_id',
+        'track',
         'img',
         'updated_by',
         'created_by',
