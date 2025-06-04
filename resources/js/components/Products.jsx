@@ -1466,7 +1466,7 @@ const Products = () => {
                     <select
                       name="track"
                       value={editFormData.track}
-                      onChange={handleChange}
+                      onChange={(e) => setEditFormData({ ...editFormData, track: e.target.value })}
                       className={`w-full border px-3 py-2 rounded-lg focus:outline-none ${
                         editErrors.track ? "border-red-500" : "border-gray-300"
                       }`}
