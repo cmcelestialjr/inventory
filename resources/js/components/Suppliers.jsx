@@ -160,6 +160,37 @@ const Suppliers = () => {
         
     };
 
+    const handleSupplierRemove = (supplier) => {
+        Swal.fire({
+            title: `Remove?`,
+            text: `Are you sure you want to remove supplier "${supplier.name}"!`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#6c757d",
+            confirmButtonText: "Yes, remove it!",
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const authToken = localStorage.getItem("token");
+                    const response = await axios.get("/api/suppliers/delete", {
+                            params: { id: supplier.id },
+                            headers: { Authorization: `Bearer ${authToken}` },
+                    });
+                    if (response.data.message === 'Supplier removed successfully.') {
+                        fetchSuppliers(selectedSupplierStatus);
+                        Swal.fire("Removed!", `"${supplier.name}" has been removed.`, "success");
+                    } else {
+                        Swal.fire("Error", response.data.message, "error");
+                    }
+                } catch (error) {
+                    Swal.fire("Error", "An error occurred while removing the supplier.", "error");
+                }
+            }
+        });
+        
+    };
+
     const handleSupplierNew = () => {
         setSupplierId(null);
         setSupplierName(null);
@@ -299,6 +330,10 @@ const Suppliers = () => {
                                                 <button onClick={() => handleSupplierEdit(supplier)}
                                                     className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
                                                     <Edit size={16} /> Edit
+                                                </button>
+                                                <button onClick={() => handleSupplierRemove(supplier)}
+                                                    className="flex items-center gap-1 text-red-600 hover:text-red-800 hover:underline">
+                                                    <X size={16} /> Remove
                                                 </button>
                                             </td>
                                     </tr>

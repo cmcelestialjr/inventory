@@ -5,6 +5,7 @@ import axios from 'axios';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toastr from 'toastr';
+import Swal from "sweetalert2";
 import 'toastr/build/toastr.min.css';
 import AsyncSelect from "react-select/async";
 
@@ -846,6 +847,46 @@ const Products = () => {
     }));
   };
 
+  const handleRemovePricing = (pricing) => {
+    Swal.fire({
+        title: `Remove?`,
+        text: `Are you sure you want to remove this price "${pricing.price}"?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Yes, remove it!",
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const authToken = localStorage.getItem("token");
+                const response = await axios.get("/api/products/pricing/delete", {
+                    params: { id: pricing.id },
+                    headers: { Authorization: `Bearer ${authToken}` },
+                });
+
+                if (response.data.message === 'Price removed successfully.') {
+                    // ✅ Update local state
+                    const updatedPricingList = editFormData.pricingList.filter(
+                        (p) => p.id !== pricing.id
+                    );
+                    setEditFormData({
+                        ...editFormData,
+                        pricingList: updatedPricingList,
+                    });
+
+                    Swal.fire("Removed!", `Price "${pricing.price}" has been removed.`, "success");
+                } else {
+                    Swal.fire("Error", response.data.message, "error");
+                }
+            } catch (error) {
+                Swal.fire("Error", "An error occurred while removing the price.", "error");
+            }
+        }
+    });
+  };
+
+
   return (
     <Layout>
       <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-10">
@@ -1522,13 +1563,22 @@ const Products = () => {
                               })}
                             </p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => openEditPricingModal(pricing)}
+                            className="mt-2 bg-blue-500 text-white text-sm py-1 px-2 rounded-md hover:bg-blue-600 transition"
+                          >
+                            Edit
+                          </button>
+                          {pricing.qty<=0 && (
                             <button
                               type="button"
-                              onClick={() => openEditPricingModal(pricing)}
-                              className="mt-2 bg-blue-500 text-white text-sm py-1 px-2 rounded-md hover:bg-blue-600 transition"
+                              onClick={() => handleRemovePricing(pricing)}
+                              className="mt-2 bg-red-500 text-white text-sm py-1 px-2 rounded-md hover:bg-red-600 transition"
                             >
-                              Edit
+                              Delete
                             </button>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -167,7 +167,7 @@ class SaleServices
 
             $getProduct = Product::find($product['id']);
 
-            if($getProduct->track=="Y"){
+            if($getProduct->track==NULL || $getProduct->track=='Y'){
                 $productPrice = ProductsPrice::where('product_id', $product['id'])
                     ->where('price', $product['price'])
                     ->where('cost', $product['cost'])
@@ -186,11 +186,13 @@ class SaleServices
                             if((($validatedData['saleStatus']==3 || $validatedData['saleStatus']==4) && $saleStatusOld!=3 && $saleStatusOld!=4)){
                                 $newQuantity = max(0, $productPrice->qty + $product['quantity']);
                                 $productPrice->update(['qty' => $newQuantity]);
+                                $productPrice->save();
                             }                        
                         }else{
-                            if((($validatedData['saleStatus']!=3 && $validatedData['saleStatus']!=4) && ($saleStatusOld==3 || $saleStatusOld==4))){
+                            if((($validatedData['saleStatus']!=3 && $validatedData['saleStatus']!=4) && ($saleStatusOld==3 || $saleStatusOld==4 || $saleStatusOld=='' || $saleStatusOld==null))){
                                 $newQuantity = max(0, $productPrice->qty - $product['quantity']);
                                 $productPrice->update(['qty' => $newQuantity]);
+                                $productPrice->save();
                             }
                         }
                         
@@ -199,7 +201,7 @@ class SaleServices
 
                 $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
                 Product::where('id', $product['id'])->update(['qty' => $totalStock]);
-            }
+           }
         }
     }
 
@@ -223,7 +225,8 @@ class SaleServices
     {
         $customer = Customer::firstOrCreate(
             ['name' => $customer_name],
-            ['customer_type_id' => 1] 
+            ['customer_type_id' => 1,
+            'updated_by' => 1] 
         );
 
         return $customer->id;

@@ -4,6 +4,12 @@
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
     "keywords": ["laravel", "framework"],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://nativephp.composer.sh"
+        }
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
@@ -12,6 +18,8 @@
         "laravel/tinker": "^2.9",
         "laravel/ui": "^4.6",
         "maatwebsite/excel": "^3.1",
+        "nativephp/electron": "*",
+        "nativephp/mobile": "^1.0",
         "phpoffice/phpspreadsheet": "^1.29"
     },
     "require-dev": {

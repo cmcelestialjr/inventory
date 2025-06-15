@@ -49,6 +49,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/products/categoriesCount', [ProductController::class, 'categoriesCount']);
     Route::get('/products/print', [ProductController::class, 'print']);
     Route::post('/product/update-image', [ProductController::class, 'updateImage']);
+    Route::get('/products/pricing/delete', [ProductController::class, 'pricingDestroy']);
 
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
@@ -91,7 +92,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/suppliers', [SuppliersController::class, 'index']);
     Route::post('/suppliers/manage', [SuppliersController::class, 'manage']);
     Route::get('/fetch-suppliers', [SuppliersController::class, 'fetch']);
-    Route::get('/suppliers/removeContact', [SuppliersController::class, 'removeContact']);    
+    Route::get('/suppliers/removeContact', [SuppliersController::class, 'removeContact']);
+    Route::get('/suppliers/delete', [SuppliersController::class, 'destroy']);
 
     Route::get('/services', [ServicesController::class, 'index']);
     Route::post('/services/manage', [ServicesController::class, 'manage']);

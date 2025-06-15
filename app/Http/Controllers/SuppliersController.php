@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
+use App\Models\ProductsPrice;
 use App\Models\Supplier;
 use App\Models\SupplierContact;
 use Carbon\Carbon;
@@ -63,6 +65,31 @@ class SuppliersController extends Controller
         try{
             SupplierContact::where('id',$validatedData['id'])->delete();
             return response()->json(['message' => 'Contact deleted successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function destroy(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|numeric|min:0|exists:suppliers,id',
+        ]);
+        try{
+            $supplier_id = $validatedData['id'];
+
+            $check = ProductsPrice::where('supplier_id',$supplier_id)->first();
+
+            if($check){
+                return response()->json(['message' => 'Cannot remove supplier because it is associated with an existing product.'], 200);
+            }
+
+            Supplier::where('id',$supplier_id)->delete();
+            return response()->json(['message' => 'Supplier removed successfully.'], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

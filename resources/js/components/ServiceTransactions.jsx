@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare, Reply } from "lucide-react";
+import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare, Reply, Minus } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -349,27 +349,33 @@ const TransactionTransactions = () => {
     };
 
     const handleSelectService = (service) => {
-        const vat = parseFloat((service.price / 1.12 * 0.12).toFixed(2));
+        
         setSearchService(service.name);
         setServiceId(service.id);
         setServiceName(service.name);
-        setServicePrice(service.price);
-        setServiceVat(vat);
-        setAmountToPaid(Number(service.price)-Number(service.discount));
-        setLaborCost(service.labor_cost);
-        setDiscount(service.discount);
-        const productsData = service.products?.map(product => ({
-            pid: null,
-            id: product.product?.id,
-            name: product.product?.name_variant,
-            cost: product.product?.cost,
-            qty: product.qty,
-            total: product.product?.cost * product.qty,
-            returned: 0,
-        }));
-        if (productsData && productsData.length > 0) {
-            setProductsSelected(productsData);
+        
+        if(serviceTransactionId==null){
+            const vat = parseFloat((service.price / 1.12 * 0.12).toFixed(2));
+            setServicePrice(service.price);
+            setServiceVat(vat);
+            setAmountToPaid(Number(service.price)-Number(service.discount));
+            setLaborCost(service.labor_cost);
+            setDiscount(service.discount);       
+
+            const productsData = service.products?.map(product => ({
+                pid: null,
+                id: product.product?.id,
+                name: product.product?.name_variant,
+                cost: product.product?.cost,
+                qty: product.qty,
+                total: product.product?.cost * product.qty,
+                returned: 0,
+            }));
+            if (productsData && productsData.length > 0) {
+                setProductsSelected(productsData);
+            }
         }
+        
         setShowDropdownServices(false);
         
     };
@@ -823,15 +829,11 @@ const TransactionTransactions = () => {
     }
 
     const formatPhoneNumber = (value) => {
-
-        const cleaned = value.replace(/\D/g, '').slice(0, 11); 
-
+        const cleaned = value.replace(/\D/g, '').slice(0, 11);
         const match = cleaned.match(/^(\d{0,4})(\d{0,3})(\d{0,4})$/);
-      
         if (!match) return cleaned;
-      
         return [match[1], match[2], match[3]].filter(Boolean).join('-');
-    };    
+    };
 
     const formatPrice = (price) => {
         if (Number(price) === 0) return ' -';
@@ -910,14 +912,26 @@ const TransactionTransactions = () => {
 
     const [editingIndex, setEditingIndex] = useState(null);
     const [editedReturned, setEditedReturned] = useState("");
+    const [editedReturnedAdd, setEditedReturnedAdd] = useState(0.00);
+    const [editedReturnedType, setEditedReturnedType] = useState("");
 
-    const handleReplyClick = (product, index) => {
+    const handleReplyClick = (product, index, type) => {
         setEditingIndex(index);
-        setEditedReturned(product.returned);
+        if(type=='add'){
+            setEditedReturnedAdd(0.00);
+        }else{
+            setEditedReturned(product.returned);
+        }        
+        setEditedReturnedType(type);
     };
 
     const handleReturnedChange = (e) => {
-        setEditedReturned(e.target.value);
+        if(editedReturnedType=='add'){
+            setEditedReturnedAdd(e.target.value);
+            setEditedReturned(e.target.value);
+        }else{
+            setEditedReturned(e.target.value);
+        }
     };
 
     const handleSaveReturned = async (index) => {
@@ -932,6 +946,8 @@ const TransactionTransactions = () => {
             const formData = {
                 id: productsSelected[index].pid,
                 returned: editedReturned,
+                returnnedAdd: editedReturnedAdd,
+                returnedType: editedReturnedType
             };
             
             const token = localStorage.getItem("token");
@@ -943,11 +959,11 @@ const TransactionTransactions = () => {
                 toastr.success(response.data.message);
                 productsSelected[index].qty = response.data.qty;
                 productsSelected[index].total = response.data.total;
-                productsSelected[index].returned = editedReturned;
+                productsSelected[index].returned = response.data.returned;
                 setEditingIndex(null);
             }else{
                 toastr.error("Error! There is something wrong in saving return product.");
-            }           
+            }
             
         } catch (error) {
             const errorMessage = error.response?.data?.message || "An error occurred while saving the return product.";
@@ -1573,22 +1589,22 @@ const TransactionTransactions = () => {
                                                             ) : (
                                                                 <>
                                                                     <button
-                                                                        onClick={() => handleRemoveProduct(product, index)}
-                                                                        className="text-red-500 hover:underline text-sm mr-2"
+                                                                        onClick={() => handleReplyClick(product, index, "add")}
+                                                                        className="text-green-500 hover:underline text-sm mr-2"
                                                                     >
-                                                                        <X size={24} />
+                                                                        <Plus size={24} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleReplyClick(product, index)}
+                                                                        onClick={() => handleReplyClick(product, index, "minus")}
                                                                         className="text-blue-500 hover:underline text-sm"
                                                                     >
-                                                                        <Reply size={24} />
+                                                                        <Minus size={24} />
                                                                     </button>
                                                                     <button
                                                                         onClick={() => handleRemoveProduct1(product, index)}
                                                                         className="text-red-500 hover:underline text-sm mr-2"
                                                                     >
-                                                                        Remove
+                                                                        <X size={24} />
                                                                     </button>
                                                                 </>
                                                             )}
@@ -2105,7 +2121,7 @@ const TransactionTransactions = () => {
                                     className="border py-2 rounded-lg w-full"
                                 >
                                     {serviceStatusesOptions.map((option) => (
-                                         <option key={option.id} value={option.id}>
+                                        <option key={option.id} value={option.id}>
                                             {option.name}
                                         </option>
                                     ))}

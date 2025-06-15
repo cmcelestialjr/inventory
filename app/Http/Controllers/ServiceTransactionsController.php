@@ -69,7 +69,7 @@ class ServiceTransactionsController extends Controller
             }
         }
 
-        $transactions = $query->orderBy('created_at','DESC')->paginate(5);
+        $transactions = $query->orderBy('created_at','DESC')->paginate(10);
 
         return response()->json([
             'data' => $transactions->items(),
@@ -95,7 +95,7 @@ class ServiceTransactionsController extends Controller
             'servicePrice' => 'required|numeric|min:0',
             'serviceStartDate' => 'required|date',
             'laborCost' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0|max:100',
+            'discount' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string|max:255',
             'productsSelected' => 'nullable|array',
             'productsSelected.*.id' => 'integer|exists:products,id',
@@ -184,7 +184,7 @@ class ServiceTransactionsController extends Controller
             'servicePrice' => 'required|numeric|min:0',
             'serviceStartDate' => 'required|date',
             'laborCost' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0|max:100',
+            'discount' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string|max:255',
             'productsSelected' => 'required|array',
             'productsSelected.*.id' => 'integer|exists:products,id',
@@ -613,6 +613,8 @@ class ServiceTransactionsController extends Controller
         $validatedData = $request->validate([
             'id' => 'required|integer|exists:service_transaction_products,id',
             'returned' => 'required|numeric|min:0.00',
+            'returnnedAdd' => 'required|numeric|min:0.00',
+            'returnedType' => 'required|in:add,minus'
         ]);
 
         try{
@@ -622,37 +624,48 @@ class ServiceTransactionsController extends Controller
             $cashier_id = $user->id;
 
             $query = ServiceTransactionProduct::findOrFail($validatedData['id']);
+            
+            if($validatedData['returnedType']=='minus'){
+                $returned_old = $query->qty_returned;
+                $returned = $validatedData['returned'];
 
-            $returned_old = $query->qty_returned;
-            $returned = $validatedData['returned'];
+                if($returned>$returned_old){
+                    $qty = $query->qty - $validatedData['returned'];                
+                }else{
+                    $qty_add = $returned_old-$returned;
+                    $qty = $query->qty + $qty_add;
+                }
 
-            if($returned>$returned_old){
-                $qty = $query->qty - $validatedData['returned'];                
+                $query->qty_returned = $returned;
             }else{
-                $qty_add = $returned_old-$returned;
+                $qty_add = $validatedData['returnnedAdd'];
                 $qty = $query->qty + $qty_add;
             }
             
             $total = $query->cost * $qty;
             
             $query->qty = $qty;
-            $query->total = $total;
-            $query->qty_returned = $returned;
+            $query->total = $total;            
             $query->updated_by = $cashier_id;
             $query->save();
 
-            if($returned>$returned_old){
-                $qty_add = $returned-$returned_old;
+            if($validatedData['returnedType']=='minus'){
+                if($returned>$returned_old){
+                    $qty_add = $returned-$returned_old;
+                    $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_add, $query->cost, 'remove'); 
+                }elseif($returned<$returned_old){
+                    $qty_remove = $returned_old-$returned;
+                    $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_remove, $query->cost, 'add'); 
+                }
+            }else{
                 $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_add, $query->cost, 'remove'); 
-            }elseif($returned<$returned_old){
-                $qty_remove = $returned_old-$returned;
-                $this->updateProduct($query->service_transaction_id, $query->product_id, $qty_remove, $query->cost, 'add'); 
             }
 
             DB::commit();
             return response()->json([
                 'qty' => $qty,
                 'total' => $total,
+                'returned' => $query->qty_returned,
                 'message' => 'Successful! Updated returned product..',
             ], 200);
         } catch (\Exception $e) {

@@ -65,7 +65,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        $po = $query->orderBy('date_time_ordered','DESC')->paginate(5);
+        $po = $query->orderBy('date_time_ordered','DESC')->paginate(8);
 
         $po->load(['statusInfo', 'products.productInfo', 'products.statusInfo', 'paymentStatusInfo', 'payments']);
 

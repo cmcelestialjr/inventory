@@ -273,7 +273,7 @@ const ExpenseSubCategories = () => {
                                 <div className="relative">
                                     <input 
                                         type="text"
-                                        placeholder="Search Product"
+                                        placeholder="Search Category"
                                         value={searchCategory}
                                         onChange={handleCategorySearch}
                                         className="border px-3 py-2 rounded-lg w-full"

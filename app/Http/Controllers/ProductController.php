@@ -442,7 +442,7 @@ class ProductController extends Controller
             $query->orWhere('name_variant', 'LIKE', "%{$search}%");
         }
 
-        $products = $query->limit(10)->get();
+        $products = $query->limit(15)->get();
 
         $products->transform(function ($product) {
             $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
@@ -450,6 +450,38 @@ class ProductController extends Controller
         });
 
         return response()->json($products);
+    }
+
+    public function pricingDestroy(Request $request)
+    {
+        $validatedData = $request->validate([
+            'id' => 'required|numeric|min:0|exists:products_prices,id',
+        ]);
+        try{
+            $id = $validatedData['id'];
+
+            $check = ProductsPrice::where('id',$id)->first();
+
+            if($check->qty>0){
+                return response()->json(['message' => 'Cannot remove product price because it still have quantity.'], 200);
+            }
+
+            $count = ProductsPrice::where('product_id',$check->product_id)->get()->count();
+
+            if($count<=1){
+                return response()->json(['message' => 'Cannot remove the product price because it is the last one.'], 200);
+            }
+
+            ProductsPrice::where('id',$id)->delete();
+
+            return response()->json(['message' => 'Price removed successfully.'], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     private function productPrice($user_id,$product_id,$request)
