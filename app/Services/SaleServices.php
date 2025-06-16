@@ -102,7 +102,7 @@ class SaleServices
         //         Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);                
         //     }
         // }
-        $this->updateAll();
+        //$this->updateAll();
         $this->products($sale,$saleStatusOld,$validatedData,$cashier_id);
     }
 
