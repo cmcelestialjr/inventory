@@ -102,7 +102,7 @@ class SaleServices
         //         Product::where('id', $salesProduct->product_id)->update(['qty' => $totalStock]);                
         //     }
         // }
-
+        $this->updateAll();
         $this->products($sale,$saleStatusOld,$validatedData,$cashier_id);
     }
 
@@ -201,7 +201,7 @@ class SaleServices
 
                 $totalStock = ProductsPrice::where('product_id', $product['id'])->sum('qty');
                 Product::where('id', $product['id'])->update(['qty' => $totalStock]);
-           }
+            }
         }
     }
 
@@ -230,5 +230,46 @@ class SaleServices
         );
 
         return $customer->id;
+    }
+
+    private function updateAll()
+    {
+        $products = SalesProduct::whereHas('saleInfo', function ($q) {
+                    $q->where('sales_status_id', 2);
+                })->where('update_qty',0)
+                ->get();
+        if($products->count()>0){
+            foreach ($products as $product) {
+
+                $getProduct = Product::find($product->product_id);
+
+                if($getProduct->track==NULL || $getProduct->track=='Y'){
+                    $productPrice = ProductsPrice::where('product_id', $product->product_id)
+                        ->where('price', $product->price)
+                        ->where('cost', $product->cost)
+                        ->first();
+
+                    if(!$productPrice){
+                        $productPrice = ProductsPrice::where('product_id', $product->product_id)
+                            ->orderBy('qty','DESC')
+                            ->orderBy('effective_date','DESC')
+                            ->first();
+                    }
+
+                    if ($productPrice) {
+                        $newQuantity = max(0, $productPrice->qty - $product->qty);
+                        $productPrice->update(['qty' => $newQuantity]);
+                        $productPrice->save();                    
+                    }
+
+                    $totalStock = ProductsPrice::where('product_id', $product->product_id)->sum('qty');
+                    Product::where('id', $product->product_id)->update(['qty' => $totalStock]);
+                }
+
+                $update = SalesProduct::find($product->id);
+                $update->update_qty = 1;
+                $update->save();
+            }
+        }
     }
 }
