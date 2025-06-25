@@ -68,7 +68,7 @@ class ExpensesController extends Controller
 
     public function names()
     {
-        return Expense::distinct()->pluck('expense_name');
+        return Expense::whereNotNull('expense_name')->distinct()->pluck('expense_name');
     }
 
     public function store(Request $request)
@@ -82,7 +82,7 @@ class ExpensesController extends Controller
             'remarks' => 'nullable|string|max:255',
             'tin' => 'nullable|string|max:100',
             'or' => 'nullable|string|max:100',
-            'product' => 'required|numeric|min:1|exists:products,id',
+            'product' => 'nullable|numeric|exists:products,id',
             'productQty' => 'nullable|numeric|min:0',
             'productCost' => 'nullable|numeric|min:0',
             'entryType' => 'required|string|max:100',
@@ -98,13 +98,15 @@ class ExpensesController extends Controller
             $product_id = $validatedData['product'];
             $qty = $validatedData['productQty'];
             $cost = $validatedData['productCost'];
-
+            
+            $amount = $product_id ?$cost*$qty : $validatedData['amount'];
+            
             Expense::create([
                 'category_id' => $validatedData['categoryId'],
                 'sub_category_id' => $validatedData['subCategoryId'],
                 'code' => $expenseCode,
                 'expense_name' => $validatedData['name'],
-                'amount' => $validatedData['amount'],
+                'amount' => $amount,
                 'tin' => $validatedData['tin'],
                 'or' => $validatedData['or'],
                 'product_id' => $product_id,

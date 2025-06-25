@@ -38,7 +38,7 @@ const Expenses = () => {
     const [sortColumn, setSortColumn] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
     const [entryType, setEntryType] = useState('expense');
-    const [product, setProduct] = useState("");
+    const [product, setProduct] = useState(null);
     const [productQty, setProductQty] = useState(0.00); 
     const [productCost, setProductCost] = useState(0.00);    
     const [suggestionProducts, setSuggestionProducts] = useState([]);
