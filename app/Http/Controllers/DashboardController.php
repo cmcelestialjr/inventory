@@ -235,12 +235,12 @@ class DashboardController extends Controller
                 $expensesTrends = $this->getByDays($getExpenses, 5, 'date_time_of_expense', 'amount');
                 $sellingProducts = $this->getByDaysSellingProducts($getSellingProducts);
         }
-
+      
         $topSellingProducts = (clone $sellingProducts)->orderBy('value', 'desc')->get();
 
-        $topSellingProductsIds = (clone $sellingProducts)->orderBy('value', 'desc')->pluck('id');
+        $topSellingProductsIds = (clone $sellingProducts)->orderBy('value', 'desc')->pluck('product_id');
         
-        $leastSellingProducts = (clone $sellingProducts)->whereNotIn('id',$topSellingProductsIds)->orderBy('value', 'asc')->get();
+        $leastSellingProducts = (clone $sellingProducts)->whereNotIn('sales_products.product_id',$topSellingProductsIds)->orderBy('value', 'asc')->get();
 
         return response()->json([
             'salesTrends' => $salesTrends,

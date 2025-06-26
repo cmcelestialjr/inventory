@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/products/print', [ProductController::class, 'print']);
     Route::post('/product/update-image', [ProductController::class, 'updateImage']);
     Route::get('/products/pricing/delete', [ProductController::class, 'pricingDestroy']);
+    Route::get('/products/sales', [ProductController::class, 'sales']);
 
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);

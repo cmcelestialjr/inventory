@@ -484,6 +484,66 @@ class ProductController extends Controller
         }
     }
 
+    public function sales(Request $request)
+    {
+        $query = Product::with('productCategory','sales.saleInfo')->select(
+                    'products.*',
+                    DB::raw('SUM(sales_products.qty) AS total_qty'),
+                    DB::raw('SUM(sales_products.total_cost) AS total_costs'),
+                    DB::raw('SUM(sales_products.amount) AS total_amount'),
+                    DB::raw('MAX(sales.date_time_of_sale) AS last_sale_at')
+                )
+                ->join('sales_products', 'sales_products.product_id', '=', 'products.id')
+                ->join('sales', 'sales.id', '=', 'sales_products.sale_id');
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('products.name_variant', 'LIKE', "%{$search}%")
+                ->orWhere('products.code', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->whereBetween(DB::raw('DATE(sales.date_time_of_sale)'), [$startDate, $endDate]);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['products.code', 'name_variant', 'product_category_id', 'total_qty', 'total_costs', 'total_amount'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
+        $query->groupBy('products.id')
+            ->orderByDesc('last_sale_at')
+            ->orderByDesc('total_qty');
+
+        $sales = $query->paginate(10);
+
+        $sales->getCollection()->transform(function ($product) {
+            $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
+            return $product;
+        });
+
+        return response()->json([
+            'data' => $sales->items(),
+            'meta' => [
+                'current_page' => $sales->currentPage(),
+                'last_page' => $sales->lastPage(),
+                'prev' => $sales->previousPageUrl(),
+                'next' => $sales->nextPageUrl(),
+            ]
+        ]);
+    }
+
     private function productPrice($user_id,$product_id,$request)
     {
         $product = Product::find($product_id);
