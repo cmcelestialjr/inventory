@@ -2009,46 +2009,48 @@ const Products = () => {
                 </div>
 
                 <div className="overflow-x-auto mt-4">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-100 text-gray-700">
-                            <th className="border border-gray-300 px-4 py-2 text-left">DateTime of Sale</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Qty</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProductsSales?.sales?.length > 0 ? (
-                        selectedProductsSales.sales.map((sale, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 px-4 py-2">
-                              {new Date(sale.sale_info?.date_time_of_sale).toLocaleString()}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">
-                              {formatPrice(sale.cost)}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">
-                              {formatPrice(sale.price)}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">
-                              {sale.qty}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">
-                              {formatPrice(sale.amount)}
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                      <thead>
+                          <tr className="bg-gray-100 text-gray-700">
+                              <th className="border border-gray-300 px-4 py-2 text-left">DateTime of Sale</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Cost</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Price</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Qty</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Amount</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                        {selectedProductsSales?.sales?.length > 0 ? (
+                          selectedProductsSales.sales.map((sale, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 px-4 py-2">
+                                {new Date(sale.sale_info?.date_time_of_sale).toLocaleString()}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-right">
+                                {formatPrice(sale.cost)}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-right">
+                                {formatPrice(sale.price)}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-right">
+                                {sale.qty}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2 text-right">
+                                {formatPrice(sale.amount)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="text-center py-4 text-gray-500">
+                              No sales data available.
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="4" className="text-center py-4 text-gray-500">
-                            No sales data available.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* Buttons */}
