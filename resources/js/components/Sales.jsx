@@ -376,7 +376,7 @@ const Sales = () => {
     };
 
     useEffect(() => {
-        const total = parseFloat((Number(price) * Number(quantity) - Number(discount) * Number(quantity)).toFixed(2));
+        const total = parseFloat((Number(price) * Number(quantity) - Number(discount)).toFixed(2));
         const totalCostProducts = parseFloat((Number(cost) * Number(quantity)).toFixed(2));
         setAmount(total >= 0 ? total : 0);
         setTotalCostProduct(totalCostProducts >= 0 ? totalCostProducts : 0);
@@ -386,7 +386,7 @@ const Sales = () => {
         const newTotal = products.reduce((total, product) => total + Number(product.amount), 0).toFixed(2);
         const newCost = products.reduce((total, product) => total + Number(product.cost) * Number(product.quantity), 0).toFixed(2);
         const newPrice = products.reduce((total, product) => total + Number(product.price) * Number(product.quantity), 0).toFixed(2);
-        const newDiscount = products.reduce((total, product) => total + Number(product.discount) * Number(product.quantity), 0).toFixed(2);
+        const newDiscount = products.reduce((total, product) => total + Number(product.discount), 0).toFixed(2);
         const vatAmount = (newTotal / 1.12 * 0.12).toFixed(2);
         setTotalVat(vatAmount);
         setTotalAmount(newTotal);
