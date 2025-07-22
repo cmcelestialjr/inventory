@@ -437,12 +437,44 @@ class ProductController extends Controller
 
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
-            $query->where('name', 'LIKE', "%{$search}%");
-            $query->orWhere('code', 'LIKE', "%{$search}%");
-            $query->orWhere('name_variant', 'LIKE', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                ->orWhere('code', 'LIKE', "%{$search}%")
+                ->orWhere('name_variant', 'LIKE', "%{$search}%");
+            });
+        }
+        
+        $products = $query->limit(15)->get();
+
+        $products->transform(function ($product) {
+            $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');
+            return $product;
+        });
+
+        return response()->json($products);
+    }
+
+    public function posFetch(Request $request)
+    {
+        $query = Product::with('pricingListAvailable.supplier', 'pricingList');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                ->orWhere('code', 'LIKE', "%{$search}%")
+                ->orWhere('name_variant', 'LIKE', "%{$search}%");
+            });
         }
 
-        $products = $query->limit(15)->get();
+        if ($request->has('category')) {
+            $category = $request->category;
+            if($category>0){
+                $query->where('product_category_id', $category);
+            }
+        }
+
+        $products = $query->get();
 
         $products->transform(function ($product) {
             $product->img = $product->img ? asset("storage/$product->img") : asset('images/no-image-icon.png');

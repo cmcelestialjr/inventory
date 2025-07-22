@@ -44,6 +44,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/product-pricing/{id}', [ProductController::class, 'updatePricing']);
     Route::post('/product-pricing', [ProductController::class, 'storePricing']);
     Route::get('/fetch-products', [ProductController::class, 'fetch']);
+    Route::get('/fetch-pos-products', [ProductController::class, 'posFetch']);    
     Route::post('/product/category/code', [ProductController::class, 'categoryCode']);
     Route::post('/products/upload', [ProductController::class, 'upload']);
     Route::get('/products/categoriesCount', [ProductController::class, 'categoriesCount']);

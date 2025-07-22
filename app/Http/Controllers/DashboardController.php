@@ -235,7 +235,7 @@ class DashboardController extends Controller
                 $expensesTrends = $this->getByDays($getExpenses, 5, 'date_time_of_expense', 'amount');
                 $sellingProducts = $this->getByDaysSellingProducts($getSellingProducts);
         }
-      
+        
         $topSellingProducts = (clone $sellingProducts)->orderBy('value', 'desc')->get();
 
         $topSellingProductsIds = (clone $sellingProducts)->orderBy('value', 'desc')->pluck('product_id');

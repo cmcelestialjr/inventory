@@ -221,6 +221,7 @@ class SaleController extends Controller
             DB::beginTransaction();
             
             $saleStatus = 1;
+            $validatedData['saleStatus'] = 1;
             $getSale = $this->saleService->insertSale($validatedData, $saleStatus);
             $code = $getSale->code;
 
