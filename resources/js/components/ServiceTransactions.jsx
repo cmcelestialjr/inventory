@@ -113,7 +113,7 @@ const TransactionTransactions = () => {
     });
 
     useEffect(() => {
-         if (didFetch.current) return;
+        if (didFetch.current) return;
         didFetch.current = true;
         const fetchData = async () => {
             try {

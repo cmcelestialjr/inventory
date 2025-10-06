@@ -67,8 +67,8 @@ class UsersController extends Controller
         $insert->username = $request->username;
         $insert->password = Hash::make($request->password);
         $insert->user_role_id = $request->role;
-        $insert->updated_by = $user_id;
-        $insert->created_by = $user_id;
+        // $insert->updated_by = $user_id;
+        // $insert->created_by = $user_id;
         $insert->save();
 
         return response()->json(['message' => 'success'], 201);
@@ -104,7 +104,7 @@ class UsersController extends Controller
             'username' => $request->username,
             // 'password' => Hash::make($request->password),
             'user_role_id' => $request->role,
-            'updated_by' => $user_id
+            // 'updated_by' => $user_id
         ]);
 
         return response()->json(['message' => 'User updated successfully']);

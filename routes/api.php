@@ -1,26 +1,35 @@
 <?php
 
+use App\Http\Controllers\AdvancesController;
+use App\Http\Controllers\AdvanceStatusController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DamagedController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeductionController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeDeductionController;
+use App\Http\Controllers\EmployeeScheduleController;
+use App\Http\Controllers\EmployeeServicesRateController;
 use App\Http\Controllers\ExpensesCategoriesController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\ExpensesSubCategoriesController;
 use App\Http\Controllers\PaymentOptionController;
+use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PayrollDeductionController;
+use App\Http\Controllers\PayrollPdfController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\ScheduleTypesController;
 use App\Http\Controllers\ServicesController;
 use App\Http\Controllers\ServiceTransactionsController;
 use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\UsersController;
-use App\Models\Returns;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -125,4 +134,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/damaged', [DamagedController::class, 'index']);
     Route::get('/damaged/fetch/statuses', [DamagedController::class, 'fetchStatuses']);
     Route::post('/damaged/manage', [DamagedController::class, 'manage']);
+    
+    Route::get('/employees/totals', [EmployeeController::class, 'getTotals']);
+    Route::get('/employees/search', [EmployeeController::class, 'search']);
+    Route::apiResource('employees', EmployeeController::class);
+
+    Route::get('/schedule-pay-types/fetch', [ScheduleTypesController::class, 'fetch']);
+    Route::get('/employee/schedule/index', [EmployeeScheduleController::class, 'index']);
+    Route::post('/employee/schedule/update', [EmployeeScheduleController::class, 'update']);
+
+    Route::apiResource('employee-services-rate', EmployeeServicesRateController::class);
+
+    Route::post('/payroll/listEmployee', [PayrollController::class, 'listEmployee']);
+    Route::post('/payroll/updateEarned', [PayrollController::class, 'updateEarned']);
+    Route::apiResource('payroll', PayrollController::class);
+
+    Route::apiResource('payrollDeduction', PayrollDeductionController::class);
+    
+    Route::apiResource('deductions', DeductionController::class);
+
+    Route::apiResource('employeeDeductions', EmployeeDeductionController::class);
+
+    Route::apiResource('advanceStatuses', AdvanceStatusController::class);
+
+    Route::apiResource('advances', AdvancesController::class);
+
+    Route::post('/payroll-generate-pdf', [PayrollPdfController::class, 'index']);
 });

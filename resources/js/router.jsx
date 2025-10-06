@@ -15,6 +15,10 @@ import Suppliers from './components/Suppliers';
 import UsersList from './components/UsersList';
 import PointOfSale from './components/PointOfSale';
 import Logout from './components/Logout';
+import Employees from './components/Employees';
+import Payroll from './components/Payroll';
+import Deductions from './components/Deductions';
+import Advances from './components/Advances';
 
 function RouterApp() {  
   return (
@@ -82,6 +86,31 @@ function RouterApp() {
               <Suppliers />
             </ProtectedRoute>} 
         />
+        <Route path="/employees" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Employees />
+            </ProtectedRoute>} 
+        />
+        <Route path="/payroll" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Payroll />
+            </ProtectedRoute>} 
+        />
+        <Route path="/advances" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Advances />
+            </ProtectedRoute>} 
+        />
+        <Route path="/deductions" 
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Deductions />
+            </ProtectedRoute>} 
+        />
+
         <Route path="/users" 
           element={
             <ProtectedRoute allowedRoles={["1"]}>

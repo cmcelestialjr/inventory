@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
+        Schema::create('service_transaction_employees', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('employee_id')->index();
+            $table->unsignedBigInteger('service_transaction_id')->index();
+            $table->decimal('service_amount', 10, 2);
             $table->timestamps();
         });
     }
@@ -22,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('products');
+        Schema::dropIfExists('service_transaction_employees');
     }
 };

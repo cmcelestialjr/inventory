@@ -13,7 +13,10 @@ import { Menu,
         Package,
         Settings,
         ZapOff,
-        LogOut } 
+        LogOut, 
+        Coins,
+        MinusCircle,
+        CreditCard} 
         from "lucide-react";
 
 const Sidebar = () => {
@@ -46,7 +49,7 @@ const Sidebar = () => {
           </div>
 
           <nav>
-            <ul className="space-y-4 px-5">
+            <ul className="space-y-1 px-3">
               <li>
                 <Link 
                   to="/dashboard" 
@@ -155,6 +158,50 @@ const Sidebar = () => {
                 >
                   <Truck size={20} className="mr-2" />
                   Suppliers
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/employees" 
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/employees") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <Users size={20} className="mr-2" />
+                  Employees
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/payroll"  
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/payroll") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <Coins size={20} className="mr-2" />
+                  Payrolls
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/advances"  
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/advances") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <CreditCard size={20} className="mr-2" />
+                  Advances
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/deductions"  
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/deductions") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <MinusCircle size={20} className="mr-2" />
+                  Deductions
                 </Link>
               </li>
               <li>

@@ -1587,7 +1587,7 @@ const PurchaseOrders = () => {
                                             onClick={() => setShowProductSelection(!showProductSelection)}
                                             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-gray-600 text-sm"
                                         >
-                                           Add New Product
+                                            Add New Product
                                         </button>
                                     </div>
                                 )}
