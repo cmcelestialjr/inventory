@@ -25,7 +25,9 @@ class PayrollEmployee extends Model
         'salary',
         'no_of_day_present',
         'earned',
+        'basic_pay',
         'overtime',
+        'other_earned',
         'holiday',
         'lates_absences',
         'gross',
@@ -36,6 +38,11 @@ class PayrollEmployee extends Model
         'no_of_lates',
         'no_of_undertimes',
         'no_of_absences',
+        'day',
+        'hour',
+        'minute',
+        'ot_hour',
+        'ot_minute',
         'remarks',
     ];
 
@@ -54,5 +61,9 @@ class PayrollEmployee extends Model
     public function months(): HasMany
     {
         return $this->hasMany(PayrollMonth::class, 'payroll_employee_id', 'id');
+    }
+    public function otherEarned(): HasMany
+    {
+        return $this->hasMany(PayrollOtherEarned::class, 'payroll_employee_id', 'id');
     }
 }

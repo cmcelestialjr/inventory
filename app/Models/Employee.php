@@ -50,7 +50,13 @@ class Employee extends Model
     }
     public function schedules(): HasMany
     {
-        return $this->hasMany(EmployeeSchedule::class, 'employee_id', 'id');
+        return $this->hasMany(EmployeeSchedule::class, 'employee_id', 'id')
+            ->whereIn('schedule_pay_type_id', [1, 2]);
+    }
+    public function regularSchedule(): HasMany
+    {
+        return $this->hasMany(EmployeeSchedule::class, 'employee_id', 'id')
+            ->where('schedule_pay_type_id', 1);
     }
     public function advances(): HasMany
     {
@@ -58,6 +64,30 @@ class Employee extends Model
     }
     public function advanceDeduction(): HasOne
     {
-        return $this->hasOne(AdvanceDeduction::class, 'employee_id', 'id')->whereNull('payroll_id')->orderBy('id','ASC');
+        return $this->hasOne(AdvanceDeduction::class, 'employee_id', 'id')
+            ->whereNull('payroll_id')
+            ->orderBy('id','ASC');
+    }
+    public function otherEarnings(): HasMany
+    {
+        return $this->hasMany(EmployeeOtherEarning::class, 'employee_id', 'id');
+    }
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(DtrDailySummary::class, 'employee_id', 'id')
+            ->orderBy('schedule_pay_type_id', 'ASC')
+            ->orderBy('date','ASC');
+    }
+    public function regularAttendances(): HasMany
+    {
+        return $this->hasMany(DtrDailySummary::class, 'employee_id', 'id')
+            ->where('schedule_pay_type_id', 1)
+            ->orderBy('date','ASC');
+    }
+    public function overTimeAttendances(): HasMany
+    {
+        return $this->hasMany(DtrDailySummary::class, 'employee_id', 'id')
+            ->where('schedule_pay_type_id', 2)
+            ->orderBy('date','ASC');
     }
 }

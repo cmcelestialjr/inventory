@@ -252,7 +252,11 @@ const Employees = () => {
                                     className="w-14 h-14 rounded-full object-cover shadow ring-2 ring-gray-300"
                                 />
                                 <div className="flex-1">
-                                    <h3 className="font-semibold">{emp.lastname}, {emp.firstname} {emp.extname} {emp.middlename}</h3>
+                                    <h3 className="font-semibold">
+                                        {emp.lastname}, {emp.firstname}
+                                        {emp.extname ? ` ${emp.extname}` : ''} 
+                                        {emp.middlename ? ` ${emp.middlename.charAt(0)}.` : ''}
+                                    </h3>
                                     <p className="text-sm text-gray-500">{emp.position}</p>
                                     <p className="text-sm text-gray-500">Emp No: {emp.employee_no}</p>
                                 </div>
@@ -265,7 +269,7 @@ const Employees = () => {
 
                                 <div className="mt-2 text-sm">
                                 <p><strong>Contact:</strong> {emp.contact_no}</p>
-                                <p><strong>Salary:</strong> ₱{emp.salary?.toLocaleString('en-US')}</p>
+                                <p><strong>Salary:</strong> ₱{(emp.salary).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 </div>
 
                                 <div className="flex justify-end gap-2 mt-3">

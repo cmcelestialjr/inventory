@@ -16,7 +16,8 @@ import { Menu,
         LogOut, 
         Coins,
         MinusCircle,
-        CreditCard} 
+        CreditCard,
+        Calendar} 
         from "lucide-react";
 
 const Sidebar = () => {
@@ -169,6 +170,17 @@ const Sidebar = () => {
                 >
                   <Users size={20} className="mr-2" />
                   Employees
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/attendances" 
+                  className={`flex items-center p-2 rounded transition ${
+                    isActive("/attendances") ? "bg-blue-500 text-white" : "hover:bg-gray-100"
+                  }`}
+                >
+                  <Calendar size={20} className="mr-2" />
+                  Attendances
                 </Link>
               </li>
               <li>

@@ -130,20 +130,32 @@ class ProcessAttendanceStatus implements ShouldQueue
                     $dayOfWeek == $day->day_no &&
                     $date_started <= $dtrDate &&
                     ($date_separated >= $dtrDate || $date_separated==null)
-                ){                    
-                    $insert = new DtrDailySummary;
-                    $insert->employee_id = $employee_id;
-                    $insert->date = $dtrDate;
-                    $insert->schedule_in = $time_in;
-                    $insert->schedule_out = $time_out;
-                    $insert->late_minutes = 0;
-                    $insert->undertime_minutes = 0;
-                    $insert->is_absent = 1;
-                    $insert->incomplete_log = 1;
-                    $insert->salary = $salary;
-                    $insert->earned = 0;
-                    $insert->deduction = 0;
-                    $insert->schedule_pay_type_id = 1;
+                ){
+                    $check = DtrDailySummary::where('employee_id', $employee_id)
+                        ->where('date', $dtrDate)
+                        ->first();
+                    if($check){
+                        $insert = new DtrDailySummary;
+                        $insert->employee_id = $employee_id;
+                        $insert->date = $dtrDate;
+                        $insert->schedule_in = $time_in;
+                        $insert->schedule_out = $time_out;
+                        $insert->day = 0;
+                        $insert->hour = 0;
+                        $insert->minute = 0;
+                        $insert->late_minutes = 0;
+                        $insert->undertime_minutes = 0;
+                        $insert->is_absent = 1;
+                        $insert->incomplete_log = 1;
+                        $insert->salary = $salary;
+                        $insert->earned = 0;
+                        $insert->deduction = 0;
+                        $insert->schedule_pay_type_id = 1;
+                    }else{
+                        $insert = $check;
+                        $insert->salary = $salary;
+                    }
+                    
                     $insert->save();
                 }
             }
@@ -280,6 +292,9 @@ class ProcessAttendanceStatus implements ShouldQueue
             $insert->date = $date;
             $insert->schedule_in = $time_in;
             $insert->schedule_out = $time_out;
+            $insert->day = 0;
+            $insert->hour = 0;
+            $insert->minute = 0;
             if($type == 0){
                 $insert->actual_in = $time;
             }
@@ -376,6 +391,9 @@ class ProcessAttendanceStatus implements ShouldQueue
         $salary_per_minute = ($salary * $pay_multiplier) / (8 * 60);
         $earned = round(($overtimeMinutes * $salary_per_minute), 2);
 
+        $hour = floor($overtimeMinutes / 60);
+        $minute = $overtimeMinutes % 60;
+
         if($dtrSummary->schedule_pay_type_id == 1){
 
             $dtrSummary = $this->checkDtrSummary($employee_id, $date, 2);
@@ -387,14 +405,17 @@ class ProcessAttendanceStatus implements ShouldQueue
                 $insert->schedule_in = $schedule_in;
                 $insert->schedule_out = $schedule_out;
                 $insert->actual_in = $actual_in;
-                $insert->actual_out = $actual_out;
-                $insert->salary = $salary;
+                $insert->actual_out = $actual_out;                
+                $insert->day = 0;                
             }else{
                 $insert = $dtrSummary;
             }
         }else{
             $insert = $dtrSummary;
         }
+        $insert->salary = $salary;
+        $insert->hour = $hour;
+        $insert->minute = $minute;
         $insert->earned = $earned;
         $insert->late_minutes = 0;
         $insert->undertime_minutes = 0;

@@ -69,6 +69,14 @@ const EmployeeWageByService = ({ activeTab, wages, fetchEmployees, setWagesModal
                 toastr.success("Employee Service Rate deleted!");
                 setServiceRates(prevRates => prevRates.filter(rate => rate.id !== id));
                 fetchEmployees();
+                setForm({
+                    id: "",
+                    employee_id: form.employee_id,
+                    service_id: "",
+                    service_amount_rate: 0.00,
+                    service_percentage_rate: 0.00,
+                    rate_type: "amount",
+                });
             }
         });
     };

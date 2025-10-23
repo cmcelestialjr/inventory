@@ -2,39 +2,27 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class DtrDailySummary extends Model
+class EmployeeOtherEarning extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'employee_id',
-        'date',
-        'schedule_in',
-        'schedule_out',
-        'actual_in',
-        'actual_out',
-        'day',
-        'hour',
-        'minute',
-        'late_minutes',
-        'undertime_minutes',
-        'is_absent',
-        'incomplete_log',
-        'salary',
-        'earned',
-        'deduction',
-        'schedule_pay_type_id',
+        'earning_type_id', 
+        'amount',
     ];
-
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
+    }
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(EarningType::class, 'earning_type_id', 'id');
     }
 }

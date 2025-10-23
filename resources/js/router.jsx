@@ -19,6 +19,7 @@ import Employees from './components/Employees';
 import Payroll from './components/Payroll';
 import Deductions from './components/Deductions';
 import Advances from './components/Advances';
+import Attendances from './components/Attendances';
 
 function RouterApp() {  
   return (
@@ -90,6 +91,12 @@ function RouterApp() {
           element={
             <ProtectedRoute allowedRoles={["1"]}>
               <Employees />
+            </ProtectedRoute>} 
+        />
+        <Route path="/attendances"
+          element={
+            <ProtectedRoute allowedRoles={["1"]}>
+              <Attendances />
             </ProtectedRoute>} 
         />
         <Route path="/payroll" 

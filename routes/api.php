@@ -2,13 +2,16 @@
 
 use App\Http\Controllers\AdvancesController;
 use App\Http\Controllers\AdvanceStatusController;
+use App\Http\Controllers\AttendancesController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DamagedController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeductionController;
+use App\Http\Controllers\EarningTypesController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeDeductionController;
+use App\Http\Controllers\EmployeeOtherEarningsController;
 use App\Http\Controllers\EmployeeScheduleController;
 use App\Http\Controllers\EmployeeServicesRateController;
 use App\Http\Controllers\ExpensesCategoriesController;
@@ -17,6 +20,7 @@ use App\Http\Controllers\ExpensesSubCategoriesController;
 use App\Http\Controllers\PaymentOptionController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\PayrollDeductionController;
+use App\Http\Controllers\PayrollOtherEarningsController;
 use App\Http\Controllers\PayrollPdfController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
@@ -135,13 +139,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/damaged/fetch/statuses', [DamagedController::class, 'fetchStatuses']);
     Route::post('/damaged/manage', [DamagedController::class, 'manage']);
     
+    Route::get('/employee/salary/{id}', [EmployeeController::class, 'updateSalary']);
     Route::get('/employees/totals', [EmployeeController::class, 'getTotals']);
     Route::get('/employees/search', [EmployeeController::class, 'search']);
     Route::apiResource('employees', EmployeeController::class);
 
     Route::get('/schedule-pay-types/fetch', [ScheduleTypesController::class, 'fetch']);
     Route::get('/employee/schedule/index', [EmployeeScheduleController::class, 'index']);
-    Route::post('/employee/schedule/update', [EmployeeScheduleController::class, 'update']);
+    Route::post('/employee/schedule/update', [EmployeeScheduleController::class, 'update']);    
 
     Route::apiResource('employee-services-rate', EmployeeServicesRateController::class);
 
@@ -160,4 +165,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('advances', AdvancesController::class);
 
     Route::post('/payroll-generate-pdf', [PayrollPdfController::class, 'index']);
+
+    Route::get('/earning-types/fetch', [EarningTypesController::class, 'fetch']);
+    Route::apiResource('earning-types', EarningTypesController::class);
+
+    Route::apiResource('employee-other-earnings', EmployeeOtherEarningsController::class);
+
+    Route::apiResource('payroll-other-earnings', PayrollOtherEarningsController::class);
+
+    Route::apiResource('attendances', AttendancesController::class);
 });

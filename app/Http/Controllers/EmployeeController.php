@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\EmployeeSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -73,7 +74,10 @@ class EmployeeController extends Controller
                 $validated['picture'] = $request->file('picture')->store('employees/pictures', 'public');
             }
             
-            Employee::create($validated);
+            $employee = Employee::create($validated);
+
+            $this->defaultSchedule($employee->id);
+
             return response()->json(['message' => 'Employee created'], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -176,5 +180,40 @@ class EmployeeController extends Controller
             ->get();
 
         return response()->json($employees);
+    }
+
+    public function updateSalary(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'salary' => 'required|numeric|min:0',
+            ]);
+
+            $employee = Employee::findOrFail($id);
+            $employee->salary = $validated['salary'];
+            $employee->save();
+
+            return response()->json(['message' => 'Employee salary updated'], 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function defaultSchedule($employee_id)
+    {
+        $check = EmployeeSchedule::where('employee_id', $employee_id)
+            ->where('schedule_pay_type_id', 1)
+            ->first();
+        
+        if($check){
+            return;
+        }
+
+        $insert = new EmployeeSchedule;
+        $insert->employee_id = $employee_id;
+        $insert->time_in = '08:00:00';
+        $insert->time_out = '17:00:00';
+        $insert->schedule_pay_type_id = 1;
+        $insert->save();
     }
 }

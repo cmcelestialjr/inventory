@@ -25,7 +25,9 @@ return new class extends Migration
             $table->decimal('salary', 10, 2);
             $table->decimal('no_of_day_present', 10, 2);
             $table->decimal('earned', 10, 2);
+            $table->decimal('basic_pay', 10, 2);
             $table->decimal('overtime', 10, 2);
+            $table->decimal('other_earned', 10, 2);
             $table->decimal('holiday', 10, 2);
             $table->decimal('lates_absences', 10, 2);
             $table->decimal('gross', 10, 2);
@@ -36,6 +38,11 @@ return new class extends Migration
             $table->decimal('no_of_lates', 10, 2);
             $table->decimal('no_of_undertimes', 10, 2);
             $table->decimal('no_of_absences', 10, 2);
+            $table->integer('day');
+            $table->integer('hour');
+            $table->integer('minute');
+            $table->integer('ot_hour');
+            $table->integer('ot_minute');
             $table->string('remarks')->nullable();
             $table->timestamps();
         });

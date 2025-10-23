@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Jobs\ProcessAttendanceStatus;
-use App\Models\DtrDailySummary;
 use App\Models\DtrDevice;
 use App\Models\DtrLog;
 use App\Models\Employee;

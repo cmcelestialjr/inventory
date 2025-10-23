@@ -6,6 +6,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import EmployeeWageBySalary from "./EmployeeWageBySalary";
 import EmployeeWageByService from "./EmployeeWageByService";
+import EmployeeWageByOthers from "./EmployeeWageByOthers";
 
 const EmployeeWages = ({ wagesModal, setWagesModal, wages, fetchEmployees }) => {
     if (!wagesModal) return null;
@@ -27,7 +28,7 @@ const EmployeeWages = ({ wagesModal, setWagesModal, wages, fetchEmployees }) => 
                 </div>
                 
                 <div className="flex gap-4 mb-4">
-                    {["By Salary", "By Service"].map((tab) => (
+                    {["By Salary", "By Service", "Other Earnings"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -50,6 +51,13 @@ const EmployeeWages = ({ wagesModal, setWagesModal, wages, fetchEmployees }) => 
                 />
 
                 <EmployeeWageByService
+                    activeTab={activeTab}
+                    wages={wages}
+                    fetchEmployees={fetchEmployees}
+                    setWagesModal={setWagesModal}
+                />
+
+                <EmployeeWageByOthers
                     activeTab={activeTab}
                     wages={wages}
                     fetchEmployees={fetchEmployees}

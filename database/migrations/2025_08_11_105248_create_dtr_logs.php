@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('state');  //1 finger, 15 face 
             $table->string('log_type')->index(); //in or out
             $table->integer('updated_to_daily')->index(); // 0 or 1
-            $table->integet('is_sent')->nullable(); //0 or 1
+            $table->integer('is_sent')->nullable(); //0 or 1
             $table->timestamps();
         });
     }

@@ -19,6 +19,9 @@ return new class extends Migration
             $table->time('schedule_out')->nullable();
             $table->time('actual_in')->nullable();
             $table->time('actual_out')->nullable();
+            $table->integer('day')->default(0);
+            $table->integer('hour')->default(0);
+            $table->integer('minute')->default(0);
             $table->integer('late_minutes')->default(0);
             $table->integer('undertime_minutes')->default(0);
             $table->integer('is_absent')->default(0); // 1 for absent

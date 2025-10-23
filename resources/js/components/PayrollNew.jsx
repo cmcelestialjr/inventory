@@ -269,7 +269,7 @@ const PayrollNew = ({ authToken }) => {
                             List Employee
                         </button>
                     </div>
-                </div>                
+                </div>
             </form>
 
             <div>
@@ -321,15 +321,46 @@ const PayrollNew = ({ authToken }) => {
                                             </div>
                                         </label>
                                     </div>
-                                    <div className="flex justify-between mb-2 mt-2">
+                                    <div className="flex justify-between mt-2">
+                                        <p className="text-sm text-gray-800">
+                                                Salary: ₱{employee.salary?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <p className="text-sm font-medium text-blue-600">
+                                                Days Present: {employee.no_of_day_present}
+                                            </p>
+                                    </div>
+                                    <div className="flex justify-between mb-2 border-t mt-1 pt-1">
                                         <div>
-                                            <p className="text-sm text-gray-800">Salary: {employee.salary}</p>
-                                            <p className="text-sm text-blue-600">Days: {employee.no_of_day_present}</p>
-                                            <p className="text-sm text-blue-600">Earned: {employee.earned}</p>
+                                            <p className="text-sm text-gray-800">
+                                                Basic Pay: ₱{employee.basic_pay?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+
+                                            <p className="text-sm text-gray-800">
+                                                Overtime: ₱{employee.overtime?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+
+                                            {employee.other_earnings?.length > 0 &&
+                                                employee.other_earnings.map((earning) => (
+                                                    <p key={earning.id} className="text-sm text-purple-600">
+                                                    {earning.name}: ₱{earning.total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </p>
+                                                ))
+                                            }
                                         </div>
+
+                                        {/* Right Column: Deductions and Netpay */}
                                         <div className="text-right">
-                                            <p className="text-sm text-red-600">Deduction: {employee.deduction}</p>
-                                            <p className="text-sm text-green-600">Netpay: {employee.netpay}</p>
+                                            <p className="text-sm font-medium text-blue-600">
+                                                Earned: ₱{employee.earned?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+
+                                            <p className="text-sm font-medium text-red-600">
+                                                Deductions: ₱{employee.deduction?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+
+                                            <p className="text-sm font-semibold text-green-600">
+                                                Net Pay: ₱{employee.netpay?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

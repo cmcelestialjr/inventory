@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Plus, Save, X } from "lucide-react";
+import { Check, Pencil, Plus, Save, X } from "lucide-react";
 import toastr from 'toastr';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -13,6 +13,8 @@ const EmployeeWageBySalary = ({ activeTab, wages, fetchEmployees, setWagesModal 
     const [editTimeOut, setEditTimeOut] = useState(null);
     const [schedules, setSchedules] = useState([]);
     const [selectedDays, setSelectedDays] = useState([]);
+    const [tempSalary, setTempSalary] = useState(wages.salary || "");
+    const [isEditing, setIsEditing] = useState(false);    
 
     useEffect(() => {
         fetchSchedules();
@@ -117,19 +119,83 @@ const EmployeeWageBySalary = ({ activeTab, wages, fetchEmployees, setWagesModal 
         );
     };
 
+    const handleEdit = () => setIsEditing(true);
+
+    const handleCancel = () => {
+        setIsEditing(false);
+    };
+
+    const handleSave = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            const response = await axios.get(
+                `/api/employee/salary/${wages.id}`, { 
+                params: {
+                    salary: tempSalary
+                }, 
+                headers: { Authorization: `Bearer ${authToken}` } }
+            );
+            toastr.success("Salary updated successfully!");
+            fetchEmployees();
+            setIsEditing(false);
+            setWages((prev) => ({
+                ...prev,
+                salary: tempSalary,
+            }));
+            
+
+        } catch (error) {
+            
+        }
+        
+    };
+
     return (
         <div className="mt-5">
             <form className="space-y-4">
                 <div>
-                    <label htmlFor="salary">Salary per day</label>
-                    <input 
-                        type="text"
-                        id="salary"
-                        name="salary"
-                        value={wages.salary}
-                        className="border px-3 py-2 rounded-lg w-full"
-                        disabled
-                    />
+                    <label htmlFor="salary" className="flex items-center justify-between mb-1">
+                    <span>Salary per day</span>
+
+                    {!isEditing ? (
+                    <button
+                        type="button"
+                        onClick={handleEdit}
+                        className="text-blue-600 hover:text-blue-400 flex items-center gap-1 text-sm"
+                    >
+                        <Pencil size={14} /> Edit
+                    </button>
+                    ) : (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            className="text-green-600 hover:text-green-400 flex items-center gap-1 text-sm"
+                        >
+                            <Check size={14} /> Save
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="text-red-600 hover:text-red-400 flex items-center gap-1 text-sm"
+                        >
+                            <X size={14} /> Cancel
+                        </button>
+                    </div>
+                    )}
+                </label>
+
+                <input
+                    type="number"
+                    id="salary"
+                    name="salary"
+                    value={tempSalary}
+                    onChange={(e) => setTempSalary(e.target.value)}
+                    className={`border px-3 py-2 rounded-lg w-full ${
+                    isEditing ? "bg-white" : "bg-gray-100"
+                    }`}
+                    disabled={!isEditing}
+                />
                 </div>
                 {schedules.map((schedule) => (
                     <div key={schedule.id} className="border rounded-lg p-4 mb-4 shadow-sm">

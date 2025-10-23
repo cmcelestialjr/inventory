@@ -247,7 +247,10 @@ class PayrollDeductionController extends Controller
         $payroll->netpay = $payrollEmployee->netpay_sum;
         $payroll->save();
 
-        return Payroll::with('payrollType','employees.deductionList.deduction')
+        return Payroll::with('payrollType', 
+                    'employees.deductionList.deduction',
+                    'employees.otherEarned.earningType',
+                    'employees.employee')
                 ->withCount('employees')
                 ->where('id',$payroll_id)
                 ->first();

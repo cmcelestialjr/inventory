@@ -141,7 +141,7 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                                 No Employees found
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                                 {employeesToDisplay.map((employee) => {
                                     const middlename = employee.middlename ? ' ' + employee.middlename[0] + '.' : '';
                                     const extname = employee.extname ? ' ' + employee.extname : '';
@@ -166,15 +166,45 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div className="flex justify-between mb-1 mt-1">
+                                                <div className="flex justify-between mt-2">
+                                                    <p className="text-sm text-gray-800">
+                                                            Salary: ₱{parseFloat(employee.salary)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+                                                        <p className="text-sm font-medium text-blue-600">
+                                                            Days Present: {employee.no_of_day_present}
+                                                        </p>
+                                                </div>
+                                                <div className="flex justify-between mb-2 border-t mt-1 pt-1">
                                                     <div>
-                                                        <p className="text-sm text-gray-800">Salary: {employee.salary}</p>
-                                                        <p className="text-sm text-blue-600">Days: {employee.no_of_day_present}</p>
-                                                        <p className="text-sm text-blue-600">Earned: {employee.earned}</p>
+                                                        <p className="text-sm text-gray-800">
+                                                            Basic Pay: ₱{parseFloat(employee.basic_pay)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+
+                                                        <p className="text-sm text-blue-500">
+                                                            Overtime: ₱{parseFloat(employee.overtime)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+
+                                                        {employee.other_earned?.length > 0 &&
+                                                            employee.other_earned.map((earning) => (
+                                                                <p key={earning.id} className="text-sm text-purple-600">
+                                                                {earning.earning_type?.name}: ₱{parseFloat(earning.total)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </p>
+                                                            ))
+                                                        }
                                                     </div>
+                                                    {/* Right Column: Deductions and Netpay */}
                                                     <div className="text-right">
-                                                        <p className="text-sm text-red-600">Deduc: {employee.deduction}</p>
-                                                        <p className="text-sm text-green-600">Net: {employee.netpay}</p>
+                                                        <p className="text-sm font-medium text-blue-600">
+                                                            Earned: ₱{parseFloat(employee.earned)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+
+                                                        <p className="text-sm font-medium text-red-600">
+                                                            Deductions: ₱{parseFloat(employee.deduction)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
+
+                                                        <p className="text-sm font-semibold text-green-600">
+                                                            Net Pay: ₱{parseFloat(employee.netpay)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 <div className="mt-2">

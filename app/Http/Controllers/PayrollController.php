@@ -10,6 +10,7 @@ use App\Models\Payroll;
 use App\Models\PayrollDeduction;
 use App\Models\PayrollEmployee;
 use App\Models\PayrollMonth;
+use App\Models\PayrollOtherEarned;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +22,10 @@ class PayrollController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Payroll::with('payrollType','employees.deductionList.deduction')
+        $query = Payroll::with('payrollType', 
+                    'employees.deductionList.deduction',
+                    'employees.otherEarned.earningType',
+                    'employees.employee')
             ->withCount('employees');
 
         if ($request->has('search') && !empty($request->search)) {
@@ -82,7 +86,8 @@ class PayrollController extends Controller
                 'dtr_summary' => function ($q) use ($date_from, $date_to) {
                     $q->whereBetween('date', [$date_from, $date_to]);
                 },
-                'advanceDeduction'
+                'advanceDeduction',
+                'otherEarnings.type',
             ])->withSum('deductions', 'amount');
 
         $query->whereDoesntHave('payrollMonths', function ($q) use ($year,$month,$date_from,$date_to,$payrollType) {
@@ -128,7 +133,12 @@ class PayrollController extends Controller
                 $no_of_lates = 0;
                 $no_of_undertimes = 0;
                 $no_of_absences = 0;
-
+                $overtime_earnedss = [];
+                $day = 0;
+                $hour = 0;
+                $minute = 0;
+                $ot_hour = 0;
+                $ot_minute = 0;
                 if ($employee->dtr_summary) {
                     foreach ($employee->dtr_summary as $dtr) {
                         if($dtr->is_absent==1){
@@ -137,7 +147,7 @@ class PayrollController extends Controller
                         }else{
                             if ($dtr->schedule_pay_type_id == 1) {
                                 $regular_earned += $dtr->earned;
-                                $regular_deduction += $dtr->deduction;
+                                // $regular_deduction += $dtr->deduction;
                                 $lates_absences += $dtr->deduction;
                                 $lates += $dtr->late_minutes + $dtr->undertime_minutes;
 
@@ -151,16 +161,59 @@ class PayrollController extends Controller
                                     $no_of_undertimes++;
                                 }
 
+                                $day += $dtr->day;
+                                $hour += $dtr->hour;
+                                $minute += $dtr->minute;
+
                             } elseif ($dtr->schedule_pay_type_id == 2) {
                                 $overtime_earned += $dtr->earned;
+                                $overtime_earnedss[] = $dtr->earned.'-'.$dtr->id;
+                                $ot_hour += $dtr->hour;
+                                $ot_minute += $dtr->minute;
                             }
                         }
                     }
                 }
 
-                $deductions = $deduction + $regular_deduction;
-                $earned = $regular_earned + $overtime_earned;
-                $gross = $earned-$regular_deduction;
+
+                if ($minute >= 60) {
+                    $hour += floor($minute / 60); // Add the hours
+                    $minute = $minute % 60; // Get the remaining minutes
+                }
+
+                if ($hour >= 8) {
+                    $day += floor($hour / 8); // Add the days
+                    $hour = $hour % 8; // Get the remaining hours
+                }
+
+                if ($ot_minute >= 60) {
+                    $ot_hour += floor($ot_minute / 60); // Add the hours
+                    $ot_minute = $ot_minute % 60; // Get the remaining minutes
+                }
+
+                
+                $other_earned = 0;
+                $list_other_earned = [];
+
+                if(count($employee->otherEarnings)>0){
+                    foreach($employee->otherEarnings as $earning){
+                        $times_to = $earning->type->type == 'daily' ? $no_of_day_present : 1;
+
+                        $list_other_earned[] = [
+                            'id' => $earning->type->id,
+                            'name' => $earning->type->name,
+                            'type' => $earning->type->type,
+                            'amount' => $earning->amount,
+                            'total' => $earning->amount * $times_to,
+                        ];
+
+                        $other_earned += $earning->amount * $times_to;
+                    }
+                }
+
+                $deductions = $deduction + $regular_deduction + $lates_absences;
+                $earned = $regular_earned + $overtime_earned + $other_earned;
+                $gross = $earned;
                 $netpay = $earned - $deductions;
 
                 $employeeLists[] = [
@@ -173,7 +226,9 @@ class PayrollController extends Controller
                     'position' => $employee->position,
                     'salary' => $employee->salary,
                     'earned' => $earned,
+                    'basic_pay' => $regular_earned,
                     'overtime' => $overtime_earned,
+                    'other_earned' => $other_earned,
                     'gross' => $gross,
                     'deduction' => $deductions,                    
                     'netpay' => $netpay,
@@ -184,7 +239,13 @@ class PayrollController extends Controller
                     'no_of_lates' => $no_of_lates,
                     'no_of_undertimes' => $no_of_undertimes,
                     'no_of_absences' => $no_of_absences,
+                    'day' => $day,
+                    'hour' => $hour,
+                    'minute' => $minute,
+                    'ot_hour' => $ot_hour,
+                    'ot_minute' => $ot_minute,
                     'deductions' => $employee->deductions,
+                    'other_earnings' => $list_other_earned,
                 ];
             }
         }
@@ -214,7 +275,9 @@ class PayrollController extends Controller
             'employees.*.salary' => 'required|numeric|min:0',
             'employees.*.deduction' => 'required|numeric|min:0',
             'employees.*.earned' => 'required|numeric|min:0',
-            'employees.*.overtime' => 'required|numeric|min:0',            
+            'employees.*.basic_pay' => 'required|numeric|min:0',
+            'employees.*.overtime' => 'required|numeric|min:0',
+            'employees.*.other_earned' => 'required|numeric|min:0',
             'employees.*.gross' => 'required|numeric|min:0',
             'employees.*.netpay' => 'required|numeric',
             'employees.*.no_of_day_present' => 'required|integer|min:0',
@@ -224,12 +287,22 @@ class PayrollController extends Controller
             'employees.*.no_of_lates' => 'required|integer|min:0',
             'employees.*.no_of_undertimes' => 'required|integer|min:0',
             'employees.*.no_of_absences' => 'required|integer|min:0',
+            'employees.*.day' => 'required|integer|min:0',
+            'employees.*.hour' => 'required|integer|min:0',
+            'employees.*.minute' => 'required|integer|min:0',
+            'employees.*.ot_hour' => 'required|integer|min:0',
+            'employees.*.ot_minute' => 'required|integer|min:0',
             'employees.*.deductions' => 'nullable|array',
             'employees.*.deductions.*.employee_id' => 'required|integer|exists:employees,id',
             'employees.*.deductions.*.deduction_id' => 'required|integer|exists:deductions,id',
             'employees.*.deductions.*.amount' => 'required|numeric|min:0',
+            'employees.*.other_earnings' => 'nullable|array',
+            'employees.*.other_earnings.*.id' => 'required|integer|exists:earning_types,id',
+            'employees.*.other_earnings.*.type' => 'required|string|in:daily,hourly,fixed',
+            'employees.*.other_earnings.*.amount' => 'required|numeric|min:0',
+            'employees.*.other_earnings.*.total' => 'required|numeric|min:0',
         ]);
-
+        
         DB::beginTransaction();
         try{
             $user = Auth::user();
@@ -263,7 +336,7 @@ class PayrollController extends Controller
             $insert->date_from = $date_from;
             $insert->date_to = $date_to;
             $insert->etal = '';
-            $insert->earned = 0;
+            $insert->earned = 0;            
             $insert->gross = 0;
             $insert->lwop = 0;
             $insert->deduction = 0;
@@ -293,6 +366,10 @@ class PayrollController extends Controller
 
                 if (isset($employee['deductions'])) {
                     $this->payrollDeductions($payroll_employee_id, $payroll_id, $employee['deductions']);
+                }
+
+                if (isset($employee['other_earnings'])) {
+                    $this->payrollOtherEarnings($payroll_employee_id, $payroll_id, $employee['id'], $employee['other_earnings']);
                 }
 
                 $x++;
@@ -364,6 +441,7 @@ class PayrollController extends Controller
             PayrollDeduction::where('payroll_id',$id)->delete();
             PayrollEmployee::where('payroll_id',$id)->delete();
             PayrollMonth::where('payroll_id',$id)->delete();
+            PayrollOtherEarned::where('payroll_id',$id)->delete();
 
             $payroll->delete();
 
@@ -380,9 +458,19 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'id' => 'required|integer|exists:payroll_employees,id',
             'salary' => 'required|numeric',
+            'no_of_day_present' => 'required|numeric',
             'days' => 'required|numeric',
+            'hour' => 'required|numeric',
+            'minute' => 'required|numeric',
+            'ot_hour' => 'required|numeric',
+            'ot_minute' => 'required|numeric',
+            'basic_pay' => 'required|numeric',
+            'overtime' => 'required|numeric',
             'earned' => 'required|numeric',
             'netpay' => 'required|numeric',
+            'other_earned' => 'nullable|array',
+            'other_earned.*.id' => 'required|integer|exists:payroll_other_earneds,id',
+            'other_earned.*.total' => 'required|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -392,10 +480,25 @@ class PayrollController extends Controller
 
             $update = PayrollEmployee::findOrFail($validated['id']);
             $update->salary = $validated['salary'];
-            $update->no_of_day_present = $validated['days'];
+            $update->no_of_day_present = $validated['no_of_day_present'];
+            $update->day = $validated['days'];
+            $update->hour = $validated['hour'];
+            $update->minute = $validated['minute'];
+            $update->ot_hour = $validated['ot_hour'];
+            $update->ot_minute = $validated['ot_minute'];
+            $update->basic_pay = $validated['basic_pay'];
+            $update->overtime = $validated['overtime'];
             $update->earned = $validated['earned'];
             $update->netpay = $validated['netpay'];
             $update->save();
+
+            if (isset($validated['other_earned'])) {
+                foreach($validated['other_earned'] as $other_earned){
+                    $update = PayrollOtherEarned::findOrFail($other_earned['id']);
+                    $update->total = $other_earned['total'];
+                    $update->save();
+                }
+            }
 
             $payroll_id = $update->payroll_id;
 
@@ -458,7 +561,6 @@ class PayrollController extends Controller
                     ->where('deduction_id', $ca_deduction_id)
                     ->update(['amount' => 0]);
         }
-
     }
 
     private function payrollEmployees($payroll_id, $employee)
@@ -474,7 +576,9 @@ class PayrollController extends Controller
         $insert->salary = $employee['salary'];
         $insert->no_of_day_present = $employee['no_of_day_present'];
         $insert->earned = $employee['earned'];
+        $insert->basic_pay = $employee['basic_pay'];
         $insert->overtime = $employee['overtime'];
+        $insert->other_earned = $employee['other_earned'];
         $insert->holiday = 0;
         $insert->lates_absences = $employee['lates_absences'];
         $insert->gross = $employee['gross'];
@@ -485,6 +589,11 @@ class PayrollController extends Controller
         $insert->no_of_lates = $employee['no_of_lates'];
         $insert->no_of_undertimes = $employee['no_of_undertimes'];
         $insert->no_of_absences = $employee['no_of_absences'];
+        $insert->day = $employee['day'];
+        $insert->hour = $employee['hour'];
+        $insert->minute = $employee['minute'];
+        $insert->ot_hour = $employee['ot_hour'];
+        $insert->ot_minute = $employee['ot_minute'];
         $insert->save();
 
         return $insert->id;
@@ -575,8 +684,8 @@ class PayrollController extends Controller
         $payroll->deduction = $payrollEmployee->deduction_sum;
         $payroll->netpay = $payrollEmployee->netpay_sum;
         $payroll->save();
-
-        return Payroll::with('payrollType','employees.deductionList.deduction')
+        
+        return Payroll::with('payrollType','employees.deductionList.deduction', 'employees.otherEarned.earningType', 'employees.employee')
                 ->withCount('employees')
                 ->where('id',$payroll_id)
                 ->first();
@@ -630,4 +739,26 @@ class PayrollController extends Controller
 
         return $deduction->id;
     }
+
+    private function payrollOtherEarnings($payroll_employee_id, $payroll_id, $employee_id, $other_earnings)
+    {
+        $insertData = [];
+
+        foreach($other_earnings as $earning){
+            $insertData[] = [
+                'payroll_employee_id' => $payroll_employee_id,
+                'payroll_id' => $payroll_id,
+                'employee_id' => $employee_id,
+                'earning_type_id' => $earning['id'],
+
+                'type' => $earning['type'],
+                'amount' => $earning['amount'],
+                'total' => $earning['total'],
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+        }
+
+        PayrollOtherEarned::insert($insertData);
+    }   
 }
