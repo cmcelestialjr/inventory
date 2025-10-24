@@ -75,16 +75,22 @@ const AttendanceLists = ({}) => {
     };
 
     const getDaysInMonth = (year, month) => {
-        return new Date(year, month, 0).getDate(); // Get number of days in a month
+        return new Date(year, month, 0).getDate(); 
     };
 
     const generateDayColumns = (daysInMonth) => {
         const days = [];
         for (let i = 1; i <= daysInMonth; i++) {
-            days.push(<th key={i} className="px-3 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider border-l border-gray-200">{i}</th>);
+            const bgColor = isWeekEnd(i, month - 1, year) ? 'bg-blue-500 text-white' : '';
+            days.push(<th key={i} className={`${bgColor} px-3 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider border-l border-gray-200`}>{i}</th>);
         }
         return days;
     };
+
+    function isWeekEnd(date, month = 1, year = 2025) {
+        const weekEnd = new Date(year, month, date).getDay();
+        return  weekEnd === 0 || weekEnd === 6; 
+    }
 
     const daysInMonth = getDaysInMonth(year, month);
 
