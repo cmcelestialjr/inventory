@@ -33,7 +33,7 @@ class EmployeeDeductionController extends Controller
 
         $employees = $query->orderBy('lastname','ASC')
             ->orderBy('firstname','ASC')
-            ->limit(20)
+            ->limit(30)
             ->get();
 
         return response()->json([

@@ -104,10 +104,10 @@ const DeductionEmployee = ({}) => {
     };    
 
     const fetchEmployees = async (searchTerm) => {
-        if (searchTerm.length <= 1) {
-            setEmployees([]);
-            return;
-        }
+        // if (searchTerm.length <= 1) {
+        //     setEmployees([]);
+        //     return;
+        // }
 
         try {
             const authToken = localStorage.getItem("token");
