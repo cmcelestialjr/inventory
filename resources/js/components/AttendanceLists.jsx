@@ -124,7 +124,6 @@ const AttendanceLists = ({}) => {
     };
 
     const handleDailyClick  = (employee_id, salary, schedules, date, attendance, otAttendance) => {
-        console.log(schedules);
         setForm({
             employee_id: employee_id,
             salary: salary,

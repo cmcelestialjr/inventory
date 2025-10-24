@@ -31,6 +31,10 @@ class EmployeeScheduleController extends Controller
             $validatedId = $request->validate([
                 'id' => 'required|exists:employee_schedules,id'
             ]);
+            $request->merge([
+                'time_in' => ($request->input('time_in') === 'None') ? null : $request->input('time_in'),
+                'time_out' => ($request->input('time_out') === 'None') ? null : $request->input('time_out')
+            ]);
 
             $validatedData = $request->validate([
                 'time_in' => 'nullable|date_format:H:i:s',

@@ -340,8 +340,7 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
                                                 if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setRegularTimeIn(date);
                                                 }
                                             }}
@@ -374,8 +373,7 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
                                                 if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setRegularTimeOut(date);
                                                 }
                                             }}
@@ -414,11 +412,16 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                             value={overTimeIn ? overTimeIn.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
                                             onChange={(e) => {
                                                 const value = e.target.value;
+
+                                                if (value === '') {
+                                                    setOverTimeOut(null); 
+                                                    return;
+                                                }
+
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
-                                                if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                if (hours && minutes && !isNaN(hours) && !isNaN(minutes)) {
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setOverTimeIn(date);
                                                 }
                                             }}
@@ -448,11 +451,16 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                             value={overTimeOut ? overTimeOut.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
                                             onChange={(e) => {
                                                 const value = e.target.value;
+
+                                                if (value === '') {
+                                                    setOverTimeOut(null); 
+                                                    return;
+                                                }
+                                                
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
-                                                if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                if (hours && minutes && !isNaN(hours) && !isNaN(minutes)) {
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setOverTimeOut(date);
                                                 }
                                             }}
@@ -501,8 +509,7 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
                                                 if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setActualTimeIn(date);
                                                 }
                                             }}
@@ -535,8 +542,7 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                                 const date = new Date();
                                                 const [hours, minutes] = value.split(':');
                                                 if (hours && minutes) {
-                                                    date.setHours(parseInt(hours));
-                                                    date.setMinutes(parseInt(minutes));
+                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
                                                     setActualTimeOut(date);
                                                 }
                                             }}

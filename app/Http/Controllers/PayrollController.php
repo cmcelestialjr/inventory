@@ -281,7 +281,7 @@ class PayrollController extends Controller
             'employees.*.gross' => 'required|numeric|min:0',
             'employees.*.netpay' => 'required|numeric',
             'employees.*.no_of_day_present' => 'required|integer|min:0',
-            'employees.*.lates_absences' => 'required|integer|min:0',
+            'employees.*.lates_absences' => 'nullable|integer|min:0',
             'employees.*.lates' => 'required|integer|min:0',
             'employees.*.absences' => 'required|integer|min:0',
             'employees.*.no_of_lates' => 'required|integer|min:0',
@@ -580,7 +580,7 @@ class PayrollController extends Controller
         $insert->overtime = $employee['overtime'];
         $insert->other_earned = $employee['other_earned'];
         $insert->holiday = 0;
-        $insert->lates_absences = $employee['lates_absences'];
+        $insert->lates_absences = $employee['lates_absences'] ? $employee['lates_absences'] : 0;
         $insert->gross = $employee['gross'];
         $insert->deduction = $employee['deduction'];
         $insert->netpay = $employee['netpay'];
