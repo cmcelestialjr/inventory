@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Advance;
 use App\Models\AdvanceDeduction;
 use App\Models\Deduction;
 use App\Models\Employee;
@@ -77,6 +78,14 @@ class PayrollController extends Controller
         $date_from = $getDateFromTo['date_from'];
         $date_to = $getDateFromTo['date_to'];
 
+        $includeDeduction = 'yes';
+
+        $check_date = date('Y-m-01', strtotime($year . '-' . $month . '-01'));
+
+        if (strtotime($check_date) >= strtotime($date_from) && strtotime($check_date) <= strtotime($date_to)) {
+            $includeDeduction = 'yes';
+        }
+
         $this->checkCashAdvances();
 
         $query = Employee::with([
@@ -120,7 +129,12 @@ class PayrollController extends Controller
             foreach($employees as $employee){
                 $extname = ' '.$employee->extname ? $employee->extname.' ' : '';
                 $middlename = ' '.$employee->middlename ? substr($employee->middlename, 0, 1) . '.' : '';
-                $deduction = $employee->deductions_sum_amount ? $employee->deductions_sum_amount : 0;
+                
+                if($includeDeduction){
+                    $deduction = $employee->deductions_sum_amount ? $employee->deductions_sum_amount : 0;
+                }else{
+                    $deduction = 0;
+                }
 
                 $regular_earned = 0;
                 $regular_deduction = 0;
@@ -139,6 +153,7 @@ class PayrollController extends Controller
                 $minute = 0;
                 $ot_hour = 0;
                 $ot_minute = 0;
+
                 if ($employee->dtr_summary) {
                     foreach ($employee->dtr_summary as $dtr) {
                         if($dtr->is_absent==1){
@@ -413,10 +428,33 @@ class PayrollController extends Controller
         ]);
 
         try {
+            $date_to_bank = date('Y-m-d', strtotime($validated['date_to_bank']));
 
             $payroll = Payroll::findOrFail($id);
-            $payroll->date_to_bank = date('Y-m-d', strtotime($validated['date_to_bank']));
+            $payroll->date_to_bank = $date_to_bank;
             $payroll->save();
+
+            $checkAdvance = AdvanceDeduction::where('payroll_id', $id)->first();
+            if($checkAdvance){
+                $checkAdvance->deduction_date = $date_to_bank;
+                $checkAdvance->save();
+
+                $total_deducted = AdvanceDeduction::where('advance_id', $checkAdvance->advance_id)
+                    ->whereNotNull('payroll_id')
+                    ->whereNotNull('deduction_date')
+                    ->sum('deduction_amount');
+
+                $advance = Advance::where('id', $checkAdvance->advance_id)->first();
+                if($advance){
+                    if($advance->total_deducted >= $advance->advance_amount){
+                        $advance->status_id = 3;
+                    }
+                    $advance->total_deducted = $total_deducted;
+                    $advance->save();
+
+                    
+                }
+            }
 
             return response()->json(['message' => 'Payroll date updated successfully'], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

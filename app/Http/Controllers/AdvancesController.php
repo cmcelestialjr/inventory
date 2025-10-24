@@ -188,6 +188,22 @@ class AdvancesController extends Controller
         }
     }
 
+    public function destroy($id)
+    {
+        try {
+            
+            $payroll = Advance::findOrFail($id);
+
+            $payroll->delete();
+
+            return response()->json(['message' => 'Deleted successfully'], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to delete'], 500);
+        }
+    }
+
     private function fetchCode()
     {
         $yearToday = date('Y');

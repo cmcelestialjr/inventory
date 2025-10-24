@@ -94,6 +94,26 @@ const Advances = () => {
         }
     };
 
+    const handleDelete = async (id) => {
+        Swal.fire({
+            title: "Delete Advance?",
+            text: "This action cannot be undone",
+            icon: "warning",
+            showCancelButton: true,
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const authToken = localStorage.getItem("token");
+                await axios.delete(`/api/advances/${id}`, {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
+                toastr.success("Advance deleted!");
+                fetchAdvances();
+            }
+        });
+    }; 
+
     const handleView = (advance) => {
         setSelectedAdvance(advance);
         setViewModal(true);
@@ -216,19 +236,24 @@ const Advances = () => {
                                         </span>
                                         </p>
                                         <p className="text-sm text-gray-700 flex justify-between w-full">
-                                        Repayment Period/s: <span className="font-medium">
-                                            {advance.repayment_periods}
-                                        </span>
+                                            Repayment Period/s: <span className="font-medium">
+                                                {advance.repayment_periods}
+                                            </span>
                                         </p>
                                         <p className="text-sm text-gray-700 flex justify-between w-full">
-                                        Monthly Deduction: <span className="font-medium">
-                                            {advance.monthly_deduction > 0 ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(advance.monthly_deduction) : 0}
-                                        </span>
+                                            Monthly Deduction: <span className="font-medium">
+                                                {advance.monthly_deduction > 0 ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(advance.monthly_deduction) : 0}
+                                            </span>
                                         </p>
                                         <p className="text-sm text-gray-700 flex justify-between w-full">
-                                        Remaining: <span className="font-medium">
-                                            {advance.advance_amount - advance.total_deducted > 0 ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(advance.advance_amount - advance.total_deducted) : 0}
-                                        </span>
+                                            Remaining: 
+                                            <span
+                                                className={`font-medium ${
+                                                    advance.advance_amount - advance.total_deducted > 0 ? 'text-red-500' : ''
+                                                }`}
+                                            >
+                                                {advance.advance_amount - advance.total_deducted > 0 ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(advance.advance_amount - advance.total_deducted) : 0}
+                                            </span>
                                         </p>
                                         <p className="text-sm text-gray-700 flex justify-between w-full">
                                         Status: <span className={`font-medium ${textColor}`}>{advance.status?.name}</span>
@@ -250,7 +275,18 @@ const Advances = () => {
                                             >
                                             Edit
                                             </button>
-
+                                            
+                                            <button
+                                                className={`text-white py-1 px-2 rounded-lg text-xs transition-colors ${
+                                                    (advance.deductions?.some(d => d.payroll_id !== null))
+                                                    ? 'bg-red-400 opacity-50 cursor-not-allowed'
+                                                    : 'bg-red-700 hover:bg-red-600'
+                                                }`}
+                                                onClick={() => handleDelete(advance.id)}
+                                                disabled={advance.deductions?.some(d => d.payroll_id !== null)}
+                                            >
+                                                Delete
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

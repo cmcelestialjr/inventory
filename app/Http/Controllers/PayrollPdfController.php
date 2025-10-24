@@ -59,7 +59,7 @@ class PayrollPdfController extends Controller
             if ($count_4_employee>3) {
                 $count_4_employee = 0;
                 $pdf->AddPage();
-                $pdf->SetY(5);
+                $pdf->SetY(8);
             }
 
             $x = $this->margin_x;
@@ -70,7 +70,9 @@ class PayrollPdfController extends Controller
         $start_y = $pdf->GetY();
         $pdf->SetXY($x, $y);
 
-        // --- Place Logo, Company Name, and Address ---
+        $pdf->SetXY($x - 2, $y - 1);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell($this->column_width + 6, 140, '', 1, 1, 'L', 0, '', 1);
 
         // Logo setup
         $logo_path = public_path('images/rockfil.png');
@@ -248,75 +250,12 @@ class PayrollPdfController extends Controller
         $pdf->SetFont('dejavusans', 'I', 7);
         $pdf->Cell($this->column_width, 5, 'This payslip is system generated. Signature is not required.', 0, 1, 'C', 0, '', 1);
 
-        // $pdf->SetXY($x, $start_y_summary);
-        // $pdf->SetFont('dejavusans', 'B', 8);
-        // $pdf->Cell(27, 4, 'EARNINGS', 0, 1, 'L', 0, '', 1);
-
-        // $pdf->SetXY($x + 27, $start_y_summary);
-        // $pdf->SetFont('dejavusans', 'B', 8);
-        // $pdf->Cell(18, 4, 'Amount', 1, 1, 'L', 0, '', 1);
-
-        // $pdf->SetXY($x + 27 + 18, $start_y_summary);
-        // $pdf->SetFont('dejavusans', 'B', 8);
-        // $pdf->Cell(27, 4, 'DEDUCTIONS', 0, 1, 'L', 0, '', 1);
-
-        // $pdf->SetXY($x + 27 + 18 + 27, $start_y_summary);
-        // $pdf->SetFont('dejavusans', 'B', 8);
-        // $pdf->Cell(18, 4, 'Amount', 0, 1, 'L', 0, '', 1);
-
-        // // Earnings and Attendance
-        // $pdf->SetFont('dejavusans', '', 10);
-        // $this->addDetailRow($pdf, $x, 'Period:', "{$payroll['period']}");
-        // $this->addDetailRow($pdf, $x, 'Type:', "{$payroll['payroll_type']['name']}");
-        // $this->addDetailRow($pdf, $x, 'Base Salary:', "{$employee['salary']}");
-        // $this->addDetailRow($pdf, $x, 'Days Present:', "{$employee['no_of_day_present']}");
-
-        // $pdf->Ln(1);
-        // $pdf->SetFont('dejavusans', 'B', 10);
-        // $this->addDetailRow($pdf, $x, 'Earned:', "{$employee['earned']}", true, 11);
-        // $pdf->SetFont('dejavusans', '', 10);
-
-        // // Deductions
-        // $pdf->SetFont('dejavusans', 'B', 10);
-        // $this->addDetailRow($pdf, $x, "Deductions:", "");
-        // $pdf->SetFont('dejavusans', '', 9);
-
-        // if (isset($employee['deduction_list']) && count($employee['deduction_list']) > 0) {
-        //     foreach ($employee['deduction_list'] as $deduction) {
-        //         $deduction_group = $deduction['deduction']['group'] ? "({$deduction['deduction']['group']})" : "";
-        //         $deduction_label = "{$deduction['deduction']['name']}{$deduction_group}:";
-        //         $this->addDetailRow($pdf, $x, $deduction_label, $deduction['amount']);
-        //     }
-        // } else {
-        //     $pdf->SetX($x);
-        //     $pdf->Cell($this->column_width, 5, '-', 0, 1, 'L');
-        // }
-
-        // // Totals and Net Pay
-        // $pdf->Ln(1);
-        // $pdf->SetFont('dejavusans', 'B', 10);
-        // $this->addDetailRow($pdf, $x, 'Total Deductions:', "{$employee['deduction']}");
-
-        // $pdf->SetDrawColor(0, 0, 0);
-        // $pdf->SetLineWidth(0.3);
-        // $pdf->SetFillColor(220, 240, 255);
-
-        // $pdf->Ln(1);
-        // $pdf->SetFont('dejavusans', 'B', 12);
-        // $pdf->SetX($x);
-        // $pdf->Cell($this->column_width * 0.55, 7, 'NET PAY:', 'T', 0, 'L', 1);
-        // $pdf->Cell($this->column_width * 0.45, 7, "{$employee['netpay']}", 'T', 1, 'R', 1);
-
-        // $pdf->Ln(5); // Space after the entry
-
-        // Calculate the height of the current block for column alignment
         $end_y = $pdf->GetY();
         $previous_employee_height = $end_y - $start_y;
 
         $employee_count++;
 
         if ($employee_count % 2 === 0) {
-            // Move the Y position down to the bottom of the two columns for the next entry
             $pdf->SetY(150);
         }
         $count_4_employee++;

@@ -218,21 +218,21 @@ const Employees = () => {
                                     <div className="flex justify-center gap-2">
                                         <button
                                             onClick={() => handleForm(emp)}
-                                            className="bg-yellow-500 text-md text-white px-3 py-2 rounded-md shadow hover:bg-yellow-400 flex items-center gap-1"
+                                            className="bg-yellow-500 text-xs text-white px-3 py-2 rounded-md shadow hover:bg-yellow-400 flex items-center gap-1"
                                         >
-                                            <Edit size="14" /> Edit
+                                            <Edit size="11" /> Edit
                                         </button>
                                         <button
                                             onClick={() => handleDelete(emp.id)}
-                                            className="bg-red-600 text-md text-white px-3 py-2 rounded-md shadow hover:bg-red-500 flex items-center gap-1"
+                                            className="bg-red-600 text-xs text-white px-3 py-2 rounded-md shadow hover:bg-red-400 flex items-center gap-1"
                                         >
-                                            <Trash2 size="14" /> Delete
+                                            <Trash2 size="11" /> Delete
                                         </button>
                                         <button
                                             onClick={() => handleWages(emp)}
-                                            className="bg-green-600 text-md text-white px-3 py-2 rounded-md shadow hover:bg-green-500 flex items-center gap-1"
+                                            className="bg-green-600 text-xs text-white px-3 py-2 rounded-md shadow hover:bg-green-500 flex items-center gap-1"
                                         >
-                                            <Wallet size="14" /> Wages
+                                            <Wallet size="11" /> Wages
                                         </button>
                                     </div>
                                 </td>
@@ -277,19 +277,19 @@ const Employees = () => {
                                     onClick={() => handleForm(emp)}
                                     className="bg-yellow-500 text-white text-xs px-3 py-1 rounded-md shadow hover:bg-yellow-400 flex items-center gap-1"
                                 >
-                                    <Edit size="14" /> Edit
+                                    <Edit size="11" /> Edit
                                 </button>
                                 <button
                                     onClick={() => handleDelete(emp.id)}
-                                    className="bg-red-600 text-white text-xs px-3 py-1 rounded-md shadow hover:bg-red-500 flex items-center gap-1"
+                                    className="bg-blue-600 text-white text-xs px-3 py-1 rounded-md shadow hover:bg-red-500 flex items-center gap-1"
                                 >
-                                    <Trash2 size="14" /> Delete
+                                    <Trash2 size="11" /> Delete
                                 </button>
                                 <button
                                     onClick={() => handleWages(emp)}
                                     className="bg-green-600 text-white text-xs px-3 py-1 rounded-md shadow hover:bg-green-500 flex items-center gap-1"
                                 >
-                                    <Wallet size="14" /> Wages
+                                    <Wallet size="11" /> Wages
                                 </button>
                                 </div>
                             </div>

@@ -15,8 +15,6 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('payroll_id')->index();
             $table->unsignedBigInteger('employee_id')->index();
-            $table->string('year')->index();
-            $table->string('month')->index();
             $table->string('lastname')->index();
             $table->string('firstname')->index();
             $table->string('middlename')->nullable();
