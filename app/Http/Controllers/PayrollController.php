@@ -163,7 +163,7 @@ class PayrollController extends Controller
                             if ($dtr->schedule_pay_type_id == 1) {
                                 $regular_earned += $dtr->earned;
                                 // $regular_deduction += $dtr->deduction;
-                                $lates_absences += $dtr->deduction;
+                                // $lates_absences += $dtr->deduction;
                                 $lates += $dtr->late_minutes + $dtr->undertime_minutes;
 
                                 $no_of_day_present++;

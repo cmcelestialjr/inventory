@@ -95,33 +95,58 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
         const minuteDiff = (a, b) => (b - a) / (1000 * 60); // difference in minutes
         const hourRate = form.salary / 8;
 
+        // ✅ Normalize all times into valid Date objects
+        const safeDate = (time) => {
+            if (!time) return null;
+            const t = new Date(time);
+            return new Date(1970, 0, 1, t.getHours(), t.getMinutes(), t.getSeconds(), 0);
+        };
+
+        const actualIn = safeDate(actualTimeIn);
+        const actualOut = safeDate(actualTimeOut);
+        const regularIn = safeDate(regularTimeIn);
+        const regularOut = safeDate(regularTimeOut);
+        const otIn = safeDate(overTimeIn);
+        const otOut = safeDate(overTimeOut);
+
+        if (!actualIn || !actualOut || !regularIn || !regularOut) return;
+
         // --- REGULAR TIME COMPUTATION ---
-        // Determine overlap between scheduled and actual work
-        const regularStart = actualTimeIn > regularTimeIn ? actualTimeIn : regularTimeIn;
-        const regularEnd = actualTimeOut < regularTimeOut ? actualTimeOut : regularTimeOut;
+        const regularStart = actualIn > regularIn ? actualIn : regularIn;
+        const regularEnd = actualOut < regularOut ? actualOut : regularOut;
 
         let regularMinutes = 0;
         if (regularEnd > regularStart) {
             regularMinutes = minuteDiff(regularStart, regularEnd);
-        }
 
+            // --- LUNCH BREAK DEDUCTION ---
+            const lunchStart = new Date(regularStart);
+            lunchStart.setHours(12, 0, 0, 0);
+            const lunchEnd = new Date(regularStart);
+            lunchEnd.setHours(13, 0, 0, 0);
+
+            if (regularStart < lunchStart && regularEnd > lunchEnd) {
+            regularMinutes -= 60;
+            }
+        }
+        
         // 🔹 CAP regular work to 8 hours MAX
         if (regularMinutes > 480) regularMinutes = 480;
 
-        // 🔹 Compute late minutes (if actual in > regular in)
+        // 🔹 Compute late minutes
         let lateMinutes = 0;
-        if (actualTimeIn > regularTimeIn) {
-            lateMinutes = minuteDiff(regularTimeIn, actualTimeIn);
+        if (actualIn > regularIn) {
+            lateMinutes = minuteDiff(regularIn, actualIn);
         }
 
+        // 🔹 Compute undertime minutes
         let underTimeMinutes = 0;
-        if (regularTimeOut > actualTimeOut) {
-            underTimeMinutes = minuteDiff(actualTimeOut, regularTimeOut);
+        if (regularOut > actualOut) {
+            underTimeMinutes = minuteDiff(actualOut, regularOut);
         }
-        
-        // Deduct late minutes from total regular time (if not already clipped)
-        let payableMinutes = regularMinutes - lateMinutes - underTimeMinutes;
-        if (payableMinutes < 0) payableMinutes = 0;
+
+        // 🔹 Ensure valid payable minutes
+        let payableMinutes = Math.max(0, regularMinutes);
 
         const regHours = Math.floor(payableMinutes / 60);
         const regMins = Math.floor(payableMinutes % 60);
@@ -129,17 +154,20 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
 
         // --- OVERTIME COMPUTATION ---
         let otMinutes = 0;
-        if (overTimeIn && overTimeOut && actualTimeOut > overTimeIn) {
-            const otStart = actualTimeIn > overTimeIn ? actualTimeIn : overTimeIn;
-            const otEnd = actualTimeOut < overTimeOut ? actualTimeOut : overTimeOut;
-            if (otEnd > otStart) otMinutes = minuteDiff(otStart, otEnd);
+        if (otIn && otOut && actualOut && actualOut > otIn) {
+            const otStart = actualIn > otIn ? actualIn : otIn;
+            const otEnd = actualOut < otOut ? actualOut : otOut;
+
+            if (otEnd > otStart) {
+            otMinutes = minuteDiff(otStart, otEnd);
+            }
         }
 
         const otHours = Math.floor(otMinutes / 60);
         const otMins = Math.floor(otMinutes % 60);
-        const otEarned = hourRate * 1 * (otMinutes / 60);
+        const otEarned = hourRate * 1 * (otMinutes / 60); // (replace 1 with multiplier if needed)
 
-        // --- TOTAL & CONDITIONAL DAY/HOUR LOGIC ---
+        // --- TOTAL DAY/HOUR LOGIC ---
         if (payableMinutes >= 480) {
             setDay(1);
             setHour(0);
@@ -156,8 +184,15 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
         setTotalEarned((regEarned + otEarned).toFixed(2));
         setLates(lateMinutes);
         setUnderTime(underTimeMinutes);
+    }, [
+        actualTimeIn,
+        actualTimeOut,
+        regularTimeIn,
+        regularTimeOut,
+        overTimeIn,
+        overTimeOut,
+    ]);
 
-    }, [actualTimeIn, actualTimeOut, regularTimeIn, regularTimeOut, overTimeIn, overTimeOut]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
