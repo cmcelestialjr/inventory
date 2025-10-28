@@ -39,6 +39,7 @@ const AttendanceLists = ({}) => {
     const [search, setSearch] = useState("");
     const [selectedDay, setSelectedDay] = useState([]);
     const [formModal, setFormModal] = useState(false);
+    const [printMode, setPrintMode] = useState("2P");
     const [form, setForm] = useState({
             employee_id: "",
             salary: 0,
@@ -89,6 +90,16 @@ const AttendanceLists = ({}) => {
     };
 
     const componentRef = useRef();
+
+    const handlePrint1P = () => {
+        setPrintMode("1P");
+        setTimeout(() => handlePrint(), 100);
+    };
+
+    const handlePrint2P = () => {
+        setPrintMode("2P");
+        setTimeout(() => handlePrint(), 100);
+    };
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef, // ✅ for react-to-print v3.2.0
@@ -227,10 +238,19 @@ const AttendanceLists = ({}) => {
                     />
                     <div className="flex justify-end mb-4">
                         <button
-                            onClick={handlePrint}
-                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow"
+                            onClick={handlePrint1P}
+                            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md shadow"
                             >
-                            <Printer className="w-4 h-4" />
+                            <Printer className="w-4 h-4" /> 1P
+                        </button>
+                    </div>
+
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={handlePrint2P}
+                            className="flex items-center gap-2 bg-green-700 hover:bg-green-900 text-white px-4 py-2 rounded-md shadow"
+                            >
+                            <Printer className="w-4 h-4" /> 2P
                         </button>
                     </div>
                 </div>
@@ -544,9 +564,9 @@ const AttendanceLists = ({}) => {
                                 
                                 {/* Summary Columns */}
                                 <th rowSpan="2">OT (h.m)</th>
-                                <th rowSpan="2">TOTAL (d.h.m)</th>
+                                {printMode === "2P" && <th rowSpan="2">TOTAL (d.h.m)</th>}
                                 <th rowSpan="2">1st_P (d.h.m)</th>
-                                <th rowSpan="2">2nd_P (d.h.m)</th>
+                                {printMode === "2P" && <th rowSpan="2">2nd_P (d.h.m)</th>}
                             </tr>
                             
                             {/* Header Row 2 - Day Numbers */}
@@ -582,6 +602,11 @@ const AttendanceLists = ({}) => {
                                 let totalDays2p = 0;
                                 let totalHours2p = 0;
                                 let totalMinutes2p = 0;
+
+                                if(index == 0){
+                                    overAllTotalOThours = 0;
+                                    overAllTotalOTMinutes = 0;
+                                }
 
                                 const calculateAttendanceTotals = (attendance) => {
                                     if (attendance) {
@@ -674,13 +699,30 @@ const AttendanceLists = ({}) => {
                                 };
 
                                 (emp.over_time_attendances || []).forEach((overtime) => {
-                                    calculateOvertimeTotals(overtime);
+                                    if(printMode == '1P'){
+                                        const day = parseInt(overtime.date.split('-')[2], 10);
+                                        if(day >= 1 && day <= 15){
+                                            calculateOvertimeTotals(overtime);
+                                        }
+                                    }else{
+                                        calculateOvertimeTotals(overtime);
+                                    }
+                                    
                                 });
 
                                 // Convert total minutes to hours if totalMinutes >= 60
                                 if (totalOTMinutes >= 60) {
                                     totalOThours += Math.floor(totalOTMinutes / 60); // Add the hours
                                     totalOTMinutes = totalOTMinutes % 60; // Get the remaining minutes
+                                }
+
+                                overAllTotalOThours += totalOThours;
+                                overAllTotalOTMinutes += totalOTMinutes;
+
+                                // Convert total minutes to hours if totalMinutes >= 60
+                                if (overAllTotalOTMinutes >= 60) {
+                                    overAllTotalOThours += Math.floor(overAllTotalOTMinutes / 60); // Add the hours
+                                    overAllTotalOTMinutes = overAllTotalOTMinutes % 60; // Get the remaining minutes
                                 }
 
                                 return (
@@ -734,7 +776,7 @@ const AttendanceLists = ({}) => {
                                                     className={`text-center text-xs px-1 py-1 cursor-pointer border-l border-gray-200 hover:bg-gray-200 transition duration-100 ${cellColorClass}`}
                                                     onClick={() => handleDailyClick(emp.id, emp.salary, emp.schedules, fullDate, attendance, otAttendance)}
                                                 >
-                                                    {cellContent}
+                                                    {printMode === "1P" &&  day > 15 ? "" : cellContent}
                                                 </td>
                                             );
                                         })}
@@ -742,9 +784,17 @@ const AttendanceLists = ({}) => {
                                         
                                         {/* Summary Data - Replaced {emp.name} with placeholders for structure */}
                                         <td className="px-3 py-2 text-sm text-center font-semibold text-gray-700 border-l border-gray-200">{totalOThours}.{totalOTMinutes}</td>
-                                        <td className="px-3 py-2 text-sm text-center font-bold text-blue-600 border-l border-gray-200">{totalDays}.{totalHours}.{totalMinutes}</td>
+                                        {printMode === "2P" && (
+                                            <td className="px-3 py-2 text-sm text-center font-bold text-blue-600 border-l border-gray-200">
+                                                {totalDays}.{totalHours}.{totalMinutes}
+                                            </td>
+                                        )}
                                         <td className="px-3 py-2 text-sm text-center text-gray-700 border-l border-gray-200">{totalDays1p}.{totalHours1p}.{totalMinutes1p}</td>
-                                        <td className="px-3 py-2 text-sm text-center text-gray-70 border-l border-gray-200">{totalDays2p}.{totalHours2p}.{totalMinutes2p}</td>
+                                        {printMode === "2P" && (
+                                            <td className="px-3 py-2 text-sm text-center text-gray-700 border-l border-gray-200">
+                                                {totalDays2p}.{totalHours2p}.{totalMinutes2p}
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
@@ -752,9 +802,13 @@ const AttendanceLists = ({}) => {
                         <tfoot>
                             <td colSpan={daysInMonth + 2} className="text-center font-bold">TOTAL</td>
                             <td className="px-3 py-2 text-sm text-center font-semibold text-gray-700 border-l border-gray-200">{overAllTotalOThours}.{overAllTotalOTMinutes}</td>
-                            <td className="px-3 py-2 text-sm text-center font-bold text-blue-600 border-l border-gray-200">{overAllTotalDays}.{overAllTotalHours}.{overAllTotalMinutes}</td>
+                            {printMode === "2P" && (
+                                <td className="px-3 py-2 text-sm text-center font-bold text-blue-600 border-l border-gray-200">{overAllTotalDays}.{overAllTotalHours}.{overAllTotalMinutes}</td>
+                            )}
                             <td className="px-3 py-2 text-sm text-center text-gray-700 border-l border-gray-200">{overAllTotalDays1p}.{overAllTotalHours1p}.{overAllTotalMinutes1p}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-70 border-l border-gray-200">{overAllTotalDays2p}.{overAllTotalHours2p}.{overAllTotalMinutes2p}</td>
+                            {printMode === "2P" && (
+                                <td className="px-3 py-2 text-sm text-center text-gray-70 border-l border-gray-200">{overAllTotalDays2p}.{overAllTotalHours2p}.{overAllTotalMinutes2p}</td>
+                            )}
                         </tfoot>
                     </table>                    
                     <table>
@@ -763,7 +817,7 @@ const AttendanceLists = ({}) => {
                                 <td className="font-bold [writing-mode:vertical-rl] rotate-180 text-center align-middle whitespace-nowrap">SIGNATURE</td>
                                 {employees.map((emp, index) => {
                                     return (
-                                        <td className="[writing-mode:vertical-rl] rotate-180 text-center align-middle whitespace-nowrap uppercase px-2 py-4">
+                                        <td className="[writing-mode:vertical-rl] rotate-180 text-center align-bottom whitespace-nowrap uppercase px-2 py-4">
                                             {emp.lastname}, {emp.firstname}
                                             {emp.extname ? ` ${emp.extname}` : ''} 
                                             {emp.middlename ? ` ${emp.middlename.charAt(0)}.` : ''}    

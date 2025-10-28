@@ -89,15 +89,41 @@ class PayrollController extends Controller
         $this->checkCashAdvances();
 
         $query = Employee::with([
-                'deductions' => function ($q) {
+                'deductions' => function ($q) use ($payrollOption, $year, $month, $dayRange) {
                     $q->select('employee_id', 'deduction_id', 'amount');
+                    
+                    if ($payrollOption == 'semi-monthly') {
+                        $q->whereHas('deduction.periods', function ($query) use ($year, $month, $dayRange) {
+                            $query->where('year', $year)
+                                ->where('month', $month);
+                            
+                            if ($dayRange == '1-15') {
+                                $query->where('period', '1-15');
+                            } else {
+                                $query->where('period', '16-30');
+                            }
+                        });
+                        
+                    }
                 },
                 'dtr_summary' => function ($q) use ($date_from, $date_to) {
                     $q->whereBetween('date', [$date_from, $date_to]);
                 },
-                'advanceDeduction',
                 'otherEarnings.type',
-            ])->withSum('deductions', 'amount');
+            ])->withSum(['deductions' => function ($q) use ($payrollOption, $year, $month, $dayRange) {
+                if ($payrollOption == 'semi-monthly') {
+                    $q->whereHas('deduction.periods', function ($query) use ($year, $month, $dayRange) {
+                        $query->where('year', $year)
+                            ->where('month', $month);
+                        
+                        if ($dayRange == '1-15') {
+                            $query->where('period', '1-15');
+                        } else {
+                            $query->where('period', '16-30');
+                        }
+                    });
+                }
+            }], 'amount');
 
         $query->whereDoesntHave('payrollMonths', function ($q) use ($year,$month,$date_from,$date_to,$payrollType) {
             $q->where('year', $year);
@@ -452,7 +478,99 @@ class PayrollController extends Controller
                     $advance->total_deducted = $total_deducted;
                     $advance->save();
 
-                    
+                    $advances = Advance::where('status_id', 1)
+                        ->where('id', $checkAdvance->advance_id)
+                        ->get();
+                    if($advances->count()>0){
+                        foreach($advances as $advance){
+                            $advance_id = $advance->id;
+                            $employee_id = $advance->employee_id;
+                            $per_month = $advance->monthly_deduction;
+                            $advance_amount = $advance->advance_amount;
+                            $ca_total_deducted = $advance->total_deducted;
+                            $diff = $advance_amount - $ca_total_deducted;
+                            $total_diff = $diff;
+                            $per_diff = $diff - $per_month;
+                            
+                            if($per_diff  < 0){
+                                $ad = AdvanceDeduction::where('advance_id', $advance_id)
+                                    ->whereNull('payroll_id')
+                                    ->whereNull('deduction_date')
+                                    ->first();
+                                if(!$ad){
+                                    $ad = new AdvanceDeduction;
+                                    $ad->advance_id = $advance_id;
+                                    $ad->employee_id = $employee_id;
+                                    $ad->deduction_amount = $diff;
+                                    $ad->save();
+                                }else{
+                                    $ad->deduction_amount = $diff;
+                                    $ad->save();
+                                }
+                            }else{
+                                $divide = $diff / $per_month;
+                                $initial_count = (int) $divide;
+                                $check_excess = $divide - $initial_count;
+                                $excess = $check_excess > 0 ? 1 : 0;
+                                
+                                $adList = AdvanceDeduction::where('advance_id', $advance_id)
+                                        ->whereNull('payroll_id')
+                                        ->whereNull('deduction_date')
+                                        ->get();
+                                if ($adList->count() > 0) {
+                                    foreach ($adList as $row) {
+                                        $update = AdvanceDeduction::find($row->id);
+
+                                        if ($diff > $per_month) {
+                                            $update->deduction_amount = $per_month;
+                                            $diff -= $per_month;
+                                        } else {
+                                            $update->deduction_amount = $diff;
+                                            $diff = 0;
+                                        }
+
+                                        $update->save();
+                                    }
+                                }
+                                if($diff > 0){
+                                    $for_count = $initial_count - $adList->count();
+
+                                    for($x = 0; $x < $for_count; $x++){
+                                        $ad = new AdvanceDeduction;
+                                        $ad->advance_id = $advance_id;
+                                        $ad->employee_id = $employee_id;
+                                        $ad->deduction_amount = $per_month;
+                                        $ad->save();
+                                    }
+                                
+
+                                    if($excess > 0){
+                                        $ad = new AdvanceDeduction;
+                                        $ad->advance_id = $advance_id;
+                                        $ad->employee_id = $employee_id;
+                                        $ad->deduction_amount = $total_diff - ($per_month * $initial_count);
+                                        $ad->save();
+                                    }
+                                }
+                            }
+
+                            $to_be_deduct = AdvanceDeduction::where('advance_id', $advance_id)
+                                ->whereNull('payroll_id')
+                                ->whereNull('deduction_date')
+                                ->sum('deduction_amount');
+
+                            $getDeduction = Deduction::where('name', 'Cash Advance')->first();
+                            if($getDeduction){
+                                $employeeDeduction = EmployeeDeduction::where('deduction_id', $getDeduction->id)
+                                    ->where('employee_id', $employee_id)
+                                    ->first();
+                                if($employeeDeduction){
+                                    $employeeDeduction->amount = $to_be_deduct > $per_month ? $per_month : $to_be_deduct;
+                                    $employeeDeduction->save();
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -578,13 +696,25 @@ class PayrollController extends Controller
 
             if ($ca_deduction_id == $deduction['deduction_id'] && $deduction['amount'] > 0) {
                 $updateCA = AdvanceDeduction::where('employee_id', $deduction['employee_id'])
-                    ->where('deduction_amount', $deduction['amount'])
                     ->whereNull('payroll_id')
                     ->first();
 
                 if ($updateCA) {
                     $updateCA->payroll_id = $payroll_id;
+                    $updateCA->deduction_amount = $deduction['amount'];
                     $updateCA->save();
+                } else {
+                    $ca = AdvanceDeduction::where('employee_id', $deduction['employee_id'])
+                        ->where('status', 1)
+                        ->first();
+                    if($ca){
+                        $insert = new AdvanceDeduction;
+                        $insert->advance_id = $ca->id;
+                        $insert->employee_id = $deduction['employee_id'];
+                        $insert->payroll_id = $payroll_id;
+                        $insert->deduction_amount = $deduction['amount'];
+                        $insert->save();
+                    }
                 }
 
                 $employeeIds[] = $deduction['employee_id'];
@@ -743,17 +873,23 @@ class PayrollController extends Controller
         $now = now();
 
         foreach ($employeesWithCA as $employee) {
-            EmployeeDeduction::updateOrCreate(
-                [
-                    'deduction_id' => $deduction_id, 
-                    'employee_id' => $employee->id
-                ],
-                [
-                    'amount' => $employee->advanceDeduction->deduction_amount,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
-            );
+            $check = EmployeeDeduction::where('deduction_id', $deduction_id)
+                ->where('employee_id', $employee->id)
+                ->where('amount', 0)
+                ->first();
+            if($check){
+                EmployeeDeduction::updateOrCreate(
+                    [
+                        'deduction_id' => $deduction_id, 
+                        'employee_id' => $employee->id
+                    ],
+                    [
+                        'amount' => $employee->advanceDeduction->deduction_amount,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
+            }
         }
     }
 

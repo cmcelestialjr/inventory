@@ -46,7 +46,9 @@ class AttendancesController extends Controller
             });
         }
 
-        $employees = $query->get();
+        $employees = $query->orderBy('lastname')
+            ->orderBy('firstname')
+            ->get();
         
         return response()->json([
             'data' => $employees

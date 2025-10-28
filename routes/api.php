@@ -11,6 +11,7 @@ use App\Http\Controllers\DeductionController;
 use App\Http\Controllers\EarningTypesController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeDeductionController;
+use App\Http\Controllers\EmployeeDeductionPeriodController;
 use App\Http\Controllers\EmployeeOtherEarningsController;
 use App\Http\Controllers\EmployeeScheduleController;
 use App\Http\Controllers\EmployeeServicesRateController;
@@ -157,8 +158,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('payrollDeduction', PayrollDeductionController::class);
     
     Route::apiResource('deductions', DeductionController::class);
-
+    
+    Route::post('/updateEmployeeDeductions', [EmployeeDeductionController::class, 'udpateDeduction']);
     Route::apiResource('employeeDeductions', EmployeeDeductionController::class);
+
+    Route::apiResource('employeeDeductionPeriods', EmployeeDeductionPeriodController::class);
 
     Route::apiResource('advanceStatuses', AdvanceStatusController::class);
 

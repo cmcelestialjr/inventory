@@ -5,11 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Deduction;
 use App\Models\Employee;
 use App\Models\EmployeeDeduction;
-use App\Models\Payroll;
 use App\Models\PayrollDeduction;
-use App\Models\PayrollEmployee;
-use App\Models\PayrollMonth;
-use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +16,8 @@ class DeductionController extends Controller
 {
     public function index(Request $request)
     {
+        $this->udpateDeduction();
+        
         $query = Deduction::with('payrolls','employees');
         
         if ($request->has('search') && !empty($request->search)) {
@@ -80,6 +78,8 @@ class DeductionController extends Controller
             $insert->employer_amount = 0;
             $insert->save();
 
+            $this->udpateDeduction();
+
             DB::commit();
             return response()->json([
                 'message' => 'Success in adding new deduction.',
@@ -136,6 +136,8 @@ class DeductionController extends Controller
             $update->employer_amount = 0;
             $update->save();
 
+            $this->udpateDeduction();
+
             DB::commit();
             return response()->json([
                 'message' => 'Success in updating deduction.'
@@ -178,6 +180,44 @@ class DeductionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Failed to delete deduction'], 500);
+        }
+    }
+
+    private function udpateDeduction()
+    {
+        $deductions = Deduction::where('amount', '>' , 0)->get();
+        if($deductions->count()>0){
+            foreach($deductions as $deduction){
+                $deduction_id = $deduction->id;
+                $amount = $deduction->amount;
+
+                $employeesWithOutDeduction = Employee::whereDoesntHave('deductions', function ($query) use ($deduction_id) {
+                        $query->where('deduction_id', $deduction_id);
+                    })
+                    ->where('status', 'Active')
+                    ->get();
+                if($employeesWithOutDeduction->count()>0){
+                    $insertData = $employeesWithOutDeduction->map(function ($employee) use ($deduction_id, $amount) {
+                        return [
+                            'employee_id' => $employee->id,
+                            'deduction_id' => $deduction_id,
+                            'amount' => $amount,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    });
+
+                    EmployeeDeduction::insert($insertData->toArray());
+                }
+
+                $update = EmployeeDeduction::where('deduction_id', $deduction_id)
+                    ->where('amount', 0)
+                    ->first();
+                if($update){
+                    $update->amount = $amount;
+                    $update->save();
+                }
+            }
         }
     }
 }

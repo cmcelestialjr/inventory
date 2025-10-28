@@ -30,4 +30,8 @@ class Deduction extends Model
     {
         return $this->hasMany(EmployeeDeduction::class, 'deduction_id', 'id');
     }
+    public function periods(): HasMany
+    {
+        return $this->hasMany(EmployeeDeductionPeriod::class, 'deduction_id', 'id');
+    }
 }

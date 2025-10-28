@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Advance;
 use App\Models\AdvanceDeduction;
+use App\Models\Deduction;
+use App\Models\EmployeeDeduction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,8 @@ class AdvancesController extends Controller
                 $insertPeriod->save();
             }
 
+            $this->updateEmployeeDeduction($employee_id, $monthly_deduction);
+
             DB::commit();
             return response()->json([
                 'message' => 'Success in adding cash advance.',
@@ -173,6 +177,8 @@ class AdvancesController extends Controller
                 }
             }
 
+            $this->updateEmployeeDeduction($employee_id, $monthly_deduction);
+
             DB::commit();
             return response()->json([
                 'message' => 'Success in updating cash advance.'
@@ -225,5 +231,26 @@ class AdvancesController extends Controller
         }
 
         return $code;
+    }
+
+    private function updateEmployeeDeduction($employee_id, $monthly_deduction)
+    {
+        $getDeduction = Deduction::where('name', 'Cash Advance')->first();
+        if($getDeduction){
+            $deduction_id = $getDeduction->id;
+            $employeeDeduction = EmployeeDeduction::where('deduction_id', $deduction_id)
+                ->where('employee_id', $employee_id)
+                ->first();
+            if($employeeDeduction){
+                $employeeDeduction->amount = $monthly_deduction;
+                $employeeDeduction->save();
+            }else{
+                $insert = new EmployeeDeduction;
+                $insert->employee_id = $employee_id;
+                $insert->deduction_id = $deduction_id;
+                $insert->amount = $monthly_deduction;
+                $insert->save();
+            }
+        }
     }
 }
