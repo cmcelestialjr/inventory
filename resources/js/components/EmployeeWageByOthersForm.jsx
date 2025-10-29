@@ -68,7 +68,7 @@ const EmployeeWageByOthersForm = ({ formModal, setFormModal, form, setForm, fetc
 
                 setForm({
                     id: "",
-                    employee_id: "",
+                    employee_id: form.employee_id,
                     earning_type_id: "",
                     amount: 0.00
                 });

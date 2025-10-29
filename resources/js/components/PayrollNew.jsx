@@ -283,7 +283,7 @@ const PayrollNew = ({ authToken }) => {
                             <div
                                 key={employee.id}
                                 className={`border p-4 rounded-lg shadow-md bg-white hover:bg-gray-50 cursor-pointer flex items-start`}
-                                onClick={() => toggleEmployeeSelection(index)}
+                                onClick={() => toggleEmployeeSelection(employee)}
                             >            
 
                                 <div className="flex flex-col ml-4 w-full">
