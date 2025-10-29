@@ -704,8 +704,8 @@ class PayrollController extends Controller
                     $updateCA->deduction_amount = $deduction['amount'];
                     $updateCA->save();
                 } else {
-                    $ca = AdvanceDeduction::where('employee_id', $deduction['employee_id'])
-                        ->where('status', 1)
+                    $ca = Advance::where('employee_id', $deduction['employee_id'])
+                        ->where('status_id', 1)
                         ->first();
                     if($ca){
                         $insert = new AdvanceDeduction;
