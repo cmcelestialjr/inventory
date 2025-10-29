@@ -72,7 +72,7 @@ const EmployeeWageByOthers = ({ activeTab, wages, fetchEmployees, setWagesModal 
                 fetchEmployees();
                 setForm({
                     id: "",
-                    employee_id: "",
+                    employee_id: wages.id,
                     earning_type_id: "",
                     amount: 0.00
                 });
