@@ -42,6 +42,7 @@ const AttendanceLists = ({}) => {
     const [printMode, setPrintMode] = useState("2P");
     const [form, setForm] = useState({
             employee_id: "",
+            name: "",
             salary: 0,
             date: "",
             schedules: [],
@@ -183,9 +184,10 @@ const AttendanceLists = ({}) => {
 
     const daysInMonth = getDaysInMonth(year, month);
 
-    const handleDailyClick  = (employee_id, salary, schedules, date, attendance, otAttendance) => {
+    const handleDailyClick  = (employee_id, name, salary, schedules, date, attendance, otAttendance) => {
         setForm({
             employee_id: employee_id,
+            name: name,
             salary: salary,
             date: date,
             schedules: schedules,
@@ -464,6 +466,8 @@ const AttendanceLists = ({}) => {
                                     overAllTotalOTMinutes = overAllTotalOTMinutes % 60; // Get the remaining minutes
                                 }
 
+                                const name = emp.lastname + ', ' + emp.firstname + ' ';
+
                                 return (
                                     <tr key={emp.id} className="hover:bg-gray-50 transition duration-150 ease-in-out">
                                         {/* Index and Name */}
@@ -513,7 +517,7 @@ const AttendanceLists = ({}) => {
                                                 <td 
                                                     key={dayIndex} 
                                                     className={`text-center text-xs px-1 py-1 cursor-pointer border-l border-gray-200 hover:bg-gray-200 transition duration-100 ${cellColorClass}`}
-                                                    onClick={() => handleDailyClick(emp.id, emp.salary, emp.schedules, fullDate, attendance, otAttendance)}
+                                                    onClick={() => handleDailyClick(emp.id, name, emp.salary, emp.schedules, fullDate, attendance, otAttendance)}
                                                 >
                                                     {cellContent}
                                                 </td>
@@ -725,6 +729,8 @@ const AttendanceLists = ({}) => {
                                     overAllTotalOTMinutes = overAllTotalOTMinutes % 60; // Get the remaining minutes
                                 }
 
+                                const name = emp.lastname + ', ' + emp.firstname + ' ';
+
                                 return (
                                     <tr key={emp.id} className="hover:bg-gray-50 transition duration-150 ease-in-out">
                                         {/* Index and Name */}
@@ -774,7 +780,7 @@ const AttendanceLists = ({}) => {
                                                 <td 
                                                     key={dayIndex} 
                                                     className={`text-center text-xs px-1 py-1 cursor-pointer border-l border-gray-200 hover:bg-gray-200 transition duration-100 ${cellColorClass}`}
-                                                    onClick={() => handleDailyClick(emp.id, emp.salary, emp.schedules, fullDate, attendance, otAttendance)}
+                                                    onClick={() => handleDailyClick(emp.id, name, emp.salary, emp.schedules, fullDate, attendance, otAttendance)}
                                                 >
                                                     {printMode === "1P" &&  day > 15 ? "" : cellContent}
                                                 </td>

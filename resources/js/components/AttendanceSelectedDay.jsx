@@ -295,6 +295,17 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
             <div className="bg-white rounded-lg p-6 shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="flex justify-between">
                     <h2 className="text-xl font-semibold">
+                        {form.name}
+                    </h2>
+                    <button
+                        onClick={() => setFormModal(false)}
+                        className="text-gray-500 hover:text-gray-700 transition"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
+                <div className="flex justify-between">
+                    <h2 className="text-xl font-semibold">
                         {form.date
                         ? new Intl.DateTimeFormat("en-US", {
                             year: "numeric",
@@ -303,12 +314,6 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                         }).format(new Date(form.date))
                         : ""}
                     </h2>
-                    <button
-                        onClick={() => setFormModal(false)}
-                        className="text-gray-500 hover:text-gray-700 transition"
-                    >
-                        <X size={24} />
-                    </button>
                 </div>
 
                 <div className="mt-1 p-4 bg-white shadow-md rounded-lg">
