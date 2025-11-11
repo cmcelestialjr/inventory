@@ -1045,7 +1045,7 @@ class PayrollController extends Controller
             // === Loop in memory ===
             foreach ($employees as $employee) {
                 foreach ($deductions as $deduction) {
-                    $deduction_id = $deduction->id;
+                    $deduction_id = $deduction->deduction_id;
                     $employee_id = $employee->id;
                     $amount = $deduction->deduction->amount ?? 0;
                     $deduction_name[] = $deduction->deduction->name;
