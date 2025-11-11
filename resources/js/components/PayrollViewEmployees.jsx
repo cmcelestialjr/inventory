@@ -127,7 +127,7 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                     <div className="flex items-center gap-4 mb-2">
                         <input
                             type="text"
-                            placeholder="Search payroll..."
+                            placeholder="Search employee..."
                             value={searchEmployee}
                             onChange={handleSearch}
                             className="flex-grow border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

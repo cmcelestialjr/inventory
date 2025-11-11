@@ -383,7 +383,10 @@ const Returns = () => {
                                                                         Qty: <span className="font-semibold">{returnProducts.qty ?? "No Qty"}</span>
                                                                     </p>
                                                                     <p className="text-gray-600 text-xs">
-                                                                        Amount: <span className="font-semibold">{returnProducts.amount ?? "No Amount"}</span>
+                                                                        Amount: <span className="font-semibold">
+                                                                            {returnProducts.amount ? parseFloat(returnProducts.amount)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "No Amount"}
+
+                                                                        </span>
                                                                     </p>
                                                                 </div>
                                                             ))}

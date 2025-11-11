@@ -547,7 +547,7 @@ const Expenses = () => {
                                                     </td>
                                                     <td className="border border-gray-300 px-4 py-2">
                                                         {expense.product
-                                                            ? expense.qty : expense.amount}
+                                                            ? expense.qty : parseFloat(expense.amount)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.tin}</td>
                                                     <td className="border border-gray-300 px-4 py-2">{expense.or}</td>

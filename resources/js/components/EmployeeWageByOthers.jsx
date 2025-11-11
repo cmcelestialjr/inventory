@@ -137,7 +137,7 @@ const EmployeeWageByOthers = ({ activeTab, wages, fetchEmployees, setWagesModal 
                             ))
                             ) : (
                             <tr>
-                                <td className="border p-2 text-center" colSpan={3}>
+                                <td className="border p-2 text-center" colSpan={4}>
                                     No Other Earnings available.
                                 </td>                                
                             </tr>

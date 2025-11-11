@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Deduction;
+use App\Models\DeductionAutoTypes;
 use App\Models\Employee;
 use App\Models\EmployeeDeduction;
 use App\Models\PayrollDeduction;
@@ -18,7 +19,7 @@ class DeductionController extends Controller
     {
         $this->udpateDeduction();
         
-        $query = Deduction::with('payrolls','employees');
+        $query = Deduction::with('payrolls', 'employees', 'auto');
         
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -61,6 +62,9 @@ class DeductionController extends Controller
                 'numeric',
                 'min:0',
             ],
+            'type_auto' => 'required|string|in:none,monthly,semi-monthly,weekly',
+            'day_range' => 'nullable|string|in:1st,2nd',
+            'week_range' => 'nullable|string|in:1st,2nd,3rd,4th',
         ]);
 
         DB::beginTransaction();
@@ -77,6 +81,10 @@ class DeductionController extends Controller
             $insert->ceiling = $validated['ceiling'];
             $insert->employer_amount = 0;
             $insert->save();
+
+            $deduction_id = $insert->id;
+
+            $this->deductionAutoType($deduction_id, $validated['type_auto'], $validated['day_range'], $validated['week_range']);
 
             $this->udpateDeduction();
 
@@ -119,6 +127,9 @@ class DeductionController extends Controller
                 'numeric',
                 'min:0',
             ],
+            'type_auto' => 'required|string|in:none,monthly,semi-monthly,weekly',
+            'day_range' => 'nullable|string|in:1st,2nd',
+            'week_range' => 'nullable|string|in:1st,2nd,3rd,4th',
         ]);
 
         DB::beginTransaction();
@@ -135,6 +146,10 @@ class DeductionController extends Controller
             $update->ceiling = $validated['ceiling'];
             $update->employer_amount = 0;
             $update->save();
+
+            $deduction_id = $update->id;
+
+            $this->deductionAutoType($deduction_id, $validated['type_auto'], $validated['day_range'], $validated['week_range']);
 
             $this->udpateDeduction();
 
@@ -218,6 +233,26 @@ class DeductionController extends Controller
                     $update->save();
                 }
             }
+        }
+    }
+
+    private function deductionAutoType($deduction_id, $type_auto, $day_range, $week_range)
+    {
+        if($type_auto == 'none'){
+            DeductionAutoTypes::where('deduction_id', $deduction_id)->delete();
+        }else{
+            $check = DeductionAutoTypes::where('deduction_id', $deduction_id)->first();
+            if(!$check){
+                $insert = new DeductionAutoTypes;
+                $insert->deduction_id = $deduction_id;
+            }else{
+                $insert = $check;
+            }
+            
+            $insert->type = $type_auto;
+            $insert->day_range = $type_auto == 'semi-monthly' ? $day_range : null;
+            $insert->week_range = $type_auto == 'weekly' ? $week_range : null;
+            $insert->save();
         }
     }
 }

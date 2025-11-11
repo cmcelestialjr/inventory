@@ -446,28 +446,47 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                     dateFormat="hh:mm aa"
                                     className="border px-3 py-2 rounded-lg w-full"
                                     customInput={
-                                        <InputMask
-                                            mask="99:99 aa"
-                                            maskChar=" "
-                                            value={overTimeIn ? overTimeIn.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
+                                    <InputMask
+                                        mask="99:99 aa"
+                                        maskChar=""
+                                        value={
+                                        overTimeIn
+                                            ? overTimeIn.toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })
+                                            : ""
+                                        }
+                                        onChange={(e) => {
+                                        const value = e.target.value.trim();
 
-                                                if (value === '') {
-                                                    setOverTimeOut(null); 
-                                                    return;
-                                                }
+                                        // Allow blank input
+                                        if (value === "") {
+                                            setOverTimeIn(null);
+                                            return;
+                                        }
 
-                                                const date = new Date();
-                                                const [hours, minutes] = value.split(':');
-                                                if (hours && minutes && !isNaN(hours) && !isNaN(minutes)) {
-                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                                                    setOverTimeIn(date);
-                                                }
-                                            }}
-                                        >
-                                            {(inputProps) => <input {...inputProps} />}
-                                        </InputMask>
+                                        const [timePart, meridian] = value.split(" ");
+                                        if (!timePart || !meridian) return;
+
+                                        const [hoursStr, minutesStr] = timePart.split(":");
+                                        if (!hoursStr || !minutesStr) return;
+
+                                        let hours = parseInt(hoursStr, 10);
+                                        const minutes = parseInt(minutesStr, 10);
+
+                                        if (isNaN(hours) || isNaN(minutes)) return;
+
+                                        if (meridian.toLowerCase() === "pm" && hours < 12) hours += 12;
+                                        if (meridian.toLowerCase() === "am" && hours === 12) hours = 0;
+
+                                        const date = new Date();
+                                        date.setHours(hours, minutes, 0, 0);
+                                        setOverTimeIn(date);
+                                        }}
+                                    >
+                                        {(inputProps) => <input {...inputProps} />}
+                                    </InputMask>
                                     }
                                 />
                             </div>
@@ -485,28 +504,47 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                     dateFormat="hh:mm aa"
                                     className="border px-3 py-2 rounded-lg w-full"
                                     customInput={
-                                        <InputMask
-                                            mask="99:99 aa"
-                                            maskChar=" "
-                                            value={overTimeOut ? overTimeOut.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
+                                    <InputMask
+                                        mask="99:99 aa"
+                                        maskChar=""
+                                        value={
+                                        overTimeOut
+                                            ? overTimeOut.toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })
+                                            : ""
+                                        }
+                                        onChange={(e) => {
+                                        const value = e.target.value.trim();
 
-                                                if (value === '') {
-                                                    setOverTimeOut(null); 
-                                                    return;
-                                                }
-                                                
-                                                const date = new Date();
-                                                const [hours, minutes] = value.split(':');
-                                                if (hours && minutes && !isNaN(hours) && !isNaN(minutes)) {
-                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                                                    setOverTimeOut(date);
-                                                }
-                                            }}
-                                        >
-                                            {(inputProps) => <input {...inputProps} />}
-                                        </InputMask>
+                                        // Allow blank input
+                                        if (value === "") {
+                                            setOverTimeOut(null);
+                                            return;
+                                        }
+
+                                        const [timePart, meridian] = value.split(" ");
+                                        if (!timePart || !meridian) return;
+
+                                        const [hoursStr, minutesStr] = timePart.split(":");
+                                        if (!hoursStr || !minutesStr) return;
+
+                                        let hours = parseInt(hoursStr, 10);
+                                        const minutes = parseInt(minutesStr, 10);
+
+                                        if (isNaN(hours) || isNaN(minutes)) return;
+
+                                        if (meridian.toLowerCase() === "pm" && hours < 12) hours += 12;
+                                        if (meridian.toLowerCase() === "am" && hours === 12) hours = 0;
+
+                                        const date = new Date();
+                                        date.setHours(hours, minutes, 0, 0);
+                                        setOverTimeOut(date);
+                                        }}
+                                    >
+                                        {(inputProps) => <input {...inputProps} />}
+                                    </InputMask>
                                     }
                                 />
                             </div>
@@ -540,25 +578,52 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                     dateFormat="hh:mm aa"
                                     className="border px-3 py-2 rounded-lg w-full"
                                     customInput={
-                                        <InputMask
-                                            mask="99:99 aa"
-                                            maskChar=" "
-                                            value={actualTimeIn ? actualTimeIn.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                const date = new Date();
-                                                const [hours, minutes] = value.split(':');
-                                                if (hours && minutes) {
-                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                                                    setActualTimeIn(date);
-                                                }
-                                            }}
-                                        >
-                                            {(inputProps) => <input {...inputProps} />}
-                                        </InputMask>
+                                    <InputMask
+                                        mask="99:99 aa"
+                                        maskChar=""
+                                        value={
+                                        actualTimeIn
+                                            ? actualTimeIn.toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })
+                                            : ""
+                                        }
+                                        onChange={(e) => {
+                                        const value = e.target.value.trim();
+
+                                        // Allow blank input
+                                        if (value === "") {
+                                            setActualTimeIn(null);
+                                            return;
+                                        }
+
+                                        // Parse valid time values
+                                        const [timePart, meridian] = value.split(" ");
+                                        if (!timePart || !meridian) return;
+
+                                        const [hoursStr, minutesStr] = timePart.split(":");
+                                        if (!hoursStr || !minutesStr) return;
+
+                                        let hours = parseInt(hoursStr, 10);
+                                        const minutes = parseInt(minutesStr, 10);
+
+                                        if (isNaN(hours) || isNaN(minutes)) return;
+
+                                        if (meridian.toLowerCase() === "pm" && hours < 12) hours += 12;
+                                        if (meridian.toLowerCase() === "am" && hours === 12) hours = 0;
+
+                                        const date = new Date();
+                                        date.setHours(hours, minutes, 0, 0);
+                                        setActualTimeIn(date);
+                                        }}
+                                    >
+                                        {(inputProps) => <input {...inputProps} />}
+                                    </InputMask>
                                     }
                                 />
                             </div>
+
                             <div>
                                 <label className="block mb-1">
                                     <strong>Actual Time Out:</strong>
@@ -573,26 +638,51 @@ const AttendanceSelectedDay = ({ formModal, setFormModal, form, setForm, fetchEm
                                     dateFormat="hh:mm aa"
                                     className="border px-3 py-2 rounded-lg w-full"
                                     customInput={
-                                        <InputMask
-                                            mask="99:99 aa"
-                                            maskChar=" "
-                                            value={actualTimeOut ? actualTimeOut.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : ''}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                const date = new Date();
-                                                const [hours, minutes] = value.split(':');
-                                                if (hours && minutes) {
-                                                    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                                                    setActualTimeOut(date);
-                                                }
-                                            }}
-                                        >
-                                            {(inputProps) => <input {...inputProps} />}
-                                        </InputMask>
+                                    <InputMask
+                                        mask="99:99 aa"
+                                        maskChar=""
+                                        value={
+                                        actualTimeOut
+                                            ? actualTimeOut.toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })
+                                            : ""
+                                        }
+                                        onChange={(e) => {
+                                        const value = e.target.value.trim();
+
+                                        // Allow blank input
+                                        if (value === "") {
+                                            setActualTimeOut(null);
+                                            return;
+                                        }
+
+                                        const [timePart, meridian] = value.split(" ");
+                                        if (!timePart || !meridian) return;
+
+                                        const [hoursStr, minutesStr] = timePart.split(":");
+                                        if (!hoursStr || !minutesStr) return;
+
+                                        let hours = parseInt(hoursStr, 10);
+                                        const minutes = parseInt(minutesStr, 10);
+
+                                        if (isNaN(hours) || isNaN(minutes)) return;
+
+                                        if (meridian.toLowerCase() === "pm" && hours < 12) hours += 12;
+                                        if (meridian.toLowerCase() === "am" && hours === 12) hours = 0;
+
+                                        const date = new Date();
+                                        date.setHours(hours, minutes, 0, 0);
+                                        setActualTimeOut(date);
+                                        }}
+                                    >
+                                        {(inputProps) => <input {...inputProps} />}
+                                    </InputMask>
                                     }
                                 />
                             </div>
-                        </div>                        
+                        </div>
                     </div>
                     <div className="flex justify-between">
                         <button 

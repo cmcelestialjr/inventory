@@ -725,20 +725,22 @@ const Sales = () => {
                                         <td className="border border-gray-300 px-4 py-2">{sale.cashier_name}</td>
                                         {/* <td className="border border-gray-300 px-4 py-2">{sale.customer_name}</td> */}
                                         {/* <td className="border border-gray-300 px-4 py-2">{sale.total_cost}</td> */}
-                                        <td className="border border-gray-300 px-4 py-2">{sale.total_amount}</td>
+                                        <td className="border border-gray-300 px-4 py-2">
+                                            {parseFloat(sale.total_amount)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
                                         {/* <td className="border border-gray-300 px-4 py-2">{sale.total_qty}</td> */}
                                         <td className="border border-gray-300 px-4 py-2">
                                             {sale.payment_options && sale.payment_options.length > 0 ? (
                                                 sale.payment_options?.map((paymentOption, idx) => (
                                                     <div key={idx}>
                                                         {/* Display payment_option_name and amount_paid */}
-                                                        {paymentOption.payment_option_name} : {paymentOption.amount_paid}
+                                                        {paymentOption.payment_option_name} : {parseFloat(paymentOption.amount_paid)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
                                                         {/* Display amount_change if it exists */}
                                                         {paymentOption.amount_change !== undefined && paymentOption.amount_change !== null ? (
                                                             paymentOption.amount_change > 0 ? (
                                                                 <div className="text-green-500">
-                                                                    Change: {paymentOption.amount_change}
+                                                                    Change: {parseFloat(paymentOption.amount_change)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                 </div>
                                                             ) : (
                                                                 <div className="text-red-500">

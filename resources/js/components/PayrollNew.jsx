@@ -238,9 +238,9 @@ const PayrollNew = ({ authToken }) => {
                                 const start = week.start.toLocaleDateString();
                                 const end = week.end.toLocaleDateString();
                                 return (
-                                <option key={idx} value={`${start}-${end}`}>
-                                    {`${start} - ${end}`}
-                                </option>
+                                    <option key={idx} value={`${idx+1}_${start}-${end}`}>
+                                        {`${start} - ${end}`}
+                                    </option>
                                 );
                             })}
                             </select>

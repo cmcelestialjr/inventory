@@ -294,7 +294,7 @@ const AttendanceLists = ({}) => {
                                     acc[att.date] = att;
                                     return acc;
                                 }, {});
-                                const otAttendanceMap = (emp.overtime_attendances || []).reduce((acc, att) => {
+                                const otAttendanceMap = (emp.over_time_attendances || []).reduce((acc, att) => {
                                     // If emp.regularAttendances is undefined, it uses an empty array []
                                     acc[att.date] = att;
                                     return acc;
@@ -589,12 +589,12 @@ const AttendanceLists = ({}) => {
                                     acc[att.date] = att;
                                     return acc;
                                 }, {});
-                                const otAttendanceMap = (emp.overtime_attendances || []).reduce((acc, att) => {
+                                const otAttendanceMap = (emp.over_time_attendances || []).reduce((acc, att) => {
                                     // If emp.regularAttendances is undefined, it uses an empty array []
                                     acc[att.date] = att;
                                     return acc;
                                 }, {});
-
+                                
                                 const paddedMonth = String(month).padStart(2, '0');
 
                                 let totalDays = 0;

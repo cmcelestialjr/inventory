@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Deduction extends Model
 {
@@ -33,5 +34,9 @@ class Deduction extends Model
     public function periods(): HasMany
     {
         return $this->hasMany(EmployeeDeductionPeriod::class, 'deduction_id', 'id');
+    }
+    public function auto(): HasOne
+    {
+        return $this->hasOne(DeductionAutoTypes::class, 'deduction_id', 'id');
     }
 }

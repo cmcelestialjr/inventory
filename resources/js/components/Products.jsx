@@ -1267,9 +1267,15 @@ const Products = () => {
                       <td className="border border-gray-300 px-4 py-2">{product.name}</td>
                       <td className="border border-gray-300 px-4 py-2">{product.variant}</td>
                       <td className="border border-gray-300 px-4 py-2">{product.product_category?.name}</td>
-                      <td className="border border-gray-300 px-4 py-2">{product.cost}</td>
-                      <td className="border border-gray-300 px-4 py-2">{product.price}</td>
-                      <td className="border border-gray-300 px-4 py-2">{product.qty}</td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {parseFloat(product.cost)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {parseFloat(product.price)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {parseFloat(product.qty)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
                       <td className="border border-gray-300 px-4 py-2 gap-2">
                         <button onClick={() => openEditModal(product)}
                           className="flex items-center gap-1 text-blue-600 hover:underline">

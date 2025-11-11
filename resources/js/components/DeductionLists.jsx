@@ -21,6 +21,9 @@ const DeductionLists = ({}) => {
         amount: 0,
         percentage: 0,
         ceiling: 0,
+        type_auto: "none",
+        day_range: "1st",
+        week_range: "1st",
     });
     
     useEffect(() => {
@@ -46,9 +49,35 @@ const DeductionLists = ({}) => {
         setSearch(e.target.value);
     };
 
-    const handleForm = (employee) => {
+    const handleForm = (deduction) => {
         setFormModal(true);
-        setForm(employee);
+        
+        if(deduction.id == ""){
+            setForm(deduction);
+        }else{
+            let type_auto = "none";
+            let day_range = "1st";
+            let week_range = "1st";
+
+            if(deduction.auto){
+                type_auto = deduction.auto.type;
+                day_range = deduction.auto.day_range ? deduction.auto.day_range : '1st';
+                week_range = deduction.auto.week_range ? deduction.auto.week_range : '1st';
+            }
+
+            setForm({
+                id: deduction.id,
+                name: deduction.name,
+                group: deduction.group,
+                type: deduction.type,
+                amount: deduction.amount,
+                percentage: deduction.percentage,
+                ceiling: deduction.ceiling,
+                type_auto: type_auto,
+                day_range: day_range,
+                week_range: week_range,
+            });
+        }
     };
 
     const closeModal = () => {
@@ -60,6 +89,9 @@ const DeductionLists = ({}) => {
             amount: 0,
             percentage: 0,
             ceiling: 0,
+            type_auto: "none",
+            day_range: "1st",
+            week_range: "1st",
         });
         setFormModal(false);
     };

@@ -141,6 +141,8 @@ class AttendancesController extends Controller
 
             if($validated['overTimeIn'] || $validated['overTimeOut']){
                 $this->updateOverTime($validated);
+            }else{
+                $this->removeOverTime($validated);
             }
 
             return response()->json(['message' => 'Success'], 201);
@@ -190,6 +192,18 @@ class AttendancesController extends Controller
         $insert->earned = $validated['otEarned'];
         $insert->deduction = 0;
         $insert->save();
+    }
+
+    private function removeOverTime($validated)
+    {
+        $id = $validated['employee_id'];
+
+        $date = date('Y-m-d', strtotime($validated['date']));
+
+        DtrDailySummary::where('employee_id', $id)
+            ->where('date', $date)
+            ->where('schedule_pay_type_id', 2)
+            ->delete();
     }
 
 }

@@ -60,6 +60,9 @@ const DeductionForm = ({ formModal, closeModal, form, setForm, fetchDeductions }
                 amount: 0,
                 percentage: 0,
                 ceiling: 0,
+                type_auto: "none",
+                day_range: "1st",
+                week_range: "1st",
             });
             fetchDeductions();
             closeModal();
@@ -170,6 +173,56 @@ const DeductionForm = ({ formModal, closeModal, form, setForm, fetchDeductions }
                                 />
                             </div>
                             </>
+                        )}
+
+                        <div>
+                            <label htmlFor="type_auto">Deduction Every?</label>
+                            <select
+                                id="type_auto"
+                                name="type_auto"
+                                value={form.type_auto}                                
+                                onChange={handleChange}
+                                className="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="none">None</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="semi-monthly">Semi-Monthly</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+
+                        {form.type_auto === "semi-monthly" && ( 
+                            <div>
+                            <label htmlFor="day_range">Range</label>
+                                <select
+                                    id="day_range"
+                                    name="day_range"
+                                    value={form.day_range}                                    
+                                    onChange={handleChange}
+                                    className="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="1st">1st Half</option>
+                                    <option value="2nd">2nd Half</option>
+                                </select>
+                            </div>
+                        )}
+
+                        {form.type_auto === "weekly" && ( 
+                            <div>
+                            <label htmlFor="week_range">Range</label>
+                                <select
+                                    id="week_range"
+                                    name="week_range"
+                                    value={form.week_range}                                    
+                                    onChange={handleChange}
+                                    className="border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="1st">1st Week</option>
+                                    <option value="2nd">2nd Week</option>
+                                    <option value="3rd">3rd Week</option>
+                                    <option value="4th">4th Week</option>
+                                </select>
+                            </div>
                         )}
                     </div>
                     <div className="flex justify-between mt-2">
