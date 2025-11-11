@@ -61,11 +61,22 @@ const PayrollViewEmployeeEdit = ({ employee, search, year, setSearch, setYear, s
             updatedOtherEarned = formData.other_earned.map((earnedItem) => {
                 // If the earning type is 'daily', multiply amount by 'no_of_day_present'
                 if (earnedItem.earning_type?.type === 'daily') {
+                    const per_day = earnedItem.amount;
+                    const per_hour = Math.round((per_day / 8) * 100) / 100;
+                    const per_minute = Math.round((per_hour / 60) * 100) / 100;
+
+                    const earned_day = Math.round((per_day * days) * 100) / 100;
+                    const earned_hour = Math.round((per_hour * hour) * 100) / 100;
+                    const earned_minute = Math.round((per_minute * minute) * 100) / 100;
+
+                    const total = Math.round((earned_day + earned_hour + earned_minute) * 100) / 100;
+
                     return {
                         ...earnedItem,
-                        total: Math.round(parseFloat(earnedItem.amount * no_of_day_present) * 100) / 100 // Multiply by 'no_of_day_present' and round to 2 decimals
+                        total: total
                     };
                 }
+
                 return earnedItem; // If not 'daily', keep the item unchanged
             });
 

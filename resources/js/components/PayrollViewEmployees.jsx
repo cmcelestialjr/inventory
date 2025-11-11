@@ -171,7 +171,7 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                                                             Salary: ₱{parseFloat(employee.salary)?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </p>
                                                         <p className="text-sm font-medium text-blue-600">
-                                                            Days Present: {employee.no_of_day_present}
+                                                            Present (Days-Hours): {employee.day}-{employee.hour}
                                                         </p>
                                                 </div>
                                                 <div className="flex justify-between mb-2 border-t mt-1 pt-1">
