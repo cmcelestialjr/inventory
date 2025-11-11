@@ -127,7 +127,7 @@ class PayrollController extends Controller
                     $q->select('employee_id', 'deduction_id', 'amount');
                     
                     if ($payrollOption == 'semi-monthly') {
-                        $q->whereHas('deduction.periods', function ($query) use ($year, $month, $dayRange) {
+                        $q->whereHas('periods', function ($query) use ($year, $month, $dayRange) {
                             $query->where('year', $year)
                                 ->where('month', $month);
                             
@@ -138,13 +138,13 @@ class PayrollController extends Controller
                             }
                         });
                     }elseif ($payrollOption == 'weekly') {
-                        $q->whereHas('deduction.periods', function ($query) use ($year, $month, $week) {
+                        $q->whereHas('periods', function ($query) use ($year, $month, $week) {
                             $query->where('year', $year)
                                 ->where('month', $month);
                             $query->where('period', $week);
                         });
                     }else{
-                        $q->whereHas('deduction.periods', function ($query) use ($year, $month, $lastDay) {
+                        $q->whereHas('periods', function ($query) use ($year, $month, $lastDay) {
                             $query->where('year', $year)
                                 ->where('month', $month);
                             $query->where('period', '1-'.$lastDay);
@@ -157,7 +157,7 @@ class PayrollController extends Controller
                 'otherEarnings.type',
             ])->withSum(['deductions' => function ($q) use ($payrollOption, $year, $month, $dayRange) {
                 if ($payrollOption == 'semi-monthly') {
-                    $q->whereHas('deduction.periods', function ($query) use ($year, $month, $dayRange) {
+                    $q->whereHas('periods', function ($query) use ($year, $month, $dayRange) {
                         $query->where('year', $year)
                             ->where('month', $month);
                         
@@ -1003,7 +1003,7 @@ class PayrollController extends Controller
 
             // === Determine deduction period ===
             $query = DeductionAutoTypes::with('deduction')->where('type', $payrollOption);
-
+            
             if ($payrollOption === 'semi-monthly') {
                 $day_range = $dayRange === '1-15' ? '1st' : '2nd';
                 $query->where('day_range', $day_range);
@@ -1048,7 +1048,7 @@ class PayrollController extends Controller
                     $deduction_id = $deduction->id;
                     $employee_id = $employee->id;
                     $amount = $deduction->deduction->amount ?? 0;
-
+                    $deduction_name[] = $deduction->deduction->name;
                     $periodKey = "{$employee_id}-{$deduction_id}-{$period}";
                     $deductKey = "{$employee_id}-{$deduction_id}";
 
@@ -1060,10 +1060,17 @@ class PayrollController extends Controller
                             'year' => $year,
                             'month' => $month,
                             'period' => $period,
-                            'amount' => 0,
+                            'amount' => $amount,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
+                    } else {
+                        // Update existing record if exists
+                        $existing = $existingPeriods[$periodKey];
+                        $existing->update([
+                            'amount' => $amount,
+                            'updated_at' => now(),
+                        ]);
                     }
 
                     // Track deletions (other periods in same month)
@@ -1083,7 +1090,7 @@ class PayrollController extends Controller
                     ];
                 }
             }
-
+            
             // === Batch insert/update ===
             if (!empty($newPeriods)) {
                 EmployeeDeductionPeriod::insert($newPeriods);
@@ -1092,7 +1099,7 @@ class PayrollController extends Controller
             if (!empty($upserts)) {
                 EmployeeDeduction::upsert($upserts, ['employee_id', 'deduction_id'], ['amount', 'updated_at']);
             }
-
+            
             // === Batch delete old periods ===
             // Delete other periods (same month/year, same deduction_id, but not the current period)
             if (!empty($deletePairs)) {

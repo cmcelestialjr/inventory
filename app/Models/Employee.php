@@ -48,6 +48,10 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeDeduction::class, 'employee_id', 'id');
     }
+    public function deductionPeriods(): HasMany
+    {
+        return $this->hasMany(EmployeeDeductionPeriod::class, 'employee_id', 'id');
+    }
     public function schedules(): HasMany
     {
         return $this->hasMany(EmployeeSchedule::class, 'employee_id', 'id')

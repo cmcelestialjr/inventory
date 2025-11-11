@@ -26,4 +26,9 @@ class EmployeeDeduction extends Model
     {
         return $this->belongsTo(Deduction::class, 'deduction_id', 'id');
     }
+    public function periods()
+    {
+        return $this->hasMany(EmployeeDeductionPeriod::class, 'deduction_id', 'deduction_id')
+            ->whereColumn('employee_id', 'employee_deductions.employee_id');
+    }
 }
