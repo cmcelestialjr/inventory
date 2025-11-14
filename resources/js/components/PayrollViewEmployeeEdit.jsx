@@ -69,7 +69,10 @@ const PayrollViewEmployeeEdit = ({ employee, search, year, setSearch, setYear, s
                     const earned_hour = Math.round((per_hour * hour) * 100) / 100;
                     const earned_minute = Math.round((per_minute * minute) * 100) / 100;
 
-                    const total = Math.round((earned_day + earned_hour + earned_minute) * 100) / 100;
+                    const earned_ot_hour = Math.round((per_hour * ot_hour) * 100) / 100;
+                    const earned_ot_minute = Math.round((per_minute * ot_minute) * 100) / 100;
+
+                    const total = Math.round((earned_day + earned_hour + earned_minute + earned_ot_hour + earned_ot_minute) * 100) / 100;
 
                     return {
                         ...earnedItem,

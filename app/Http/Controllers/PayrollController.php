@@ -284,7 +284,7 @@ class PayrollController extends Controller
                     foreach($employee->otherEarnings as $earning){
                         
                         $earnedAmount = $this->calculateEarnedAmount($day, $hour, $minute, $earning->amount, $earning->type->type);
-                        $otEarnedAmount = $this->calculateEarnedAmount(0, $ot_minute, $ot_minute, $earning->amount, $earning->type->type);
+                        $otEarnedAmount = $this->calculateEarnedAmount(0, $ot_hour, $ot_minute, $earning->amount, $earning->type->type);
                         $totalEarnedAmount = $earnedAmount + $otEarnedAmount;
 
                         $list_other_earned[] = [
