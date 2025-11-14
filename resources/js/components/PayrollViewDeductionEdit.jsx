@@ -79,7 +79,7 @@ const PayrollViewDeductionEdit = ({ deduction, option, search, year, setSearch, 
                         <div>
                             {option=="deduction" && (
                                 <div className="mt-2 text-gray-700">
-                                    <h4>{deduction.deduction?.name} {deduction.deduction?.group}</h4>
+                                    <h4>{deduction.deduction?.name} {deduction.deduction?.group && deduction.deduction?.group !== 'null' ? deduction.deduction?.group : ''}</h4>
                                 </div>
                             )}
 

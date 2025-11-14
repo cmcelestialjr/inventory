@@ -149,7 +149,7 @@ const DeductionLists = ({}) => {
                                     <p className="text-sm text-gray-700">
                                         Group:{" "}
                                         <span className={`font-medium ${!deduction.group ? 'text-gray-500' : 'text-gray-800'}`}>
-                                            {deduction.group || 'n/a'}
+                                            {(deduction.group && deduction.group !== 'null') ? deduction.group : 'n/a'}
                                         </span>
                                     </p>
                                     <p className="text-sm text-gray-700">Type: <span className="font-medium">{deduction.type}</span></p>

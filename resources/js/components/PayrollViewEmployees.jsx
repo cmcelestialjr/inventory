@@ -235,7 +235,7 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                                                             employee.deduction_list.map((deduction, index) => (
                                                                 <div key={index} className="flex justify-between text-xs text-gray-600">
                                                                     <div>
-                                                                        {deduction.deduction?.name} {deduction.deduction?.group}: {deduction.amount}
+                                                                        {deduction.deduction?.name} {deduction.deduction?.group && deduction.deduction?.group !== 'null' ? deduction.deduction?.group : ''}: {deduction.amount}
                                                                     </div>
                                                                     <div>
                                                                         <button

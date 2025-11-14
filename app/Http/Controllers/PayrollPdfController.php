@@ -202,7 +202,7 @@ class PayrollPdfController extends Controller
         if(isset($employee['deduction_list']) && count($employee['deduction_list']) > 0){
             $additional_y = 4;
             foreach($employee['deduction_list'] as $deduction){
-                $deduction_group = $deduction['deduction']['group'] ? "({$deduction['deduction']['group']})" : "";
+                $deduction_group = ($deduction['deduction']['group'] && $deduction['deduction']['group'] !== 'null') ? "({$deduction['deduction']['group']})" : "";
                 $deduction_label = "{$deduction['deduction']['name']}{$deduction_group}:";
                 $pdf->SetXY($x + 27 + 18, $start_y_summary + $additional_y);
                 $pdf->SetFont('dejavusans', 'I', 9);

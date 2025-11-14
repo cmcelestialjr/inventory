@@ -144,7 +144,7 @@ const PayrollViewDeductionAdd = ({ employee, search, year, setSearch, setYear, s
                                                 className="cursor-pointer px-4 py-2 hover:bg-gray-200"
                                                 onClick={() => handleDeductionSelect(deduction)}
                                             >
-                                                <span>{deduction.name} {deduction.group}</span>
+                                                <span>{deduction.name} {deduction.group && deduction.group !== 'null' ? deduction.group : ''}</span>
                                             </li>
                                         ))
                                     ) : (
