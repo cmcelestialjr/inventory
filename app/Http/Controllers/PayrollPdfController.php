@@ -313,8 +313,11 @@ class PayrollPdfController extends Controller
     $final_total_ot_hour   = $ot_hour;
     $final_total_ot_minute = $ot_minute;
 
-    $start_y = $pdf->GetY();
-        $pdf->SetXY($x, $y);
+    $count_4_employee = 0;
+                $pdf->AddPage();
+                $pdf->SetY(8);
+    $x = $this->margin_x;
+            $y = $pdf->GetY();
 
         $pdf->SetXY($x - 2, $y - 1);
         $pdf->SetFont('dejavusans', 'B', 9);
