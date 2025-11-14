@@ -20,4 +20,8 @@ class EarningType extends Model
     {
         return $this->hasMany(EmployeeOtherEarning::class, 'earning_type_id', 'id');
     }
+    public function payrolls(): HasMany
+    {
+        return $this->hasMany(PayrollOtherEarned::class, 'earning_type_id', 'id');
+    }
 }

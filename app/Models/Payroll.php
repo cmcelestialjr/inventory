@@ -42,6 +42,14 @@ class Payroll extends Model
     {
         return $this->hasMany(PayrollEmployee::class, 'payroll_id', 'id');
     }
+    public function deductions(): HasMany
+    {
+        return $this->hasMany(PayrollEmployee::class, 'payroll_id', 'id');
+    }
+    public function others(): HasMany
+    {
+        return $this->hasMany(PayrollEmployee::class, 'payroll_id', 'id');
+    }
     public function totalEmployees()
     {
         return $this->employees()->get()->count();

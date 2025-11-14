@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Deduction;
+use App\Models\EarningType;
+use App\Models\PayrollDeduction;
 use TCPDF;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 
 class PayrollPdfController extends Controller
 {
@@ -224,7 +227,7 @@ class PayrollPdfController extends Controller
 
         $pdf->SetXY($x + 27, $pdf->GetY() - 5);
         $pdf->SetFont('dejavusans', 'I', 9);
-        $pdf->Cell(18, 5, '₱'.number_format($employee['gross']), 0, 1, 'R', 0, '', 1);
+        $pdf->Cell(18, 5, '₱'.number_format($employee['earned']), 0, 1, 'R', 0, '', 1);
 
         $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
         $pdf->SetFont('dejavusans', 'I', 9);
@@ -260,6 +263,251 @@ class PayrollPdfController extends Controller
         }
         $count_4_employee++;
     }
+    
+
+    $pdf->AddPage();
+
+    $payroll_id = $payroll['id'];
+
+    $totals = DB::table('payroll_employees')
+        ->where('payroll_id', $payroll_id)
+        ->selectRaw('
+            SUM(day) as total_days,
+            SUM(hour) as total_hours,
+            SUM(minute) as total_minutes,
+            SUM(ot_hour) as total_ot_hours,
+            SUM(ot_minute) as total_ot_minutes
+        ')
+    ->first();
+
+    // Assign values from database
+    $day = $totals->total_days ?? 0;
+    $hour = $totals->total_hours ?? 0;
+    $minute = $totals->total_minutes ?? 0;
+
+    $ot_hour = $totals->total_ot_hours ?? 0;
+    $ot_minute = $totals->total_ot_minutes ?? 0;
+
+    // ========== NORMAL TIME CONVERSION ==========
+    if ($minute >= 60) {
+        $hour += floor($minute / 60);
+        $minute = $minute % 60;
+    }
+
+    if ($hour >= 8) {
+        $day += floor($hour / 8);
+        $hour = $hour % 8;
+    }
+
+    // ========== OVERTIME CONVERSION ==========
+    if ($ot_minute >= 60) {
+        $ot_hour += floor($ot_minute / 60);
+        $ot_minute = $ot_minute % 60;
+    }
+
+    // Final Results:
+    $final_total_day      = $day;
+    $final_total_hour     = $hour;
+    $final_total_minute   = $minute;
+
+    $final_total_ot_hour   = $ot_hour;
+    $final_total_ot_minute = $ot_minute;
+
+    $start_y = $pdf->GetY();
+        $pdf->SetXY($x, $y);
+
+        $pdf->SetXY($x - 2, $y - 1);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell($this->column_width + 6, 140, '', 1, 1, 'L', 0, '', 1);
+
+    $logo_path = public_path('images/rockfil.png');
+        $logo_x = $x;  // Left margin for logo
+        $logo_y = $y;  // Align logo to the Y position of the employee block
+        $logo_width = 15;  // Width of the logo in mm
+        $logo_height = 18; // Height of the logo in mm
+        $pdf->Image($logo_path, $logo_x, $logo_y, $logo_width, $logo_height);
+
+        // Company name and address setup
+        $company_name = "ROCKFIL STAINLESS METAL WORK DOT SUPPLY CORP.";
+        $address = "Delgado Bldg. Brgy 110 Utap, Diversion Rd. Tacloban City";
+        $text_x = $logo_x + $logo_width + 5;
+
+        // Adjust Y for vertical centering relative to the logo
+        $logo_bottom_y = $logo_y + $logo_height;
+
+        $pdf->SetFont('dejavusans', 'B', 10);
+        $pdf->SetXY($x + 15, $y+6);
+        $pdf->Cell($this->column_width -16, '', $company_name, 0, 1, 'L', 0, '', 1);
+        $pdf->SetXY($x + 15, $y + 12);
+        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->Cell($this->column_width -16, '', $address, 0, 1, 'C', 0, '', 1);
+
+        $name = 'OVERALL';
+
+        $y = $logo_bottom_y + 4;
+
+        $pdf->SetXY($x, $y);
+        $pdf->SetFont('dejavusans', '', 9);
+        $pdf->Cell($this->column_width, 5, 'PAY SLIP FOR PERIOD OF '.strtoupper($payroll['period']), 0, 1, 'C', 0, '', 1);
+
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', '', 9);
+        $pdf->Cell($this->column_width, 5, 'Pay Date: '.$date_to_bank, 0, 1, 'C', 0, '', 1);
+        
+        $pdf->SetY($pdf->GetY() + 5);
+        // Employee Name
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(33, 5, 'Employee Name:', 0, 1, 'L');
+
+        $pdf->SetXY($x + 33, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', '', 10);
+        $pdf->Cell($this->column_width - 33, 5, $name, 0, 1, 'L', 0, '', 1);
+
+        // Employee Position
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(33, 5, 'Position:', 0, 1, 'L');
+
+        $pdf->SetXY($x + 33, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell($this->column_width - 33, 5, '', 0, 1, 'L', 0, '', 1);
+
+        // Employee No
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(33, 5, 'Employee No:', 0, 1, 'L');
+
+        $pdf->SetXY($x + 33, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell($this->column_width - 33, 5, '', 0, 1, 'L', 0, '', 1);
+
+        // Day.Hour.Min of Work
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'I', 8);
+        $pdf->Cell(33, 5, 'Day.Hour.Minute of Work', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 33, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(15, 5, $final_total_day.'.'.$final_total_hour.'.'.$final_total_minute, 0, 1, 'C', 0, '', 1);
+
+        $pdf->SetXY($x + 33 + 15, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(25, 5, 'OT Hour.Minute:', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 33 + 15 + 25, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell($this->column_width - 33 - 15 - 25, 5, $final_total_ot_hour.'.'.$final_total_ot_minute, 0, 1, 'C', 0, '', 1);
+        
+        $pdf->SetY($pdf->GetY() + 5);
+
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(27, 5, 'EARNINGS', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(18, 5, 'Amount', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(27, 5, 'DEDUCTIONS', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18 + 27, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->Cell(18, 5, 'Amount', 0, 1, 'L', 0, '', 1);
+
+        $start_y_summary = $pdf->GetY();
+        
+        $otherEarneds = EarningType::withSum(['payrolls as total_amount' => function ($query) use ($payroll_id) {
+                $query->where('payroll_id', $payroll_id);
+            }], 'amount')
+            ->whereHas('payrolls', function ($q) use ($payroll_id) {
+                $q->where('payroll_id', $payroll_id);
+            })
+            ->get();
+        
+        if($otherEarneds->count() > 0){
+            $additional_y = 0;
+            foreach($otherEarneds as $otherEarned){
+                $pdf->SetXY($x, $start_y_summary + $additional_y);
+                $pdf->SetFont('dejavusans', 'I', 9);
+                $pdf->Cell(27, 4, $otherEarned->name, 0, 1, 'L', 0, '', 1);
+
+                $pdf->SetXY($x + 27, $start_y_summary + $additional_y);
+                $pdf->SetFont('dejavusans', 'I', 9);
+                $pdf->Cell(18, 5, '₱'.number_format($otherEarned->total_amount,2), 0, 1, 'R', 0, '', 1);
+                $additional_y += 4;
+            }
+        }
+
+        $pdf->SetXY($x + 27 + 18, $start_y_summary);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(27, 4, 'Lates:', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18 + 27, $start_y_summary);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(18, 4, $employee['lates_absences'] > 0 ? '₱'.number_format($employee['lates_absences'],2) : '', 0, 1, 'R', 0, '', 1);
+
+        
+        $deductions = Deduction::withSum(['payrolls as total_amount' => function ($query) use ($payroll_id) {
+                $query->where('payroll_id', $payroll_id);
+            }], 'amount')
+            ->whereHas('payrolls', function ($q) use ($payroll_id) {
+                $q->where('payroll_id', $payroll_id);
+            })
+            ->get();
+
+        if($deductions->count() > 0){
+            $additional_y = 4;
+            foreach($deductions as $deduction){
+                $deduction_group = ($deduction->group && $deduction->group !== 'null') ? "({$deduction->group})" : "";
+                $deduction_label = "{$deduction->name}{$deduction_group}:";
+                $pdf->SetXY($x + 27 + 18, $start_y_summary + $additional_y);
+                $pdf->SetFont('dejavusans', 'I', 9);
+                $pdf->Cell(27, 4, $deduction_label, 0, 1, 'L', 0, '', 1);
+
+                $pdf->SetXY($x + 27 + 18 + 27, $start_y_summary + $additional_y);
+                $pdf->SetFont('dejavusans', 'I', 9);
+                $pdf->Cell(18, 4, '₱'.number_format($deduction->total_amount,2), 0, 1, 'R', 0, '', 1);
+
+                $additional_y += 4;
+            }
+        }
+
+        $pdf->SetY(122);
+
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(27, 5, 'Gross Earnings:', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(18, 5, '₱'.number_format($payroll['earned']), 0, 1, 'R', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(27, 5, 'Total Deductions:', 0, 1, 'L', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18 + 27, $pdf->GetY() - 4);
+        $pdf->SetFont('dejavusans', 'I', 9);
+        $pdf->Cell(18, 5, '₱'.number_format($payroll['deduction']), 0, 1, 'R', 0, '', 1);
+
+        $pdf->SetY($pdf->GetY() + 4);
+
+        $pdf->SetX($x);
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(27 + 18, 5, 'NET SALARY PAYABLE:', 0, 1, 'C', 0, '', 1);
+
+        $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
+        $pdf->SetFont('dejavusans', 'B', 11);
+        $pdf->Cell(18 + 27, 5, '₱'.number_format($payroll['netpay']), 0, 1, 'C', 0, '', 1);
+
+        $pdf->SetY($pdf->GetY() + 4);
+
+        $pdf->SetXY($x, $pdf->GetY());
+        $pdf->SetFont('dejavusans', 'I', 7);
+        $pdf->Cell($this->column_width, 5, 'This payslip is system generated. Signature is not required.', 0, 1, 'C', 0, '', 1);
     
 
     // --- Output ---
