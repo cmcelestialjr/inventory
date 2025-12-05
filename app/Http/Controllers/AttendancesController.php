@@ -89,7 +89,7 @@ class AttendancesController extends Controller
                 'lates' => 'required|integer|min:0',
                 'underTime' => 'required|integer|min:0',
             ]);
-
+            
             $date = date('Y-m-d', strtotime($validated['date']));
             $salary = $validated['salary'];
             $actual_in = $validated['actualTimeIn'];
@@ -107,7 +107,7 @@ class AttendancesController extends Controller
             if(!$query){
                 $insert = new DtrDailySummary;
                 $insert->employee_id = $id;
-                $insert->date = $date;                
+                $insert->date = $date;
                 $insert->schedule_pay_type_id = 1;
             }else{
                 $insert = $query;

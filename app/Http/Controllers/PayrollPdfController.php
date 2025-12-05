@@ -232,7 +232,7 @@ class PayrollPdfController extends Controller
 
         $pdf->SetXY($x + 27, $pdf->GetY() - 5);
         $pdf->SetFont('dejavusans', 'I', 9);
-        $pdf->Cell(18, 5, '₱'.number_format($employee['earned']), 0, 1, 'R', 0, '', 1);
+        $pdf->Cell(18, 5, '₱'.number_format($employee['earned'],2), 0, 1, 'R', 0, '', 1);
 
         $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
         $pdf->SetFont('dejavusans', 'I', 9);
@@ -240,7 +240,7 @@ class PayrollPdfController extends Controller
 
         $pdf->SetXY($x + 27 + 18 + 27, $pdf->GetY() - 4);
         $pdf->SetFont('dejavusans', 'I', 9);
-        $pdf->Cell(18, 5, '₱'.number_format($employee['deduction']), 0, 1, 'R', 0, '', 1);
+        $pdf->Cell(18, 5, '₱'.number_format($employee['deduction'],2), 0, 1, 'R', 0, '', 1);
 
         $pdf->SetY($pdf->GetY() + 4);
 
@@ -250,7 +250,7 @@ class PayrollPdfController extends Controller
 
         $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
         $pdf->SetFont('dejavusans', 'B', 11);
-        $pdf->Cell(18 + 27, 5, '₱'.number_format($employee['netpay']), 0, 1, 'C', 0, '', 1);
+        $pdf->Cell(18 + 27, 5, '₱'.number_format($employee['netpay'],2), 0, 1, 'C', 0, '', 1);
 
         $pdf->SetY($pdf->GetY() + 4);
 
@@ -316,11 +316,32 @@ class PayrollPdfController extends Controller
     $final_total_ot_hour   = $ot_hour;
     $final_total_ot_minute = $ot_minute;
 
-    $count_4_employee = 0;
-    $pdf->AddPage();
-    $pdf->SetY(8);
-    $x = $this->margin_x;
-    $y = $pdf->GetY();
+    $is_new_column = ($employee_count % 2) === 1;
+
+    $page_height = $pdf->getPageHeight();
+    $half_page_height = ($page_height - $this->margin_x * 2) / 2;
+        
+    if ($is_new_column) {
+        // Move to the second column
+        $x = $this->margin_x + $this->column_width + $this->column_gap;
+        $y = $pdf->GetY() - $previous_employee_height;
+    } else {            
+         // First column entry
+        if ($count_4_employee>3) {
+            $count_4_employee = 0;
+            $pdf->AddPage();
+            $pdf->SetY(8);
+        }
+
+        $x = $this->margin_x;
+        $y = $pdf->GetY();
+    }
+
+    // $count_4_employee = 0;
+    // $pdf->AddPage();
+    // $pdf->SetY(8);
+    // $x = $this->margin_x;
+    // $y = $pdf->GetY();
 
     $pdf->SetXY($x - 2, $y - 1);
     $pdf->SetFont('dejavusans', 'B', 9);
@@ -476,7 +497,11 @@ class PayrollPdfController extends Controller
         }
     }
 
-    $pdf->SetY(122);
+    if ($count_4_employee>1) {
+        $pdf->SetY(265);
+    }else{
+        $pdf->SetY(122);
+    }
 
     $pdf->SetX($x);
     $pdf->SetFont('dejavusans', 'I', 9);
@@ -484,7 +509,7 @@ class PayrollPdfController extends Controller
 
     $pdf->SetXY($x + 27, $pdf->GetY() - 5);
     $pdf->SetFont('dejavusans', 'I', 9);
-    $pdf->Cell(18, 5, '₱'.number_format($payroll['earned']), 0, 1, 'R', 0, '', 1);
+    $pdf->Cell(18, 5, '₱'.number_format($payroll['earned'],2), 0, 1, 'R', 0, '', 1);
 
     $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
     $pdf->SetFont('dejavusans', 'I', 9);
@@ -492,7 +517,7 @@ class PayrollPdfController extends Controller
 
     $pdf->SetXY($x + 27 + 18 + 27, $pdf->GetY() - 4);
     $pdf->SetFont('dejavusans', 'I', 9);
-    $pdf->Cell(18, 5, '₱'.number_format($payroll['deduction']), 0, 1, 'R', 0, '', 1);
+    $pdf->Cell(18, 5, '₱'.number_format($payroll['deduction'],2), 0, 1, 'R', 0, '', 1);
 
     $pdf->SetY($pdf->GetY() + 4);
 
@@ -502,7 +527,7 @@ class PayrollPdfController extends Controller
 
     $pdf->SetXY($x + 27 + 18, $pdf->GetY() - 5);
     $pdf->SetFont('dejavusans', 'B', 11);
-    $pdf->Cell(18 + 27, 5, '₱'.number_format($payroll['netpay']), 0, 1, 'C', 0, '', 1);
+    $pdf->Cell(18 + 27, 5, '₱'.number_format($payroll['netpay'],2), 0, 1, 'C', 0, '', 1);
 
     $pdf->SetY($pdf->GetY() + 4);
 
