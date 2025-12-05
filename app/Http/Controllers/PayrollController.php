@@ -723,6 +723,36 @@ class PayrollController extends Controller
         }
     }
 
+    public function deleteEmployee($id)
+    {
+        DB::beginTransaction();
+        try {
+            $payrollEmployee = PayrollEmployee::findOrFail($id);
+            $payroll_id = $payrollEmployee->payroll_id;
+
+            PayrollDeduction::where('payroll_employee_id',$id)->delete();
+            PayrollMonth::where('payroll_employee_id',$id)->delete();
+            PayrollOtherEarned::where('payroll_employee_id',$id)->delete();
+
+            $payrollEmployee->delete();
+
+            $payroll = $this->updatePayroll($payroll_id);
+
+            DB::commit();
+            return response()->json([
+                'message' => 'Deleted Employee successfully!',
+                'data' => $payroll
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     private function payrollDeductions($payroll_employee_id, $payroll_id, $deductions)
     {
         $ca_deduction_id = $this->getCAdeductionId();

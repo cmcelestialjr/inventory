@@ -153,6 +153,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/payroll/listEmployee', [PayrollController::class, 'listEmployee']);
     Route::post('/payroll/updateEarned', [PayrollController::class, 'updateEarned']);
+    Route::delete('/payroll/deleteEmployee/{id}', [PayrollController::class, 'deleteEmployee']);
     Route::apiResource('payroll', PayrollController::class);
 
     Route::apiResource('payrollDeduction', PayrollDeductionController::class);

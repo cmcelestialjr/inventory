@@ -266,6 +266,7 @@ const PayrollLists = ({ authToken }) => {
                     setSearch={setSearch}
                     setYear={setYear}
                     setPayroll={setPayroll}
+                    fetchPayrolls={fetchPayrolls}
                     closeModal={closeModal} />}
 
             {showPdfModal && (

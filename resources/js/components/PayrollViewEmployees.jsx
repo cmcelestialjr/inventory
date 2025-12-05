@@ -8,7 +8,7 @@ import PayrollViewEmployeeEdit from "./PayrollViewEmployeeEdit";
 import PayrollViewDeductionAdd from "./PayrollViewDeductionAdd";
 import PayrollViewDeductionEdit from "./PayrollViewDeductionEdit";
 
-const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPayroll, closeModal }) => {
+const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPayroll, fetchPayrolls, closeModal }) => {
     const [searchEmployee, setSearchEmployee] = useState('');
     const [employee, setEmployee] = useState([]);
     const [deduction, setDeduction] = useState([]);
@@ -90,6 +90,27 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
         });
     };
 
+    const handleDelete = async (employee) => {
+        Swal.fire({
+                title: `Delete ${employee.lastname}, ${employee.firstname} in the Payroll?`,
+                text: "This action cannot be undone",
+                icon: "warning",
+                showCancelButton: true,
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const token = localStorage.getItem("token");
+                const response = await axios.delete(`/api/payroll/deleteEmployee/${employee.id}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                toastr.success("Employee deleted!");
+                setPayroll(response.data.data);
+                fetchPayrolls();
+            }
+        });
+    };
+
     return (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white rounded-lg p-6 shadow-lg max-w-[90vw] w-full max-h-[90vh] overflow-y-auto relative">
@@ -152,17 +173,23 @@ const PayrollViewEmployees = ({ payroll, search, year, setSearch, setYear, setPa
                                             className="border p-4 rounded-lg shadow-md bg-white hover:bg-gray-50 flex items-start transition-all duration-300 ease-in-out transform hover:scale-105"
                                         >
                                             <div className="flex flex-col ml-4 w-full">
-                                                <div className="flex justify-between">
+                                                <div className="flex justify-between gap-4">
                                                     <div>
                                                         <h4 className="text-lg font-medium text-gray-800">{name}</h4>
                                                         <p className="text-sm font-bold text-gray-600">{employee.position}</p>
                                                     </div>
-                                                    <div>
+                                                    <div className="flex justify-between gap-x-1">
                                                         <button
-                                                            className="bg-yellow-500 text-white py-1 px-2 rounded-lg text-sm hover:bg-yellow-600 transition-colors"
-                                                            onClick={() => handleEdit(employee)} 
+                                                            className="text-yellow-500 py-1 px-2 rounded-lg text-sm hover:text-yellow-600 transition-colors"
+                                                            onClick={() => handleEdit(employee)}
                                                         >
-                                                            <Edit size={16} />
+                                                            <Edit size={24} />
+                                                        </button>
+                                                        <button
+                                                            className="text-red-500 py-1 px-2 rounded-lg text-sm hover:text-red-600 transition-colors"
+                                                            onClick={() => handleDelete(employee)}
+                                                        >
+                                                            <X size={24} />
                                                         </button>
                                                     </div>
                                                 </div>
