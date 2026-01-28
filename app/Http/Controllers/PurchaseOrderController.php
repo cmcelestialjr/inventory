@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PaymentStatus;
+use App\Models\Product;
 use App\Models\ProductsPrice;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderPayment;
@@ -358,16 +359,16 @@ class PurchaseOrderController extends Controller
             $query->total = $product['productTotal'];
 
             if(isset($product['productStatusId'])){
-                if($status_id!=$product['productStatusId'] && ($status_id>1 && $product['productStatusId']>1)){
+                //if($product['productStatusId'] !== 1){
                     $status_id = $product['productStatusId'];
-                }
-            }
+                //}
+            }            
 
             $cost_received = 0;
             $qty_received = 0;
             $total_received = 0;
 
-            if($status_id==2){
+            if($status_id == 2){
                 if(isset($product['productCostReceived'])){
                     $cost_received = $product['productCostReceived'];
                 }
@@ -378,7 +379,7 @@ class PurchaseOrderController extends Controller
                     $total_received = $product['productTotalReceived'];
                 }
             }
-
+            
             $this->productsUpdate($cashier_id, $supplier_id,$product_id, $status_id, $status_id_old, $cost_received, $cost, $cost_old, $qty_received, $qty_old);
 
             $query->cost_received = $cost_received;
@@ -392,35 +393,47 @@ class PurchaseOrderController extends Controller
 
     private function productsUpdate($cashier_id, $supplier_id, $product_id, $status_id, $status_id_old, $cost, $cost_product, $cost_old, $qty, $qty_old)
     {
+        if ($status_id_old == 2 || $status_id !== 2) {
+
+            ProductsPrice::where('product_id', $product_id)
+                ->where('cost', $cost_old)
+                ->update(['qty' => DB::raw('qty - ' . $qty_old)]);
+
+        }
         
-        $cost_check = $cost>0 ? $cost : $cost_product;
-        $cost_check = $cost_old>0 && $cost!=$cost_old ? $cost_old : $cost_check;
+        // $cost_check = $cost>0 ? $cost : $cost_product;
+        // $cost_check = $cost_old>0 && $cost!=$cost_old ? $cost_old : $cost_check;
         
-        $query = ProductsPrice::where('product_id', $product_id)
-            ->where('cost', $cost_check)
-            ->first();
-        if($query){
-            $update = ProductsPrice::find($query->id);
-            $update->supplier_id = $supplier_id;
-            $update->qty = $status_id_old==2 && $status_id!=2 ? $query->qty - $qty_old : $query->qty + $qty;
-            $update->save();
-        }else{
-            $productInfo = ProductsPrice::where('product_id', $product_id)
-                ->orderBy('qty','DESC')
+        if ($status_id == 2 && $qty > 0) {
+            $query = ProductsPrice::where('product_id', $product_id)
+                ->where('cost', $cost)
+                ->lockForUpdate()
                 ->first();
-            $product_price = $productInfo->price;
-            $insert = new ProductsPrice;
-            $insert->supplier_id = $supplier_id;
-            $insert->product_id = $product_id;
-            $insert->cost = $cost;
-            $insert->price = $product_price;
-            $insert->qty = $qty;
-            $insert->discount = 0;
-            $insert->discount_percentage = 0;
-            $insert->effective_date = date('Y-m-d');
-            $insert->updated_by = $cashier_id;
-            $insert->created_by = $cashier_id;
-            $insert->save();
+            if($query){
+                if($status_id == 2){
+                    $update = ProductsPrice::find($query->id);
+                    $update->supplier_id = $supplier_id;
+                    $update->qty = $query->qty + $qty;
+                    $update->save();
+                }
+            }else{
+                $productInfo = ProductsPrice::where('product_id', $product_id)
+                    ->orderBy('qty','DESC')
+                    ->first();
+                $product_price = $productInfo->price;
+                $insert = new ProductsPrice;
+                $insert->supplier_id = $supplier_id;
+                $insert->product_id = $product_id;
+                $insert->cost = $cost;
+                $insert->price = $product_price;
+                $insert->qty = $qty;
+                $insert->discount = 0;
+                $insert->discount_percentage = 0;
+                $insert->effective_date = date('Y-m-d');
+                $insert->updated_by = $cashier_id;
+                $insert->created_by = $cashier_id;
+                $insert->save();
+            }
         }
     }
 

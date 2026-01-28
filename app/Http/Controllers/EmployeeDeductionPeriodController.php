@@ -64,7 +64,7 @@ class EmployeeDeductionPeriodController extends Controller
         $validated = $request->validate([
             'deduction_id' => 'required|exists:deductions,id',
             'year' => ['required', 'numeric', 'min:2025', 'max:' . date('Y')],
-            'month' => ['required', 'numeric', 'min:1', 'max:12', 'regex:/^(0[1-9]|1[0-2])$/'],
+            'month' => ['required', 'numeric', 'min:1', 'max:12'],
             'period' => 'required|string',
             'isDeductionIncluded' => 'required|boolean'
         ]);
