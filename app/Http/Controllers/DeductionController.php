@@ -74,7 +74,7 @@ class DeductionController extends Controller
             
             $insert = new Deduction;
             $insert->name = $validated['name'];
-            $insert->group = $validated['group'];
+            $insert->group = $validated['group'] == '' || $validated['group'] == 'null' ? '' : $validated['group'];
             $insert->type = $validated['type'];
             $insert->amount = $validated['amount'];
             $insert->percentage = $validated['percentage'];

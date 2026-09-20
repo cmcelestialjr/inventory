@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import axios from "axios";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
+import { Edit, Eye, Plus, X, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle, Download } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -544,6 +545,74 @@ const Sales = () => {
         });
     };
 
+    const handleDownloadExcel = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            toastr.info("Preparing Excel file...");
+
+            const response = await axios.get(`/api/sales/print`, {
+                params: {
+                    search: search,
+                    filter: selectedSaleStatus,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn,
+                    sort_order: sortOrder,
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            const salesData = response.data.data;
+
+            if (!salesData || salesData.length === 0) {
+                toastr.warning("No data found to export.");
+                return;
+            }
+
+            // Map the data to a clean format for Excel
+            const excelData = salesData.map((sale) => {
+                // Formatting Date
+                const date = moment(sale.date_time_of_sale).format("MMM D, YYYY h:mm A");
+                
+                // Format Payment Options
+                const payments = sale.payment_options?.map(
+                    p => `${p.payment_option_name}: ₱${parseFloat(p.amount_paid).toFixed(2)}`
+                ).join(" | ") || "Awaiting Payment";
+                
+                // Format Status
+                let status = "Unknown";
+                if (sale.sales_status_id === 1) status = "For Payment";
+                else if (sale.sales_status_id === 2) status = "Paid";
+                else if (sale.sales_status_id === 3) status = "Transaction On-hold";
+                else if (sale.sales_status_id === 4) status = "Cancelled";
+
+                return {
+                    "Date & Time": date,
+                    "Receipt Code": sale.code || "N/A",
+                    "Cashier": sale.cashier_name || "N/A",
+                    "Customer": sale.customer_name || "N/A",
+                    "Total Cost": Number(sale.total_cost || 0),
+                    "Total Amount": Number(sale.total_amount || 0),
+                    "Payments Made": payments,
+                    "Status": status,
+                };
+            });
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Sales");
+
+            // Generate the Excel file and trigger download
+            XLSX.writeFile(workbook, "Sales_Report.xlsx");
+            toastr.success("Excel downloaded successfully!");
+            
+        } catch (error) {
+            console.error(error);
+            toastr.error("Error generating Excel file.");
+        }
+    };
+
     const handleSelectedSaleStatus = (salesStatus) => {
         setSelectedSaleStatus(salesStatus);
         setPage(1);
@@ -577,12 +646,20 @@ const Sales = () => {
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Sales</h1>
-                    <button
-                        onClick={() => setIsNewSaleModalOpen(true)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                    >
-                        <Plus size={18} /> New Sale
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleDownloadExcel}
+                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+                        >
+                            <Download size={18} /> Excel
+                        </button>
+                        <button
+                            onClick={() => setIsNewSaleModalOpen(true)}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                        >
+                            <Plus size={18} /> New Sale
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Section (Sales Options) */}

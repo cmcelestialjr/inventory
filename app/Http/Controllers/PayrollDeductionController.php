@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Advance;
+use App\Models\AdvanceDeduction;
 use App\Models\Deduction;
 use App\Models\Employee;
 use App\Models\Payroll;
@@ -42,9 +44,14 @@ class PayrollDeductionController extends Controller
             $update = PayrollEmployee::findOrFail($validated['id']);            
 
             $payroll_employee_id = $update->id;
+            $payroll_id = $update->payroll_id;
+            $employee_id = $update->employee_id;
             $deduction_id = $validated['deduction_id'];
+            $amount = $validated['amount'];
 
-            $checkDeduction = PayrollDeduction::where('payroll_employee_id',$deduction_id)->first();
+            $checkDeduction = PayrollDeduction::where('payroll_employee_id',$payroll_employee_id)
+                ->where('deduction_id', $deduction_id)
+                ->first();
 
             if($checkDeduction){
                 $payroll_id = $update->payroll_id;
@@ -65,6 +72,38 @@ class PayrollDeductionController extends Controller
             $insertDeduction->deduction_id = $deduction_id;
             $insertDeduction->amount = $validated['amount'];
             $insertDeduction->save();
+            
+            $deductionModel = Deduction::find($deduction_id);
+            
+            if ($deductionModel && $deductionModel->name === 'Cash Advance') {
+                
+                // Find the first unpaid scheduled deduction for this employee
+                $updateCA = AdvanceDeduction::where('employee_id', $employee_id)
+                    ->whereNull('payroll_id')
+                    ->first();
+
+                if ($updateCA) {
+                    // Link it to this payroll and update the amount
+                    $updateCA->payroll_id = $payroll_id;
+                    $updateCA->deduction_amount = $amount;
+                    $updateCA->save();
+                } else {
+                    // If no pending schedule, check if they have an active Cash Advance at all
+                    $ca = Advance::where('employee_id', $employee_id)
+                        ->where('status_id', 1)
+                        ->first();
+                        
+                    if($ca){
+                        // Create a new deduction history record for it
+                        $insert = new AdvanceDeduction;
+                        $insert->advance_id = $ca->id;
+                        $insert->employee_id = $employee_id;
+                        $insert->payroll_id = $payroll_id;
+                        $insert->deduction_amount = $amount;
+                        $insert->save();
+                    }
+                }
+            }
 
             $deductionSum = PayrollDeduction::where('payroll_employee_id', $payroll_employee_id)->sum('amount');
             $deduction = $deductionSum + $update->lates_absences;
@@ -156,6 +195,17 @@ class PayrollDeductionController extends Controller
             $delete = PayrollDeduction::findOrFail($id);
 
             $payroll_employee_id = $delete->payroll_employee_id;
+            $payroll_id = $delete->payroll_id;
+            $employee_id = $delete->employee_id;
+            $deduction_id = $delete->deduction_id;
+
+            $deductionModel = Deduction::find($deduction_id);
+            if ($deductionModel && $deductionModel->name === 'Cash Advance') {
+                // Unlink the cash advance from this payroll so it can be paid later
+                AdvanceDeduction::where('payroll_id', $payroll_id)
+                    ->where('employee_id', $employee_id)
+                    ->update(['payroll_id' => null]);
+            }
 
             $delete->delete();            
 

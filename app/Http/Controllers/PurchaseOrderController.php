@@ -334,6 +334,64 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    public function print(Request $request)
+    {
+        $query = PurchaseOrder::join('suppliers', 'suppliers.id', '=', 'purchase_orders.supplier_id')
+            ->select('purchase_orders.*', 'suppliers.name as supplier_name', 'suppliers.address as supplier_address')
+            ->with(['statusInfo', 'products.productInfo', 'products.statusInfo', 'paymentStatusInfo', 'payments']);
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'LIKE', "%{$search}%")
+                    ->orWhereHas('supplierInfo', function ($q) use ($search) {
+                        $q->where('name', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->has('filterStatus')) {
+            $filter = $request->filterStatus;
+        
+            if ($filter !== 'All') {
+                if (Str::startsWith($filter, 'payment_status_id_')) {
+                    $paymentStatusId = (int) str_replace('payment_status_id_', '', $filter);
+                    $query->where('payment_status_id', $paymentStatusId);
+                } else {
+                    $query->where('status_id', $filter);
+                }
+            }
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('date_time_ordered', [$startDate, $endDate])
+                        ->orWhereBetween('date_time_received', [$startDate, $endDate]);
+                });
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'supplier_name', 'status_id', 'payment_status_id', 'remarks', 'date_time_ordered', 'date_time_received'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
+        // Use get() instead of paginate() for the full Excel export
+        $po = $query->orderBy('date_time_ordered', 'DESC')->get();
+
+        return response()->json([
+            'data' => $po
+        ]);
+    }
+
     private function productsManage($cashier_id, $supplier_id, $purchase_order_id, $status_id, $products)
     {
         foreach($products as $product){

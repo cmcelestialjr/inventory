@@ -443,6 +443,62 @@ class ReturnController extends Controller
         }
     }
 
+    public function print(Request $request)
+    {
+        $query = Returns::with('saleInfo','returnSalesProductsList.saleProductInfo.productInfo','changeSaleInfo.productsList.productInfo','returnOptionInfo');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('sales_code', 'LIKE', "%{$search}%")
+                ->orWhere('refund_amount', 'LIKE', "%{$search}%");
+                $q->orWhere('sales_of_return_code', 'LIKE', "%{$search}%")
+                ->orWhere('remarks', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->whereBetween(DB::raw('DATE(date_time_returned)'), [$startDate, $endDate]);
+            }
+        }
+
+        if ($request->has('filter')){
+            $filter = $request->filter;
+            if($filter!="all"){
+                $query->where('return_option_id', $filter);
+            }
+        }
+
+        if ($request->has('active_tab')){
+            $active_tab = $request->active_tab;
+            if($active_tab=="To Supplier"){
+                $query->where('return_type_id', 2);
+            }else{
+                $query->where('return_type_id', 1);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'sales_code', 'refund_amount', 'sales_of_return_code', 'remarks', 'date_time_returned', 'return_option_id'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
+        // Use get() instead of paginate() for the full Excel export
+        $returns = $query->orderBy('code','DESC')->get();
+
+        return response()->json([
+            'data' => $returns
+        ]);
+    }
+
     private function getCode()
     {
         $today = now()->format('ymd');

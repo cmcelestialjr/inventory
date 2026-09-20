@@ -116,6 +116,35 @@ const DeductionLists = ({}) => {
         });
     };    
 
+    const handleView = (deduction) => {
+        const amountDisplay = deduction.amount > 0 
+            ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(deduction.amount)
+            : 'n/a';
+            
+        const ceilingDisplay = deduction.ceiling > 0 
+            ? new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(deduction.ceiling)
+            : 'n/a';
+
+        const typeDetails = deduction.type === "amount"
+            ? `<p><strong>Amount:</strong> ${amountDisplay}</p>`
+            : `<p><strong>Percentage:</strong> ${deduction.percentage}%</p>
+               <p><strong>Ceiling:</strong> ${ceilingDisplay}</p>`;
+
+        Swal.fire({
+            title: deduction.name,
+            html: `
+                <div style="text-align: left; margin-top: 10px;">
+                    <p><strong>Group:</strong> ${deduction.group && deduction.group !== 'null' ? deduction.group : 'n/a'}</p>
+                    <p><strong>Type:</strong> <span style="text-transform: capitalize;">${deduction.type}</span></p>
+                    ${typeDetails}
+                </div>
+            `,
+            icon: "info",
+            confirmButtonColor: "#2563eb", // matches your blue-600 theme
+            confirmButtonText: "Close"
+        });
+    };
+
     return (
         <div className="border border-gray-300 shadow-xl rounded-lg p-6 bg-white mx-auto w-full mt-4">
             <div className="flex justify-between mb-4 gap-4">

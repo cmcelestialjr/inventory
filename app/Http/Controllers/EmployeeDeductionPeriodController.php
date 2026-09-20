@@ -47,12 +47,14 @@ class EmployeeDeductionPeriodController extends Controller
             $query->where('employee_id', $id);
         }
 
+        if (!$validated['period']) {
+            return response()->json([
+                'data' => []
+            ]);
+        }
+
         $deductions = $query->orderBy('deduction_id','ASC')
             ->get();
-
-        if (!$validated['period']) {
-            $deductions = [];
-        }
 
         return response()->json([
             'data' => $deductions

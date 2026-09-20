@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import Layout from "./Layout";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
 import ReactPaginate from "react-paginate";
 import moment from "moment";
-import { Eye, Plus, Trash, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle } from "lucide-react";
+import { Eye, Plus, Trash, Package, RotateCcw, ShoppingBag, Repeat, AlertTriangle, XCircle, Download } from "lucide-react";
 import ReturnsNewModal from "./ReturnsNewModal";
 import ReturnsToSupplier from "./ReturnsToSupplier";
 import toastr from 'toastr';
@@ -187,6 +188,73 @@ const Returns = () => {
         (props) => <ShoppingBag size={20} />
     ];
 
+    const handleDownloadExcel = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            toastr.info("Preparing Excel file...");
+
+            const response = await axios.get(`/api/returns/print`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+                params: {
+                    search: search,
+                    filter: selectedReturnOption,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : "",
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : "",
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
+                    active_tab: activeTab
+                },
+            });
+
+            const returnsData = response.data.data;
+
+            if (!returnsData || returnsData.length === 0) {
+                toastr.warning("No data found to export.");
+                return;
+            }
+
+            // Map data into a clean Excel format
+            const excelData = returnsData.map((item) => {
+                const returnDate = item.date_time_returned ? moment(item.date_time_returned).format("MMM D, YYYY h:mm A") : "N/A";
+                
+                // Format returned products list into a single readable string
+                const returnedProducts = item.return_sales_products_list?.map(
+                    p => `${p.sale_product_info?.product_info?.name_variant || "Unknown"} (Qty: ${p.qty})`
+                ).join(" | ") || "None";
+
+                // Format changed (replacement) products list into a single readable string
+                const changedProducts = item.change_sale_info?.products_list?.map(
+                    p => `${p.product_info?.name_variant || "Unknown"} (Qty: ${p.qty})`
+                ).join(" | ") || "None";
+
+                return {
+                    "Return Code": item.code || "N/A",
+                    "Date Returned": returnDate,
+                    "Original Sales Code": item.sales_code || "N/A",
+                    "Returned Products": returnedProducts,
+                    "Replacement Sales Code": item.sales_of_return_code || "None",
+                    "Replacement Products": changedProducts,
+                    "Refund Amount": Number(item.refund_amount || 0),
+                    "Total Amount": Number(item.total_amount || 0),
+                    "Status/Option": item.return_option_info?.name || "N/A",
+                    "Remarks": item.remarks || "",
+                };
+            });
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Returns");
+
+            // Generate the Excel file and trigger download
+            XLSX.writeFile(workbook, "Returns_Report.xlsx");
+            toastr.success("Excel downloaded successfully!");
+        } catch (error) {
+            console.error(error);
+            toastr.error("Error generating Excel file.");
+        }
+    };
+
     return (
         <Layout>
             <div className="w-full mt-10 mx-auto">
@@ -211,12 +279,20 @@ const Returns = () => {
                     <div>
                         <div className="flex justify-between items-center mb-6">
                             <h1 className="text-2xl font-semibold text-gray-800">Returns</h1>
-                            <button
-                                onClick={() => setReturnsNewModalOpen(true)}
-                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                            >
-                                <Plus size={18} /> New Return
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleDownloadExcel}
+                                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+                                >
+                                    <Download size={18} /> Excel
+                                </button>
+                                <button
+                                    onClick={() => setReturnsNewModalOpen(true)}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                                >
+                                    <Plus size={18} /> New Return
+                                </button>
+                            </div>
                         </div>
 
                         {/* Summary Section (Return Options) */}

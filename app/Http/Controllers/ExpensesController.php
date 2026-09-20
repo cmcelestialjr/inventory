@@ -167,6 +167,55 @@ class ExpensesController extends Controller
         }
     }
 
+    public function print(Request $request)
+    {
+        $query = Expense::with('category','subCategory','product');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'LIKE', "%{$search}%")
+                ->orWhere('expense_name', 'LIKE', "%{$search}%")
+                ->orWhere('amount', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->whereBetween(DB::raw('DATE(date_time_of_expense)'), [$startDate, $endDate]);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['category_id', 'sub_category_id', 'code', 'date_time_of_expense', 'expense_name', 'amount', 'remarks', 'tin', 'or'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+        
+        if ($request->has('numericSelectedCategory')) {
+            $numericSelectedCategory = $request->numericSelectedCategory;
+            $query->whereIn('category_id', $numericSelectedCategory);
+        }
+
+        if ($request->has('numericSelectedSubCategory')) {
+            $numericSelectedSubCategory = $request->numericSelectedSubCategory;
+            $query->whereIn('sub_category_id', $numericSelectedSubCategory);
+        }
+
+        // Use get() instead of paginate() for the full Excel export
+        $expenses = $query->orderByDesc('date_time_of_expense')->get();
+
+        return response()->json([
+            'data' => $expenses
+        ]);
+    }
+
     private function manageProductQty($product_id,$cost,$qty,$type)
     {
         $productPrice = ProductsPrice::where('product_id', $product_id)

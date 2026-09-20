@@ -68,6 +68,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/products/sales', [ProductController::class, 'sales']);
 
     Route::get('/sales', [SaleController::class, 'index']);
+    Route::get('/sales/print', [SaleController::class, 'print']);
     Route::post('/sales-confirm', [SaleController::class, 'confirmSale']);
     Route::post('/sales-proceed-payment', [SaleController::class, 'proceedPayment']);
     Route::get('/fetch-sales', [SaleController::class, 'fetch']);
@@ -79,6 +80,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-payment-statuses', [PaymentOptionController::class, 'fetchStatuses']);
 
     Route::get('/returns', [ReturnController::class, 'index']);
+    Route::get('/returns/print', [ReturnController::class, 'print']);
     Route::get('/fetch-return-options', [ReturnController::class, 'fetchOptions']);
     Route::post('/returns-confirm', [ReturnController::class, 'confirm']);
     Route::get('/returns/summary', [ReturnController::class, 'summary']);
@@ -86,6 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-returns', [ReturnController::class, 'fetch']);
     
     Route::get('/expenses', [ExpensesController::class, 'index']);
+    Route::get('/expenses/print', [ExpensesController::class, 'print']);
     Route::get('/expenses/names', [ExpensesController::class, 'names']);
     Route::post('/expenses/store', [ExpensesController::class, 'store']);
     Route::post('/expenses/delete', [ExpensesController::class, 'destroy']);
@@ -118,6 +121,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fetch-services', [ServicesController::class, 'fetch']);
     
     Route::get('/service-transactions', [ServiceTransactionsController::class, 'index']);
+    Route::get('/service-transactions/print', [ServiceTransactionsController::class, 'print']);
     Route::post('/service-transactions/manage', [ServiceTransactionsController::class, 'manage']);
     Route::get('/service-transactions/removeProduct', [ServiceTransactionsController::class, 'removeProduct']);
     Route::get('/service-transactions/removeProduct1', [ServiceTransactionsController::class, 'removeProduct1']);
@@ -129,6 +133,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/service-transaction/returned', [ServiceTransactionsController::class, 'returned']);
     
     Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+    Route::get('/purchase-orders/print', [PurchaseOrderController::class, 'print']);
     Route::post('/purchase-orders/manage', [PurchaseOrderController::class, 'manage']);
     Route::get('/purchase-orders/removeProduct', [PurchaseOrderController::class, 'removeProduct']);
     Route::get('/purchase-orders/statuses', [PurchaseOrderController::class, 'statuses']);

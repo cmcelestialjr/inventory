@@ -1,7 +1,8 @@
 import Layout from "./Layout";
 import React, { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import axios from "axios";
-import { Plus, Edit, X, Clipboard, Circle, PrinterIcon, Package, PackageCheck, PackagePlus, Wallet, XCircle, RotateCcw, PieChart, CheckCircle, Save } from "lucide-react";
+import { Plus, Edit, X, Clipboard, Circle, PrinterIcon, Package, PackageCheck, PackagePlus, Wallet, XCircle, RotateCcw, PieChart, CheckCircle, Save, Download } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -524,6 +525,70 @@ const PurchaseOrders = () => {
             }
         } catch (error) {
             toastr.error("Error!", error.response?.data);
+        }
+    };
+
+    const handleDownloadExcel = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            toastr.info("Preparing Excel file...");
+
+            const response = await axios.get(`/api/purchase-orders/print`, {
+                params: {
+                    search,
+                    filterStatus: filterStatus,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            const poData = response.data.data;
+
+            if (!poData || poData.length === 0) {
+                toastr.warning("No data found to export.");
+                return;
+            }
+
+            // Map data into a clean Excel format
+            const excelData = poData.map((po) => {
+                const totalReceived = po.products?.reduce((sum, product) => sum + (parseFloat(product.total_received) || 0), 0);
+                const paymentsReceived = po.payments?.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
+                const remainingAmount = Number(totalReceived) - Number(paymentsReceived);
+                
+                const productNames = po.products?.map(p => p.product_info?.name_variant).join(", ") || "N/A";
+                
+                const dateOrdered = po.date_time_ordered ? moment(po.date_time_ordered).format("MMM D, YYYY h:mm A") : "N/A";
+                const dateReceived = po.date_time_received ? moment(po.date_time_received).format("MMM D, YYYY h:mm A") : "N/A";
+                
+                return {
+                    "Code": po.code || "N/A",
+                    "Supplier": po.supplier_name || "N/A",
+                    "Products": productNames,
+                    "Total Amount Received": Number(totalReceived || 0),
+                    "Total Paid": Number(paymentsReceived || 0),
+                    "Remaining Balance": Number(remainingAmount || 0),
+                    "Status": po.status_info?.name || "N/A",
+                    "Payment Status": po.payment_status_info?.name || "N/A",
+                    "Date Ordered": dateOrdered,
+                    "Date Received": dateReceived,
+                    "Remarks": po.remarks || "",
+                };
+            });
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Purchase Orders");
+
+            // Generate the Excel file and trigger download
+            XLSX.writeFile(workbook, "Purchase_Orders_Report.xlsx");
+            toastr.success("Excel downloaded successfully!");
+        } catch (error) {
+            console.error(error);
+            toastr.error("Error generating Excel file.");
         }
     };
 
@@ -1074,12 +1139,20 @@ const PurchaseOrders = () => {
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Purchase Orders (PO)</h1>
-                    <button
-                        onClick={() => handleOpenPurchaseOrderModal(null)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                    >
-                        <Plus size={18} /> New PO
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleDownloadExcel}
+                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+                        >
+                            <Download size={18} /> Excel
+                        </button>
+                        <button
+                            onClick={() => handleOpenPurchaseOrderModal(null)}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                        >
+                            <Plus size={18} /> New PO
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters */}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle, Boxes, Puzzle, Bolt, Printer, ZapOff, View  } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Pencil, Trash, Plus, X, Package, CheckCircle, XCircle, AlertTriangle, Recycle, Boxes, Puzzle, Bolt, Printer, ZapOff, View, Download  } from "lucide-react";
 import Layout from "./Layout";
 import axios from 'axios';
 import DatePicker from "react-datepicker";
@@ -950,6 +951,69 @@ const Products = () => {
         return `₱${Number(price).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      const numericSelectedCategory = (selectedSupplier || []).map((item) => Number(item.value));
+      const authToken = localStorage.getItem("token");
+
+      toastr.info("Preparing Excel file...");
+
+      // Reuse the print endpoint because it returns the unpaginated dataset
+      const response = await axios.get(`/api/products/print`, {
+        params: {
+          search: search,
+          filter: filterType,
+          filterCategory: filterCategory,
+          suppliers: numericSelectedCategory,
+          sort_column: sortColumn,
+          sort_order: sortOrder,
+        },
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      const productsData = response.data.data;
+
+      if (!productsData || productsData.length === 0) {
+        toastr.warning("No data found to export.");
+        return;
+      }
+
+      // Format the data specifically for Excel columns
+      const excelData = productsData.map((product) => {
+        // Extract and format unique suppliers
+        const uniqueSuppliers = product.pricing_list_available?.filter(
+          (value, idx, self) =>
+            idx === self.findIndex((t) => t.supplier?.id === value.supplier?.id)
+        );
+        const suppliersName = uniqueSuppliers?.map((p) => p.supplier?.name || "").join(", ") || "N/A";
+
+        return {
+          "Code": product.code || "N/A",
+          "Supplier": suppliersName,
+          "Product Name": product.name_variant || "No description",
+          "Category": product.product_category?.name || "N/A",
+          "Cost": Number(product.cost || 0),
+          "Price": Number(product.price || 0),
+          "Qty": Number(product.qty || 0),
+          "Status": product.product_status || "N/A",
+        };
+      });
+
+      // Create a worksheet and workbook
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Products");
+
+      // Generate the Excel file and trigger download
+      XLSX.writeFile(workbook, "Products_List.xlsx");
+
+      toastr.success("Excel downloaded successfully!");
+    } catch (error) {
+      console.error(error);
+      toastr.error("Error generating Excel file.");
+    }
+  };
+
   return (
     <Layout>
       <div className="w-full mt-10 mx-auto">
@@ -1128,6 +1192,14 @@ const Products = () => {
               >
                 <Printer size={28} />
                 <span className="ml-2 text-base font-semibold">Print</span>
+              </button>
+
+              <button
+                onClick={handleDownloadExcel}
+                className="flex flex-row items-center justify-center p-3 rounded-xl bg-green-600 text-white shadow-md transition transform hover:scale-105"
+              >
+                <Download size={28} />
+                <span className="ml-2 text-base font-semibold">Excel</span>
               </button>
             </div>
           </div>

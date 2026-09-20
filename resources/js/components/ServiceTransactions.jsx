@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
 import Layout from "./Layout";
-import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare, Reply, Minus } from "lucide-react";
+import { Edit, Eye, Plus, X, Circle, PieChart, Clock, CheckCircle, PauseCircle, XCircle, Wallet, Save, Layers, CheckSquare, Reply, Minus, Download } from "lucide-react";
 import Swal from "sweetalert2";
 import moment from "moment";
 import toastr from 'toastr';
@@ -971,6 +972,73 @@ const TransactionTransactions = () => {
         }
     };
 
+    const handleDownloadExcel = async () => {
+        try {
+            const authToken = localStorage.getItem("token");
+            toastr.info("Preparing Excel file...");
+
+            const response = await axios.get(`/api/service-transactions/print`, {
+                params: {
+                    search: search,
+                    filterPayment: selectedPaymentStatus,
+                    filterStatus: selectedTransactionStatus,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            const transactionData = response.data.data;
+
+            if (!transactionData || transactionData.length === 0) {
+                toastr.warning("No data found to export.");
+                return;
+            }
+
+            // Map data into a clean Excel format
+            const excelData = transactionData.map((transaction) => {
+                const dateStarted = transaction.date_started ? moment(transaction.date_started).format("MMM D, YYYY") : "N/A";
+                const dateFinished = transaction.date_finished ? moment(transaction.date_finished).format("MMM D, YYYY") : "N/A";
+                const dayOut = transaction.day_out ? moment(transaction.day_out).format("MMM D, YYYY") : "N/A";
+                
+                return {
+                    "Code": transaction.code || "N/A",
+                    "Service Name": transaction.service_name || "N/A",
+                    "Customer": transaction.customer_name || "N/A",
+                    "Service Price": Number(transaction.price || 0),
+                    "Discount": Number(transaction.discount || 0),
+                    "Total Amount (To Pay)": Number(transaction.amount || 0),
+                    "Labor Cost": Number(transaction.labor_cost || 0),
+                    "Product Cost": Number(transaction.product_cost || 0),
+                    "Total Cost": Number(transaction.total_cost || 0),
+                    "Income": Number(transaction.income || 0),
+                    "Service Status": transaction.service_status?.name || "N/A",
+                    "Payment Status": transaction.payment_status?.name || "N/A",
+                    "Total Paid": Number(transaction.paid || 0),
+                    "Remaining Balance": Number(transaction.remaining || 0),
+                    "Date Started": dateStarted,
+                    "Date Finished": dateFinished,
+                    "Date Out": dayOut,
+                    "Remarks": transaction.remarks || "",
+                };
+            });
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Service Transactions");
+
+            // Generate the Excel file and trigger download
+            XLSX.writeFile(workbook, "Service_Transactions_Report.xlsx");
+            toastr.success("Excel downloaded successfully!");
+        } catch (error) {
+            console.error(error);
+            toastr.error("Error generating Excel file.");
+        }
+    };
+
     const handleCancelEdit = () => {
         setEditingIndex(null);
     };
@@ -981,12 +1049,20 @@ const TransactionTransactions = () => {
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Service Transanctions</h1>
-                    <button
-                        onClick={() => handleServiceModal([])}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                    >
-                        <Plus size={18} /> New Transaction
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleDownloadExcel}
+                            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+                        >
+                            <Download size={18} /> Excel
+                        </button>
+                        <button
+                            onClick={() => handleServiceModal([])}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                        >
+                            <Plus size={18} /> New Transaction
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary Section */}

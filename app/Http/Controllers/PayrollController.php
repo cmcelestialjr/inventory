@@ -507,113 +507,128 @@ class PayrollController extends Controller
             $payroll->date_to_bank = $date_to_bank;
             $payroll->save();
 
-            $checkAdvance = AdvanceDeduction::where('payroll_id', $id)->first();
-            if($checkAdvance){
-                $checkAdvance->deduction_date = $date_to_bank;
-                $checkAdvance->save();
+            $advanceDeductions = AdvanceDeduction::where('payroll_id', $id)->get();
 
-                $total_deducted = AdvanceDeduction::where('advance_id', $checkAdvance->advance_id)
-                    ->whereNotNull('payroll_id')
-                    ->whereNotNull('deduction_date')
-                    ->sum('deduction_amount');
+            if ($advanceDeductions->count() > 0) {
+                foreach ($advanceDeductions as $checkAdvance) {
+                    
+                    // Mark this specific deduction as paid on this date
+                    $checkAdvance->deduction_date = $date_to_bank;
+                    $checkAdvance->save();
 
-                $advance = Advance::where('id', $checkAdvance->advance_id)->first();
-                if($advance){
-                    if($advance->total_deducted >= $advance->advance_amount){
-                        $advance->status_id = 3;
-                    }
-                    $advance->total_deducted = $total_deducted;
-                    $advance->save();
+                    $advance_id = $checkAdvance->advance_id;
+                    $employee_id = $checkAdvance->employee_id;
+                    $advance = Advance::find($advance_id);
 
-                    $advances = Advance::where('status_id', 1)
-                        ->where('id', $checkAdvance->advance_id)
-                        ->get();
-                    if($advances->count()>0){
-                        foreach($advances as $advance){
-                            $advance_id = $advance->id;
-                            $employee_id = $advance->employee_id;
-                            $per_month = $advance->monthly_deduction;
-                            $advance_amount = $advance->advance_amount;
-                            $ca_total_deducted = $advance->total_deducted;
-                            $diff = $advance_amount - $ca_total_deducted;
-                            $total_diff = $diff;
-                            $per_diff = $diff - $per_month;
-                            
-                            if($per_diff  < 0){
-                                $ad = AdvanceDeduction::where('advance_id', $advance_id)
-                                    ->whereNull('payroll_id')
-                                    ->whereNull('deduction_date')
-                                    ->first();
-                                if(!$ad){
-                                    $ad = new AdvanceDeduction;
-                                    $ad->advance_id = $advance_id;
-                                    $ad->employee_id = $employee_id;
-                                    $ad->deduction_amount = $diff;
-                                    $ad->save();
-                                }else{
-                                    $ad->deduction_amount = $diff;
-                                    $ad->save();
-                                }
-                            }else{
-                                $divide = $diff / $per_month;
-                                $initial_count = (int) $divide;
-                                $check_excess = $divide - $initial_count;
-                                $excess = $check_excess > 0 ? 1 : 0;
+                    if ($advance) {
+                        // Recalculate the total deducted amount for this advance
+                        $total_deducted = AdvanceDeduction::where('advance_id', $advance_id)
+                            ->whereNotNull('payroll_id')
+                            ->whereNotNull('deduction_date')
+                            ->sum('deduction_amount');
+
+                        $advance->total_deducted = $total_deducted;
+
+                        // FIX 2: If fully paid, set status to 3 and clean up remaining dummy periods
+                        if ($total_deducted >= $advance->advance_amount) {
+                            $advance->status_id = 3; 
+                            $advance->save();
+
+                            // Delete remaining scheduled periods so they don't appear in future payrolls
+                            AdvanceDeduction::where('advance_id', $advance_id)
+                                ->whereNull('payroll_id')
+                                ->delete();
                                 
-                                $adList = AdvanceDeduction::where('advance_id', $advance_id)
+                            // Zero out the automatic deduction trigger for the employee
+                            $getDeduction = Deduction::where('name', 'Cash Advance')->first();
+                            if ($getDeduction) {
+                                EmployeeDeduction::where('deduction_id', $getDeduction->id)
+                                    ->where('employee_id', $employee_id)
+                                    ->update(['amount' => 0]);
+                            }
+                            
+                        } else {
+                            $advance->save();
+
+                            // If still active (Status 1), re-balance the remaining repayment periods
+                            if ($advance->status_id == 1) {
+                                $per_month = $advance->monthly_deduction;
+                                $advance_amount = $advance->advance_amount;
+                                $diff = $advance_amount - $total_deducted;
+                                $total_diff = $diff;
+                                $per_diff = $diff - $per_month;
+
+                                if ($per_diff < 0) {
+                                    $ad = AdvanceDeduction::where('advance_id', $advance_id)
                                         ->whereNull('payroll_id')
                                         ->whereNull('deduction_date')
-                                        ->get();
-                                if ($adList->count() > 0) {
-                                    foreach ($adList as $row) {
-                                        $update = AdvanceDeduction::find($row->id);
-
-                                        if ($diff > $per_month) {
-                                            $update->deduction_amount = $per_month;
-                                            $diff -= $per_month;
-                                        } else {
-                                            $update->deduction_amount = $diff;
-                                            $diff = 0;
+                                        ->first();
+                                    if (!$ad) {
+                                        $ad = new AdvanceDeduction;
+                                        $ad->advance_id = $advance_id;
+                                        $ad->employee_id = $employee_id;
+                                    }
+                                    $ad->deduction_amount = $diff;
+                                    $ad->save();
+                                } else {
+                                    $divide = $diff / $per_month;
+                                    $initial_count = (int) $divide;
+                                    $check_excess = $divide - $initial_count;
+                                    $excess = $check_excess > 0 ? 1 : 0;
+                                    
+                                    $adList = AdvanceDeduction::where('advance_id', $advance_id)
+                                            ->whereNull('payroll_id')
+                                            ->whereNull('deduction_date')
+                                            ->get();
+                                            
+                                    if ($adList->count() > 0) {
+                                        foreach ($adList as $row) {
+                                            $update = AdvanceDeduction::find($row->id);
+                                            if ($diff > $per_month) {
+                                                $update->deduction_amount = $per_month;
+                                                $diff -= $per_month;
+                                            } else {
+                                                $update->deduction_amount = $diff;
+                                                $diff = 0;
+                                            }
+                                            $update->save();
                                         }
-
-                                        $update->save();
+                                    }
+                                    
+                                    if ($diff > 0) {
+                                        $for_count = $initial_count - $adList->count();
+                                        for ($x = 0; $x < $for_count; $x++) {
+                                            $ad = new AdvanceDeduction;
+                                            $ad->advance_id = $advance_id;
+                                            $ad->employee_id = $employee_id;
+                                            $ad->deduction_amount = $per_month;
+                                            $ad->save();
+                                        }
+                                        if ($excess > 0) {
+                                            $ad = new AdvanceDeduction;
+                                            $ad->advance_id = $advance_id;
+                                            $ad->employee_id = $employee_id;
+                                            $ad->deduction_amount = $total_diff - ($per_month * $initial_count);
+                                            $ad->save();
+                                        }
                                     }
                                 }
-                                if($diff > 0){
-                                    $for_count = $initial_count - $adList->count();
 
-                                    for($x = 0; $x < $for_count; $x++){
-                                        $ad = new AdvanceDeduction;
-                                        $ad->advance_id = $advance_id;
-                                        $ad->employee_id = $employee_id;
-                                        $ad->deduction_amount = $per_month;
-                                        $ad->save();
+                                // Update the Employee Deduction so the next payroll pulls the correct amount
+                                $to_be_deduct = AdvanceDeduction::where('advance_id', $advance_id)
+                                    ->whereNull('payroll_id')
+                                    ->whereNull('deduction_date')
+                                    ->sum('deduction_amount');
+
+                                $getDeduction = Deduction::where('name', 'Cash Advance')->first();
+                                if ($getDeduction) {
+                                    $employeeDeduction = EmployeeDeduction::where('deduction_id', $getDeduction->id)
+                                        ->where('employee_id', $employee_id)
+                                        ->first();
+                                    if ($employeeDeduction) {
+                                        $employeeDeduction->amount = $to_be_deduct > $per_month ? $per_month : $to_be_deduct;
+                                        $employeeDeduction->save();
                                     }
-                                
-
-                                    if($excess > 0){
-                                        $ad = new AdvanceDeduction;
-                                        $ad->advance_id = $advance_id;
-                                        $ad->employee_id = $employee_id;
-                                        $ad->deduction_amount = $total_diff - ($per_month * $initial_count);
-                                        $ad->save();
-                                    }
-                                }
-                            }
-
-                            $to_be_deduct = AdvanceDeduction::where('advance_id', $advance_id)
-                                ->whereNull('payroll_id')
-                                ->whereNull('deduction_date')
-                                ->sum('deduction_amount');
-
-                            $getDeduction = Deduction::where('name', 'Cash Advance')->first();
-                            if($getDeduction){
-                                $employeeDeduction = EmployeeDeduction::where('deduction_id', $getDeduction->id)
-                                    ->where('employee_id', $employee_id)
-                                    ->first();
-                                if($employeeDeduction){
-                                    $employeeDeduction->amount = $to_be_deduct > $per_month ? $per_month : $to_be_deduct;
-                                    $employeeDeduction->save();
                                 }
                             }
                         }

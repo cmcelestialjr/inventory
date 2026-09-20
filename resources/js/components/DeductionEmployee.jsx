@@ -46,8 +46,14 @@ const DeductionEmployee = ({}) => {
     
     
     useEffect(() => {
-        fetchDeductions();
-    }, []);
+        const handler = setTimeout(() => {
+            fetchDeductions();
+        }, 500); // Waits 500ms after the user stops typing before fetching
+
+        return () => {
+            clearTimeout(handler); // Clears the timer if the user keeps typing
+        };
+    }, [search]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -124,6 +130,13 @@ const DeductionEmployee = ({}) => {
     };    
 
     const fetchEmployees = async (searchTerm) => {
+
+        if (selectedEmployee) {
+            const employeeNoPrefix = selectedEmployee.employee_no ? `${selectedEmployee.employee_no}-` : '';
+            const formattedName = `${employeeNoPrefix}${selectedEmployee.lastname}, ${selectedEmployee.firstname}`;
+            if (searchTerm === formattedName) return;
+        }
+        
         // if (searchTerm.length <= 1) {
         //     setEmployees([]);
         //     return;

@@ -190,24 +190,17 @@ class ProductController extends Controller
             $filter = $request->filter;
             switch ($filter) {
                 case 'available':
-                    $query->where('qty', '>', 0);
-                    $query->where('product_status', 'Available');
+                    $query->where('qty', '>', 0)->where('product_status', 'Available');
                     break;
-            
                 case 'out-of-stock':
-                    $query->where('qty', '=', 0);
-                    $query->where('product_status', 'Available');
+                    $query->where('qty', '=', 0)->where('product_status', 'Available');
                     break;
-            
                 case 'low-stock':
-                    $query->whereBetween('qty', [1, 4]);
-                    $query->where('product_status', 'Available');
+                    $query->whereBetween('qty', [1, 4])->where('product_status', 'Available');
                     break;
-
                 case 'phaseout':
                     $query->where('product_status', 'Phaseout');
                     break;
-                
                 case 'damaged':
                     $query->whereHas('sales.returnInfo.returnInfo', function ($q) {
                         $q->where('return_option_id', 2);
@@ -219,6 +212,23 @@ class ProductController extends Controller
         if ($request->has('filterCategory')) {
             $filterCategory = $request->filterCategory;
             $query->where('product_category_id', $filterCategory);
+        }
+
+        // ADDED: Supplier Filter
+        if ($request->has('suppliers') && !empty($request->suppliers)) {
+            $suppliers = $request->suppliers;
+            $query->whereHas('pricingList', function ($q) use ($suppliers) {
+                $q->whereIn('supplier_id', $suppliers);
+            });
+        }
+
+        // ADDED: Sorting Logic
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+            if (in_array($sortColumn, ['code', 'name', 'variant', 'cost', 'price', 'qty', 'product_category_id'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
         }
 
         $products = $query->get();
@@ -691,6 +701,7 @@ class ProductController extends Controller
             'image_url' => asset("storage/$product->img"),
         ]);
     }
+    
     private function fetchProductPrices($productId)
     {
         return ProductsPrice::with('supplier')

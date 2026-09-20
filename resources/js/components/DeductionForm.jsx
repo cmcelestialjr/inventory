@@ -20,7 +20,7 @@ const DeductionForm = ({ formModal, closeModal, form, setForm, fetchDeductions }
 
         const newErrors = {};
         if (!form.name.trim()) newErrors.name = true;
-        if (!form.type.trim()) newErrors.firstname = true;
+        if (!form.type.trim()) newErrors.type = true;
 
         setErrors(newErrors);
 

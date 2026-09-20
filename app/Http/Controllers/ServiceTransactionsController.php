@@ -608,6 +608,7 @@ class ServiceTransactionsController extends Controller
             ], 500);
         }
     }
+
     public function returned(Request $request)
     {
         $validatedData = $request->validate([
@@ -677,6 +678,67 @@ class ServiceTransactionsController extends Controller
             ], 500);
         }
     }
+
+    public function print(Request $request)
+    {
+        $query = ServiceTransaction::with('serviceInfo','customerInfo','paymentStatus','serviceStatus','products.productInfo','payments');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'LIKE', "%{$search}%")
+                ->where('service_name', 'LIKE', "%{$search}%")
+                ->orWhere('customer_name', 'LIKE', "%{$search}%")
+                ->orWhere('date_started', 'LIKE', "%{$search}%")
+                ->orWhere('date_finished', 'LIKE', "%{$search}%")
+                ->orWhere('day_out', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('date_started', [$startDate, $endDate])
+                        ->orWhereBetween('date_finished', [$startDate, $endDate])
+                        ->orWhereBetween('day_out', [$startDate, $endDate]);
+                });
+            }
+        }
+
+        if ($request->has('filterStatus')){
+            $filter = $request->filterStatus;
+            if($filter != 'All'){
+                $query->where('service_status_id', $filter);
+            }
+        }
+
+        if ($request->has('filterPayment')){
+            $filter = $request->filterPayment;
+            if($filter != 'All'){
+                $query->where('payment_status_id', $filter);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'service_name', 'customer_name', 'amount', 'total_cost', 'income', 'service_status_id', 'payment_status_id', 'remarks'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
+        // Use get() instead of paginate()
+        $transactions = $query->orderBy('created_at','DESC')->get();
+
+        return response()->json([
+            'data' => $transactions
+        ]);
+    }
+
     private function getCustomer($name,$contactNo,$email,$address,$cashier_id)
     {
         $customer = Customer::where('name',$name)->first();
@@ -694,6 +756,7 @@ class ServiceTransactionsController extends Controller
 
         return $customer->id;
     }
+
     private function getCode()
     {
         $today = now()->format('ymd');

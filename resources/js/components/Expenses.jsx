@@ -1,7 +1,8 @@
 import Layout from "./Layout";
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import axios from "axios";
-import { Plus, Trash, X } from "lucide-react";
+import { Plus, Trash, X, Download } from "lucide-react";
 import moment from "moment";
 import Swal from 'sweetalert2';
 import toastr from 'toastr';
@@ -325,6 +326,71 @@ const Expenses = () => {
         });
     };
 
+    const handleDownloadExcel = async () => {
+        try {
+            const numericSelectedCategory = (selectedCategory || []).map((item) => Number(item.value));
+            const numericSelectedSubCategory = (selectedSubCategory || []).map((item) => Number(item.value));
+            const authToken = localStorage.getItem("token");
+            toastr.info("Preparing Excel file...");
+
+            const response = await axios.get(`/api/expenses/print`, {
+                params: {
+                    search,
+                    start_date: startDate ? startDate.toISOString().split("T")[0] : null,
+                    end_date: endDate ? endDate.toISOString().split("T")[0] : null,
+                    sort_column: sortColumn, 
+                    sort_order: sortOrder,
+                    numericSelectedCategory: numericSelectedCategory,
+                    numericSelectedSubCategory: numericSelectedSubCategory,
+                },
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            const expensesData = response.data.data;
+
+            if (!expensesData || expensesData.length === 0) {
+                toastr.warning("No data found to export.");
+                return;
+            }
+
+            // Map data into a clean Excel format
+            const excelData = expensesData.map((expense) => {
+                const expenseDate = expense.date_time_of_expense ? moment(expense.date_time_of_expense).format("MMM D, YYYY h:mm A") : "N/A";
+                
+                // Identify if the entry was a product or a manual expense name
+                const expenseNameOrProduct = expense.product 
+                    ? `${expense.product.code || ''}-${expense.product.name_variant || ''}` 
+                    : expense.expense_name || "N/A";
+
+                // Map Amount or Quantity depending on what type of expense it was
+                const amountOrQty = expense.product ? Number(expense.qty || 0) : Number(expense.amount || 0);
+
+                return {
+                    "Date & Time": expenseDate,
+                    "Category": expense.category?.name || "N/A",
+                    "Sub Category": expense.sub_category?.name || "N/A",
+                    "Name / Product": expenseNameOrProduct,
+                    "Amount / Qty": amountOrQty,
+                    "TIN": expense.tin || "",
+                    "OR": expense.or || "",
+                    "Remarks": expense.remarks || "",
+                };
+            });
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Expenses");
+
+            // Generate the Excel file and trigger download
+            XLSX.writeFile(workbook, "Expenses_Report.xlsx");
+            toastr.success("Excel downloaded successfully!");
+        } catch (error) {
+            console.error(error);
+            toastr.error("Error generating Excel file.");
+        }
+    };
+
     const categoryOptions = categories.map((c) => ({
         value: c.id,
         label: c.name,
@@ -371,12 +437,20 @@ const Expenses = () => {
                             {activeTab}
                         </h1>
                         {activeTab === "expenses" && (
-                            <button
-                                onClick={() => setIsNewExpenseModalOpen(true)}
-                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
-                            >
-                                <Plus size={18} /> New Expense
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleDownloadExcel}
+                                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+                                >
+                                    <Download size={18} /> Excel
+                                </button>
+                                <button
+                                    onClick={() => setIsNewExpenseModalOpen(true)}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+                                >
+                                    <Plus size={18} /> New Expense
+                                </button>
+                            </div>
                         )}
                     </div>
                     

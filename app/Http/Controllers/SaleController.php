@@ -324,4 +324,50 @@ class SaleController extends Controller
             ], 500);
         }
     }
+
+    public function print(Request $request)
+    {
+        $query = Sale::with('paymentOptions.paymentOptionInfo', 'productsList.productInfo');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('customer_name', 'LIKE', "%{$search}%")
+                  ->orWhere('code', 'LIKE', "%{$search}%")
+                  ->orWhere('cashier_name', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $startDate = $request->start_date;
+            $endDate = $request->end_date;
+
+            if ($startDate && $endDate) {
+                $query->whereBetween(DB::raw('DATE(date_time_of_sale)'), [$startDate, $endDate]);
+            }
+        }
+
+        if ($request->has('filter')) {
+            $filter = $request->filter;
+            if ($filter != "all") {
+                $query->where('sales_status_id', $filter);
+            }
+        }
+
+        if ($request->has('sort_column') && $request->has('sort_order')) {
+            $sortColumn = $request->sort_column;
+            $sortOrder = $request->sort_order;
+    
+            if (in_array($sortColumn, ['code', 'date_time_of_sale', 'cashier_name', 'total_amount', 'sales_status_id'])) {
+                $query->orderBy($sortColumn, $sortOrder);
+            }
+        }
+
+        // Use get() instead of paginate() for the full Excel export
+        $sales = $query->orderByDesc('date_time_of_sale')->get();
+
+        return response()->json([
+            'data' => $sales
+        ]);
+    }
 }
